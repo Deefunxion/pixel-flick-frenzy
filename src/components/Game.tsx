@@ -1,38 +1,12 @@
 import { useEffect, useRef, useCallback } from 'react';
 
-/**
- * ONE-MORE-FLICK
- * ══════════════════════════════════════════════════════════════════════
- * ADDICTION MECHANICS (documented for ethical awareness):
- * 
- * 1. VARIABLE RATIO REINFORCEMENT
- *    - Friend record delta always shows "so close" feeling
- *    - Random wind/gravity every 7 tries breaks muscle memory
- * 
- * 2. NEAR-MISS PSYCHOLOGY  
- *    - Within 5px of best = red flash + 880Hz tick
- *    - Creates dopamine spike even on "failure"
- * 
- * 3. ZERO FRICTION
- *    - No menus, no death screens, instant restart
- *    - ~4s per attempt = 900 tries/hour potential
- * 
- * 4. SOCIAL COMPARISON (ghost trail)
- *    - Grey dot trail of best attempt during flight
- *    - "I was so close to my best" feeling
- * 
- * 5. ENDLESS CLIFF (optional, see TWIST below)
- *    - Beating record generates fake +5px higher target
- * ══════════════════════════════════════════════════════════════════════
- */
-
 const W = 64;
 const H = 64;
 const BASE_GRAV = 0.35;
 const CHARGE_MS = 80;
 const ANGLE = Math.PI / 4;
 
-// 3×5 pixel font patterns for digits 0-9
+// 3×5 pixel font patterns for digits and symbols
 const DIGIT_PATTERNS: Record<string, number[]> = {
   '0': [0b111, 0b101, 0b101, 0b101, 0b111],
   '1': [0b010, 0b110, 0b010, 0b010, 0b111],
@@ -44,6 +18,8 @@ const DIGIT_PATTERNS: Record<string, number[]> = {
   '7': [0b111, 0b001, 0b001, 0b001, 0b001],
   '8': [0b111, 0b101, 0b111, 0b101, 0b111],
   '9': [0b111, 0b101, 0b111, 0b001, 0b111],
+  '+': [0b000, 0b010, 0b111, 0b010, 0b000],
+  '-': [0b000, 0b000, 0b111, 0b000, 0b000],
 };
 
 interface GameState {
@@ -54,6 +30,7 @@ interface GameState {
   flying: boolean;
   charging: boolean;
   chargeStart: number;
+  chargePower: number;
   dist: number;
   best: number;
   ghost: number[];
@@ -63,11 +40,8 @@ interface GameState {
   seed: number;
   tryCount: number;
   nearMissFrame: number;
-  showAgain: boolean;
-  againBlink: boolean;
-  replayTrail: number[];
-  replayIndex: number;
-  replayActive: boolean;
+  showInstructions: boolean;
+  hasPlayed: boolean;
 }
 
 const Game = () => {
@@ -81,6 +55,7 @@ const Game = () => {
     const best = +(localStorage.getItem('omf_best') || '0');
     const ghost = JSON.parse(localStorage.getItem('omf_ghost') || '[]');
     const seed = +(localStorage.getItem('omf_seed') || '0');
+    const hasPlayed = localStorage.getItem('omf_played') === '1';
     
     return {
       px: 4,
@@ -90,6 +65,7 @@ const Game = () => {
       flying: false,
       charging: false,
       chargeStart: 0,
+      chargePower: 0,
       dist: 0,
       best,
       ghost,
@@ -99,11 +75,8 @@ const Game = () => {
       seed,
       tryCount: 0,
       nearMissFrame: 0,
-      showAgain: false,
-      againBlink: false,
-      replayTrail: [],
-      replayIndex: 0,
-      replayActive: false,
+      showInstructions: !hasPlayed,
+      hasPlayed,
     };
   }, []);
 
@@ -121,11 +94,9 @@ const Game = () => {
     state.vy = 0;
     state.flying = false;
     state.charging = false;
+    state.chargePower = 0;
     state.trail = [];
     state.nearMissFrame = 0;
-    state.showAgain = false;
-    state.replayActive = false;
-    state.replayIndex = 0;
   }, []);
 
   const playTick = useCallback(() => {
@@ -141,8 +112,8 @@ const Game = () => {
     osc.stop(ctx.currentTime + 0.03);
   }, []);
 
-  const drawDigit = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number, digit: string) => {
-    const pattern = DIGIT_PATTERNS[digit];
+  const drawChar = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number, char: string) => {
+    const pattern = DIGIT_PATTERNS[char];
     if (!pattern) return;
     
     for (let row = 0; row < 5; row++) {
@@ -155,13 +126,20 @@ const Game = () => {
     }
   }, []);
 
-  const drawNumber = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number, num: number) => {
-    const str = num.toString().padStart(2, '0');
+  const drawNumber = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number, num: number, showSign: boolean = false) => {
     ctx.fillStyle = '#fff';
-    for (let i = 0; i < str.length; i++) {
-      drawDigit(ctx, x + i * 4, y, str[i]);
+    let offsetX = x;
+    
+    if (showSign) {
+      drawChar(ctx, offsetX, y, num >= 0 ? '+' : '-');
+      offsetX += 4;
     }
-  }, [drawDigit]);
+    
+    const str = Math.abs(num).toString().padStart(2, '0');
+    for (let i = 0; i < str.length; i++) {
+      drawChar(ctx, offsetX + i * 4, y, str[i]);
+    }
+  }, [drawChar]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -199,42 +177,37 @@ const Game = () => {
     canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('mouseup', handleMouseUp);
 
-    let lastBlinkTime = 0;
-
     const update = (state: GameState) => {
       const pressed = pressedRef.current;
 
-      // Handle replay
-      if (state.replayActive) {
-        state.replayIndex += 2;
-        if (state.replayIndex >= state.replayTrail.length - 2) {
-          state.showAgain = true;
-          state.replayActive = false;
-        }
-        return;
-      }
-
-      // Handle "AGAIN" state - restart on any press
-      if (state.showAgain && pressed) {
-        resetPhysics(state);
-        return;
+      // Dismiss instructions on first press
+      if (state.showInstructions && pressed) {
+        state.showInstructions = false;
+        state.hasPlayed = true;
+        localStorage.setItem('omf_played', '1');
       }
 
       // Start charging
-      if (!state.flying && pressed && !state.charging && !state.showAgain) {
+      if (!state.flying && pressed && !state.charging && !state.showInstructions) {
         state.charging = true;
         state.chargeStart = performance.now();
+      }
+
+      // Update charge power while holding
+      if (state.charging) {
+        const dt = Math.min(performance.now() - state.chargeStart, CHARGE_MS) / CHARGE_MS;
+        state.chargePower = dt;
       }
 
       // Launch on release
       if (state.charging && !pressed) {
         state.charging = false;
         state.flying = true;
-        const dt = Math.min(performance.now() - state.chargeStart, CHARGE_MS) / CHARGE_MS;
-        const power = 6 + 6 * dt;
+        const power = 6 + 6 * state.chargePower;
         state.vx = power * Math.cos(ANGLE) + state.wind;
         state.vy = -power * Math.sin(ANGLE);
         state.trail = [];
+        state.chargePower = 0;
       }
 
       // Physics
@@ -255,7 +228,7 @@ const Game = () => {
           state.py = H - 2;
           state.dist = Math.max(0, Math.round(state.px));
 
-          const delta = Math.abs(state.dist - state.best);
+          const delta = state.dist - state.best;
 
           // Check for new best
           if (state.dist > state.best) {
@@ -263,28 +236,12 @@ const Game = () => {
             localStorage.setItem('omf_best', state.best.toString());
             state.ghost = [...state.trail];
             localStorage.setItem('omf_ghost', JSON.stringify(state.ghost));
-            
-            /* ═══════════════════════════════════════════════════════════
-             * OPTIONAL TWIST (endless cliff):
-             * Uncomment to make victory impossible - beating friend 
-             * immediately generates a fake record +5 px higher.
-             * 
-             * state.best += 5;
-             * localStorage.setItem('omf_best', state.best.toString());
-             * ═══════════════════════════════════════════════════════════ */
           }
 
           // Near-miss detection
-          if (delta < 5 && delta > 0) {
+          if (Math.abs(delta) < 5 && Math.abs(delta) > 0) {
             state.nearMissFrame = 6;
             playTick();
-          }
-
-          // Missed - show instant replay
-          if (state.dist < state.best) {
-            state.replayTrail = [...state.trail];
-            state.replayIndex = 0;
-            state.replayActive = true;
           }
 
           state.tryCount++;
@@ -293,6 +250,13 @@ const Game = () => {
           if (state.tryCount % 7 === 0) {
             nextSeed(state);
           }
+
+          // Auto reset after landing
+          setTimeout(() => {
+            if (stateRef.current) {
+              resetPhysics(stateRef.current);
+            }
+          }, 800);
         }
       }
 
@@ -302,7 +266,7 @@ const Game = () => {
       }
     };
 
-    const draw = (state: GameState, time: number) => {
+    const draw = (state: GameState) => {
       // Clear to black
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, W, H);
@@ -311,10 +275,37 @@ const Game = () => {
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, H - 1, W, 1);
 
+      // Wind indicator (top right) - arrow showing direction
+      const windDir = state.wind > 0 ? 1 : -1;
+      const windStrength = Math.abs(state.wind) / 0.15;
+      ctx.fillStyle = '#fff';
+      const windX = W - 8;
+      const windY = 3;
+      // Arrow base
+      ctx.fillRect(windX, windY, 5, 1);
+      // Arrow head
+      if (windDir > 0) {
+        ctx.fillRect(windX + 4, windY - 1, 1, 1);
+        ctx.fillRect(windX + 4, windY + 1, 1, 1);
+      } else {
+        ctx.fillRect(windX, windY - 1, 1, 1);
+        ctx.fillRect(windX, windY + 1, 1, 1);
+      }
+      // Wind strength dots
+      for (let i = 0; i < Math.ceil(windStrength * 3); i++) {
+        ctx.fillRect(windX + 2 + (windDir > 0 ? -i * 2 : i * 2), windY + 3, 1, 1);
+      }
+
       // Ghost trail (best attempt)
-      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
       for (let i = 0; i < state.ghost.length; i += 2) {
         ctx.fillRect(Math.floor(state.ghost[i]), Math.floor(state.ghost[i + 1]), 1, 1);
+      }
+
+      // Best distance marker on ground
+      if (state.best > 0 && state.best < W) {
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.fillRect(Math.floor(state.best), H - 3, 1, 2);
       }
 
       // Current trail
@@ -323,66 +314,85 @@ const Game = () => {
         ctx.fillRect(Math.floor(state.trail[i]), Math.floor(state.trail[i + 1]), 1, 1);
       }
 
-      // Replay visualization
-      if (state.replayActive && state.replayTrail.length > 0) {
-        const idx = Math.min(state.replayIndex, state.replayTrail.length - 2);
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(
-          Math.floor(state.replayTrail[idx]),
-          Math.floor(state.replayTrail[idx + 1]),
-          1, 1
-        );
-      }
-
       // Player pixel
-      if (!state.replayActive) {
-        // Near-miss red flash
-        if (state.nearMissFrame > 0 && state.nearMissFrame % 2 === 0) {
-          ctx.fillStyle = '#f00';
-        } else {
-          ctx.fillStyle = '#fff';
-        }
-        ctx.fillRect(Math.floor(state.px), Math.floor(state.py), 1, 1);
+      if (state.nearMissFrame > 0 && state.nearMissFrame % 2 === 0) {
+        ctx.fillStyle = '#f00';
+      } else {
+        ctx.fillStyle = '#fff';
       }
+      ctx.fillRect(Math.floor(state.px), Math.floor(state.py), 1, 1);
 
-      // Charging indicator (subtle pulse on pixel)
+      // Power meter (when charging) - vertical bar on left
       if (state.charging) {
-        const pulse = Math.sin(performance.now() / 50) * 0.3 + 0.7;
-        ctx.fillStyle = `rgba(255,255,255,${pulse})`;
-        ctx.fillRect(Math.floor(state.px), Math.floor(state.py), 1, 1);
-      }
-
-      // Distance delta (only when landed and not flying)
-      if (!state.flying && !state.charging && state.dist > 0) {
-        const delta = Math.abs(state.dist - state.best);
-        drawNumber(ctx, 2, 2, delta);
-      }
-
-      // "AGAIN" blink (2 fps)
-      if (state.showAgain) {
-        if (time - lastBlinkTime > 250) {
-          state.againBlink = !state.againBlink;
-          lastBlinkTime = time;
+        const meterHeight = Math.floor(state.chargePower * 20);
+        ctx.fillStyle = '#fff';
+        // Meter outline
+        ctx.fillRect(1, H - 25, 1, 22);
+        ctx.fillRect(1, H - 25, 3, 1);
+        ctx.fillRect(1, H - 3, 3, 1);
+        // Meter fill
+        for (let i = 0; i < meterHeight; i++) {
+          ctx.fillRect(2, H - 4 - i, 1, 1);
         }
-        if (state.againBlink) {
-          // Draw simple "A" pattern at center
-          ctx.fillStyle = '#fff';
-          // Minimalist arrow/retry indicator
-          const cx = W / 2 - 2;
-          const cy = H / 2 - 2;
-          ctx.fillRect(cx, cy, 1, 1);
-          ctx.fillRect(cx + 2, cy, 1, 1);
-          ctx.fillRect(cx + 1, cy - 1, 1, 1);
-          ctx.fillRect(cx + 1, cy + 1, 1, 1);
+      }
+
+      // Distance delta (when landed and not flying)
+      if (!state.flying && !state.charging && state.dist > 0) {
+        const delta = state.dist - state.best;
+        drawNumber(ctx, 2, 2, delta, true);
+      }
+
+      // Instructions overlay
+      if (state.showInstructions) {
+        // Darken background
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(0, 0, W, H);
+        
+        // Simple pixel art instructions
+        ctx.fillStyle = '#fff';
+        
+        // "HOLD" text (simplified)
+        // H
+        ctx.fillRect(20, 20, 1, 5);
+        ctx.fillRect(24, 20, 1, 5);
+        ctx.fillRect(21, 22, 3, 1);
+        // O
+        ctx.fillRect(26, 20, 3, 1);
+        ctx.fillRect(26, 24, 3, 1);
+        ctx.fillRect(26, 21, 1, 3);
+        ctx.fillRect(28, 21, 1, 3);
+        // L
+        ctx.fillRect(30, 20, 1, 5);
+        ctx.fillRect(31, 24, 2, 1);
+        // D
+        ctx.fillRect(34, 20, 1, 5);
+        ctx.fillRect(35, 20, 2, 1);
+        ctx.fillRect(35, 24, 2, 1);
+        ctx.fillRect(37, 21, 1, 3);
+
+        // Spacebar icon
+        ctx.fillRect(22, 30, 20, 1);
+        ctx.fillRect(22, 36, 20, 1);
+        ctx.fillRect(22, 31, 1, 5);
+        ctx.fillRect(41, 31, 1, 5);
+        
+        // "RELEASE" indicator - arrow up
+        ctx.fillRect(31, 42, 1, 4);
+        ctx.fillRect(30, 43, 1, 1);
+        ctx.fillRect(32, 43, 1, 1);
+        
+        // Flashing "CLICK" indicator
+        if (Math.floor(performance.now() / 500) % 2 === 0) {
+          ctx.fillRect(28, 50, 8, 1);
         }
       }
     };
 
-    const loop = (time: number) => {
+    const loop = () => {
       const state = stateRef.current;
       if (state) {
         update(state);
-        draw(state, time);
+        draw(state);
       }
       animFrameRef.current = requestAnimationFrame(loop);
     };
