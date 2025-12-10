@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 
 const W = 64;
 const H = 64;
@@ -6,7 +6,7 @@ const BASE_GRAV = 0.35;
 const CHARGE_MS = 80;
 const ANGLE = Math.PI / 4;
 
-// 3×5 pixel font patterns for digits and symbols
+// 3×5 pixel font patterns for digits
 const DIGIT_PATTERNS: Record<string, number[]> = {
   '0': [0b111, 0b101, 0b101, 0b101, 0b111],
   '1': [0b010, 0b110, 0b010, 0b010, 0b111],
@@ -18,8 +18,6 @@ const DIGIT_PATTERNS: Record<string, number[]> = {
   '7': [0b111, 0b001, 0b001, 0b001, 0b001],
   '8': [0b111, 0b101, 0b111, 0b101, 0b111],
   '9': [0b111, 0b101, 0b111, 0b001, 0b111],
-  '+': [0b000, 0b010, 0b111, 0b010, 0b000],
-  '-': [0b000, 0b000, 0b111, 0b000, 0b000],
 };
 
 interface GameState {
@@ -40,8 +38,6 @@ interface GameState {
   seed: number;
   tryCount: number;
   nearMissFrame: number;
-  showInstructions: boolean;
-  hasPlayed: boolean;
 }
 
 const Game = () => {
@@ -50,12 +46,13 @@ const Game = () => {
   const pressedRef = useRef(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const animFrameRef = useRef<number>(0);
+  const [bestScore, setBestScore] = useState(+(localStorage.getItem('omf_best') || '0'));
+  const [lastDist, setLastDist] = useState(0);
 
   const initState = useCallback((): GameState => {
     const best = +(localStorage.getItem('omf_best') || '0');
     const ghost = JSON.parse(localStorage.getItem('omf_ghost') || '[]');
     const seed = +(localStorage.getItem('omf_seed') || '0');
-    const hasPlayed = localStorage.getItem('omf_played') === '1';
     
     return {
       px: 4,
@@ -75,8 +72,6 @@ const Game = () => {
       seed,
       tryCount: 0,
       nearMissFrame: 0,
-      showInstructions: !hasPlayed,
-      hasPlayed,
     };
   }, []);
 
@@ -126,18 +121,11 @@ const Game = () => {
     }
   }, []);
 
-  const drawNumber = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number, num: number, showSign: boolean = false) => {
+  const drawNumber = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number, num: number) => {
     ctx.fillStyle = '#fff';
-    let offsetX = x;
-    
-    if (showSign) {
-      drawChar(ctx, offsetX, y, num >= 0 ? '+' : '-');
-      offsetX += 4;
-    }
-    
-    const str = Math.abs(num).toString().padStart(2, '0');
+    const str = Math.abs(num).toString();
     for (let i = 0; i < str.length; i++) {
-      drawChar(ctx, offsetX + i * 4, y, str[i]);
+      drawChar(ctx, x + i * 4, y, str[i]);
     }
   }, [drawChar]);
 
@@ -180,15 +168,8 @@ const Game = () => {
     const update = (state: GameState) => {
       const pressed = pressedRef.current;
 
-      // Dismiss instructions on first press
-      if (state.showInstructions && pressed) {
-        state.showInstructions = false;
-        state.hasPlayed = true;
-        localStorage.setItem('omf_played', '1');
-      }
-
       // Start charging
-      if (!state.flying && pressed && !state.charging && !state.showInstructions) {
+      if (!state.flying && pressed && !state.charging) {
         state.charging = true;
         state.chargeStart = performance.now();
       }
@@ -236,7 +217,9 @@ const Game = () => {
             localStorage.setItem('omf_best', state.best.toString());
             state.ghost = [...state.trail];
             localStorage.setItem('omf_ghost', JSON.stringify(state.ghost));
+            setBestScore(state.best);
           }
+          setLastDist(state.dist);
 
           // Near-miss detection
           if (Math.abs(delta) < 5 && Math.abs(delta) > 0) {
@@ -336,55 +319,9 @@ const Game = () => {
         }
       }
 
-      // Distance delta (when landed and not flying)
+      // Show current distance when landed
       if (!state.flying && !state.charging && state.dist > 0) {
-        const delta = state.dist - state.best;
-        drawNumber(ctx, 2, 2, delta, true);
-      }
-
-      // Instructions overlay
-      if (state.showInstructions) {
-        // Darken background
-        ctx.fillStyle = 'rgba(0,0,0,0.7)';
-        ctx.fillRect(0, 0, W, H);
-        
-        // Simple pixel art instructions
-        ctx.fillStyle = '#fff';
-        
-        // "HOLD" text (simplified)
-        // H
-        ctx.fillRect(20, 20, 1, 5);
-        ctx.fillRect(24, 20, 1, 5);
-        ctx.fillRect(21, 22, 3, 1);
-        // O
-        ctx.fillRect(26, 20, 3, 1);
-        ctx.fillRect(26, 24, 3, 1);
-        ctx.fillRect(26, 21, 1, 3);
-        ctx.fillRect(28, 21, 1, 3);
-        // L
-        ctx.fillRect(30, 20, 1, 5);
-        ctx.fillRect(31, 24, 2, 1);
-        // D
-        ctx.fillRect(34, 20, 1, 5);
-        ctx.fillRect(35, 20, 2, 1);
-        ctx.fillRect(35, 24, 2, 1);
-        ctx.fillRect(37, 21, 1, 3);
-
-        // Spacebar icon
-        ctx.fillRect(22, 30, 20, 1);
-        ctx.fillRect(22, 36, 20, 1);
-        ctx.fillRect(22, 31, 1, 5);
-        ctx.fillRect(41, 31, 1, 5);
-        
-        // "RELEASE" indicator - arrow up
-        ctx.fillRect(31, 42, 1, 4);
-        ctx.fillRect(30, 43, 1, 1);
-        ctx.fillRect(32, 43, 1, 1);
-        
-        // Flashing "CLICK" indicator
-        if (Math.floor(performance.now() / 500) % 2 === 0) {
-          ctx.fillRect(28, 50, 8, 1);
-        }
+        drawNumber(ctx, 2, 2, state.dist);
       }
     };
 
@@ -406,15 +343,40 @@ const Game = () => {
       canvas.removeEventListener('mouseup', handleMouseUp);
       cancelAnimationFrame(animFrameRef.current);
     };
-  }, [initState, resetPhysics, nextSeed, playTick, drawNumber]);
+  }, [initState, resetPhysics, nextSeed, playTick, drawNumber, setBestScore, setLastDist]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={W}
-      height={H}
-      className="game-canvas"
-    />
+    <div className="flex flex-col items-center gap-6">
+      {/* Instructions panel */}
+      <div className="text-center space-y-3 max-w-xs">
+        <h1 className="text-2xl font-bold text-foreground">One-More-Flick</h1>
+        <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+          <p className="text-sm text-foreground font-medium">🎯 Goal: Flick the pixel as far as possible!</p>
+          <p className="text-sm text-muted-foreground">
+            <strong>1.</strong> Hold <kbd className="px-1.5 py-0.5 bg-background border border-border rounded text-xs">SPACE</kbd> or click<br />
+            <strong>2.</strong> Release to launch — longer hold = more power
+          </p>
+        </div>
+      </div>
+
+      {/* Game canvas */}
+      <canvas
+        ref={canvasRef}
+        width={W}
+        height={H}
+        className="game-canvas"
+      />
+
+      {/* Live stats */}
+      <div className="text-center space-y-1">
+        <p className="text-muted-foreground text-sm">
+          Last: <span className="text-foreground font-mono font-bold">{lastDist}px</span>
+        </p>
+        <p className="text-muted-foreground text-sm">
+          Best: <span className="text-foreground font-mono font-bold text-lg">{bestScore}px</span>
+        </p>
+      </div>
+    </div>
   );
 };
 
