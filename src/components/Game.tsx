@@ -2,8 +2,9 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 
 const W = 64;
 const H = 64;
-const BASE_GRAV = 0.35;
-const CHARGE_MS = 600; // Much slower - 600ms to fully charge
+const CLIFF_EDGE = 58; // Land before this or fall off!
+const BASE_GRAV = 0.4;
+const CHARGE_MS = 500;
 const ANGLE = Math.PI / 4;
 
 interface GameState {
@@ -17,10 +18,11 @@ interface GameState {
   chargePower: number;
   dist: number;
   best: number;
-  ghost: number[];
   trail: number[];
+  wind: number;
   seed: number;
   tryCount: number;
+  fellOff: boolean;
 }
 
 const Game = () => {
@@ -31,10 +33,10 @@ const Game = () => {
   const animFrameRef = useRef<number>(0);
   const [bestScore, setBestScore] = useState(+(localStorage.getItem('omf_best') || '0'));
   const [lastDist, setLastDist] = useState<number | null>(null);
+  const [fellOff, setFellOff] = useState(false);
 
   const initState = useCallback((): GameState => {
     const best = +(localStorage.getItem('omf_best') || '0');
-    const ghost = JSON.parse(localStorage.getItem('omf_ghost') || '[]');
     const seed = +(localStorage.getItem('omf_seed') || '0');
     
     return {
@@ -48,11 +50,18 @@ const Game = () => {
       chargePower: 0,
       dist: 0,
       best,
-      ghost,
       trail: [],
+      wind: (Math.sin(seed) * 0.3) - 0.1, // Wind between -0.4 and 0.2
       seed,
       tryCount: 0,
+      fellOff: false,
     };
+  }, []);
+
+  const nextWind = useCallback((state: GameState) => {
+    state.seed++;
+    state.wind = (Math.sin(state.seed) * 0.3) - 0.1;
+    localStorage.setItem('omf_seed', state.seed.toString());
   }, []);
 
   const resetPhysics = useCallback((state: GameState) => {
@@ -64,19 +73,23 @@ const Game = () => {
     state.charging = false;
     state.chargePower = 0;
     state.trail = [];
+    state.fellOff = false;
   }, []);
 
-  const playTick = useCallback(() => {
+  const playSound = useCallback((freq: number, duration: number) => {
     if (!audioCtxRef.current) {
       audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
     const ctx = audioCtxRef.current;
     const osc = ctx.createOscillator();
     osc.type = 'square';
-    osc.frequency.value = 880;
-    osc.connect(ctx.destination);
+    osc.frequency.value = freq;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.1;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
     osc.start();
-    osc.stop(ctx.currentTime + 0.03);
+    osc.stop(ctx.currentTime + duration);
   }, []);
 
   useEffect(() => {
@@ -122,6 +135,7 @@ const Game = () => {
       if (!state.flying && pressed && !state.charging) {
         state.charging = true;
         state.chargeStart = performance.now();
+        setFellOff(false);
       }
 
       // Update charge power while holding
@@ -134,8 +148,9 @@ const Game = () => {
       if (state.charging && !pressed) {
         state.charging = false;
         state.flying = true;
-        const power = 4 + 8 * state.chargePower; // 4-12 px/frame based on charge
-        state.vx = power * Math.cos(ANGLE);
+        // Power gives speed 3-7, making max distance around 50-60px
+        const power = 3 + 4 * state.chargePower;
+        state.vx = power * Math.cos(ANGLE) + state.wind;
         state.vy = -power * Math.sin(ANGLE);
         state.trail = [];
         state.chargePower = 0;
@@ -149,83 +164,119 @@ const Game = () => {
         
         // Record trail
         state.trail.push(state.px, state.py);
-        if (state.trail.length > 120) {
-          state.trail = state.trail.slice(2);
-        }
 
-        // Landed
+        // Landed or fell off
         if (state.py >= H - 2) {
           state.flying = false;
           state.py = H - 2;
-          state.dist = Math.max(0, Math.round(state.px));
-
-          // Check for new best
-          if (state.dist > state.best) {
-            state.best = state.dist;
-            localStorage.setItem('omf_best', state.best.toString());
-            state.ghost = [...state.trail];
-            localStorage.setItem('omf_ghost', JSON.stringify(state.ghost));
-            setBestScore(state.best);
-            playTick(); // Play sound on new record!
+          
+          const landedAt = Math.round(state.px);
+          
+          // Did they fall off the cliff?
+          if (landedAt > CLIFF_EDGE) {
+            state.fellOff = true;
+            state.dist = 0;
+            setFellOff(true);
+            playSound(220, 0.15); // Low buzz = fail
+          } else {
+            state.dist = Math.max(0, landedAt);
+            setFellOff(false);
+            
+            // New best?
+            if (state.dist > state.best) {
+              state.best = state.dist;
+              localStorage.setItem('omf_best', state.best.toString());
+              setBestScore(state.best);
+              playSound(880, 0.05); // High beep = success
+            }
           }
-          setLastDist(state.dist);
+          
+          setLastDist(state.fellOff ? null : state.dist);
 
           state.tryCount++;
+          
+          // Change wind every 5 tries
+          if (state.tryCount % 5 === 0) {
+            nextWind(state);
+          }
 
-          // Auto reset after landing
+          // Auto reset
           setTimeout(() => {
             if (stateRef.current) {
               resetPhysics(stateRef.current);
             }
-          }, 1000);
+          }, 1200);
         }
       }
     };
 
     const draw = (state: GameState) => {
-      // Clear to black
+      // Clear
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, W, H);
 
-      // Ground line
+      // Ground (only until cliff edge)
       ctx.fillStyle = '#fff';
-      ctx.fillRect(0, H - 1, W, 1);
+      ctx.fillRect(0, H - 1, CLIFF_EDGE + 1, 1);
+      
+      // Cliff edge marker (danger zone)
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.fillRect(CLIFF_EDGE - 2, H - 1, 3, 1);
 
-      // Best distance marker on ground (flag)
-      if (state.best > 0) {
-        const markerX = Math.min(state.best, W - 2);
+      // Best distance marker
+      if (state.best > 0 && state.best <= CLIFF_EDGE) {
         ctx.fillStyle = '#fff';
-        ctx.fillRect(markerX, H - 6, 1, 5); // Pole
-        ctx.fillRect(markerX + 1, H - 6, 2, 2); // Flag
+        ctx.fillRect(state.best, H - 4, 1, 3);
+        ctx.fillRect(state.best - 1, H - 4, 3, 1);
       }
 
-      // Ghost trail (best attempt) - very faint
-      if (state.ghost.length > 0) {
-        ctx.fillStyle = 'rgba(255,255,255,0.15)';
-        for (let i = 0; i < state.ghost.length; i += 4) {
-          ctx.fillRect(Math.floor(state.ghost[i]), Math.floor(state.ghost[i + 1]), 1, 1);
-        }
+      // Wind indicator - simple arrow at top
+      const windStrength = Math.abs(state.wind);
+      const windDir = state.wind > 0 ? 1 : -1;
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      const arrowX = W / 2;
+      ctx.fillRect(arrowX - 3, 3, 6, 1);
+      if (windDir > 0) {
+        ctx.fillRect(arrowX + 2, 2, 1, 1);
+        ctx.fillRect(arrowX + 2, 4, 1, 1);
+      } else {
+        ctx.fillRect(arrowX - 3, 2, 1, 1);
+        ctx.fillRect(arrowX - 3, 4, 1, 1);
+      }
+      // Dots showing strength
+      for (let i = 0; i < Math.round(windStrength * 8); i++) {
+        ctx.fillRect(arrowX + windDir * (5 + i * 2), 3, 1, 1);
       }
 
-      // Current trail while flying
-      if (state.flying) {
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
-        for (let i = 0; i < state.trail.length; i += 2) {
-          ctx.fillRect(Math.floor(state.trail[i]), Math.floor(state.trail[i + 1]), 1, 1);
-        }
-      }
-
-      // Player pixel
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(Math.floor(state.px), Math.floor(state.py), 1, 1);
-
-      // Power bar while charging (simple horizontal bar at top)
-      if (state.charging) {
-        const barWidth = Math.floor(state.chargePower * (W - 4));
+      // Current trail
+      if (state.flying || state.trail.length > 0) {
         ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        ctx.fillRect(2, 2, W - 4, 3); // Background
+        for (let i = 0; i < state.trail.length; i += 2) {
+          const tx = state.trail[i];
+          const ty = state.trail[i + 1];
+          if (tx >= 0 && tx < W && ty >= 0 && ty < H) {
+            ctx.fillRect(Math.floor(tx), Math.floor(ty), 1, 1);
+          }
+        }
+      }
+
+      // Player pixel (red if fell off)
+      if (state.fellOff) {
+        ctx.fillStyle = '#f00';
+      } else {
         ctx.fillStyle = '#fff';
-        ctx.fillRect(2, 2, barWidth, 3); // Fill
+      }
+      const drawX = Math.max(0, Math.min(W - 1, Math.floor(state.px)));
+      const drawY = Math.max(0, Math.min(H - 1, Math.floor(state.py)));
+      ctx.fillRect(drawX, drawY, 1, 1);
+
+      // Power bar while charging
+      if (state.charging) {
+        const barWidth = Math.floor(state.chargePower * (W - 8));
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(4, H - 8, W - 8, 2);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(4, H - 8, barWidth, 2);
       }
     };
 
@@ -247,21 +298,19 @@ const Game = () => {
       canvas.removeEventListener('mouseup', handleMouseUp);
       cancelAnimationFrame(animFrameRef.current);
     };
-  }, [initState, resetPhysics, playTick, setBestScore, setLastDist]);
+  }, [initState, resetPhysics, nextWind, playSound, setBestScore, setLastDist]);
 
   return (
     <div className="flex flex-col items-center gap-4">
-      {/* Clear instructions */}
-      <div className="text-center max-w-sm">
+      <div className="text-center max-w-xs">
         <h1 className="text-xl font-bold text-foreground mb-2">One-More-Flick</h1>
-        <p className="text-muted-foreground text-sm">
-          Hold <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">SPACE</kbd> to charge power, release to launch.
+        <p className="text-muted-foreground text-sm leading-relaxed">
+          Hold <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">SPACE</kbd> to charge, release to launch.
           <br />
-          <span className="text-foreground font-medium">Goal: Launch the pixel as far as you can!</span>
+          <span className="text-foreground font-medium">Land as close to the edge as possible — but don't fall off!</span>
         </p>
       </div>
 
-      {/* Game canvas */}
       <canvas
         ref={canvasRef}
         width={W}
@@ -269,12 +318,17 @@ const Game = () => {
         className="game-canvas cursor-pointer"
       />
 
-      {/* Score display - clear and simple */}
       <div className="flex gap-8 text-center">
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Last</p>
-          <p className="text-2xl font-bold text-foreground font-mono">
-            {lastDist !== null ? `${lastDist}` : '-'}
+          <p className="text-2xl font-bold font-mono">
+            {fellOff ? (
+              <span className="text-destructive">FELL!</span>
+            ) : lastDist !== null ? (
+              <span className="text-foreground">{lastDist}</span>
+            ) : (
+              <span className="text-muted-foreground">-</span>
+            )}
           </p>
         </div>
         <div>
@@ -282,6 +336,10 @@ const Game = () => {
           <p className="text-2xl font-bold text-primary font-mono">{bestScore}</p>
         </div>
       </div>
+      
+      <p className="text-xs text-muted-foreground">
+        Wind changes every 5 tries. Max: {CLIFF_EDGE}
+      </p>
     </div>
   );
 };
