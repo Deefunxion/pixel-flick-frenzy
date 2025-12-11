@@ -13,6 +13,7 @@ interface GameState {
   vx: number;
   vy: number;
   flying: boolean;
+  sliding: boolean;
   charging: boolean;
   chargeStart: number;
   chargePower: number;
@@ -45,13 +46,14 @@ const Game = () => {
       vx: 0,
       vy: 0,
       flying: false,
+      sliding: false,
       charging: false,
       chargeStart: 0,
       chargePower: 0,
       dist: 0,
       best,
       trail: [],
-      wind: (Math.sin(seed) * 0.3) - 0.1, // Wind between -0.4 and 0.2
+      wind: (Math.sin(seed) * 0.3) - 0.1,
       seed,
       tryCount: 0,
       fellOff: false,
@@ -70,6 +72,7 @@ const Game = () => {
     state.vx = 0;
     state.vy = 0;
     state.flying = false;
+    state.sliding = false;
     state.charging = false;
     state.chargePower = 0;
     state.trail = [];
@@ -132,7 +135,7 @@ const Game = () => {
       const pressed = pressedRef.current;
 
       // Start charging
-      if (!state.flying && pressed && !state.charging) {
+      if (!state.flying && !state.sliding && pressed && !state.charging) {
         state.charging = true;
         state.chargeStart = performance.now();
         setFellOff(false);
@@ -156,7 +159,7 @@ const Game = () => {
         state.chargePower = 0;
       }
 
-      // Physics
+      // Physics - flying
       if (state.flying) {
         state.vy += BASE_GRAV;
         state.px += state.vx;
@@ -165,10 +168,29 @@ const Game = () => {
         // Record trail
         state.trail.push(state.px, state.py);
 
-        // Landed or fell off
+        // Touched ground - start sliding
         if (state.py >= H - 2) {
           state.flying = false;
+          state.sliding = true;
           state.py = H - 2;
+          state.vx *= 0.6; // Reduce speed on impact
+          state.vy = 0;
+        }
+      }
+
+      // Physics - sliding
+      if (state.sliding) {
+        const friction = 0.85;
+        state.vx *= friction;
+        state.px += state.vx;
+        
+        // Record slide trail
+        state.trail.push(state.px, state.py);
+
+        // Stop sliding when slow enough
+        if (Math.abs(state.vx) < 0.1) {
+          state.sliding = false;
+          state.vx = 0;
           
           const landedAt = Math.round(state.px);
           
@@ -201,6 +223,27 @@ const Game = () => {
           }
 
           // Auto reset
+          setTimeout(() => {
+            if (stateRef.current) {
+              resetPhysics(stateRef.current);
+            }
+          }, 1200);
+        }
+        
+        // Fall off while sliding
+        if (state.px > CLIFF_EDGE && state.sliding) {
+          state.sliding = false;
+          state.fellOff = true;
+          state.dist = 0;
+          setFellOff(true);
+          playSound(220, 0.15);
+          setLastDist(null);
+          
+          state.tryCount++;
+          if (state.tryCount % 5 === 0) {
+            nextWind(state);
+          }
+          
           setTimeout(() => {
             if (stateRef.current) {
               resetPhysics(stateRef.current);
