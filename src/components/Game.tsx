@@ -2,10 +2,15 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 
 const W = 64;
 const H = 64;
-const CLIFF_EDGE = 58; // Land before this or fall off!
+const CLIFF_EDGE = 58;
 const BASE_GRAV = 0.4;
-const CHARGE_MS = 500;
-const ANGLE = Math.PI / 4;
+const CHARGE_MS = 600;
+const MIN_POWER = 3;
+const MAX_POWER = 7;
+const DEFAULT_ANGLE = 35; // degrees
+const MIN_ANGLE = 10;
+const MAX_ANGLE = 75;
+const ANGLE_STEP = 1.5;
 
 interface GameState {
   px: number;
@@ -17,6 +22,7 @@ interface GameState {
   charging: boolean;
   chargeStart: number;
   chargePower: number;
+  angle: number;
   dist: number;
   best: number;
   trail: number[];
@@ -24,12 +30,16 @@ interface GameState {
   seed: number;
   tryCount: number;
   fellOff: boolean;
+  nudgeUsed: boolean;
+  initialSpeed: number;
 }
 
 const Game = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<GameState | null>(null);
   const pressedRef = useRef(false);
+  const leftRef = useRef(false);
+  const rightRef = useRef(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const animFrameRef = useRef<number>(0);
   const [bestScore, setBestScore] = useState(+(localStorage.getItem('omf_best') || '0'));
@@ -50,6 +60,7 @@ const Game = () => {
       charging: false,
       chargeStart: 0,
       chargePower: 0,
+      angle: DEFAULT_ANGLE,
       dist: 0,
       best,
       trail: [],
@@ -57,6 +68,8 @@ const Game = () => {
       seed,
       tryCount: 0,
       fellOff: false,
+      nudgeUsed: false,
+      initialSpeed: 0,
     };
   }, []);
 
@@ -75,8 +88,11 @@ const Game = () => {
     state.sliding = false;
     state.charging = false;
     state.chargePower = 0;
+    state.angle = DEFAULT_ANGLE;
     state.trail = [];
     state.fellOff = false;
+    state.nudgeUsed = false;
+    state.initialSpeed = 0;
   }, []);
 
   const playSound = useCallback((freq: number, duration: number) => {
@@ -105,26 +121,36 @@ const Game = () => {
     ctx.imageSmoothingEnabled = false;
     stateRef.current = initState();
 
-    const handlePress = (down: boolean) => {
-      pressedRef.current = down;
-    };
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         e.preventDefault();
-        handlePress(true);
+        pressedRef.current = true;
+      }
+      if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        leftRef.current = true;
+      }
+      if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        rightRef.current = true;
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         e.preventDefault();
-        handlePress(false);
+        pressedRef.current = false;
+      }
+      if (e.code === 'ArrowLeft') {
+        leftRef.current = false;
+      }
+      if (e.code === 'ArrowRight') {
+        rightRef.current = false;
       }
     };
 
-    const handleMouseDown = () => handlePress(true);
-    const handleMouseUp = () => handlePress(false);
+    const handleMouseDown = () => pressedRef.current = true;
+    const handleMouseUp = () => pressedRef.current = false;
 
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
@@ -133,6 +159,8 @@ const Game = () => {
 
     const update = (state: GameState) => {
       const pressed = pressedRef.current;
+      const leftPressed = leftRef.current;
+      const rightPressed = rightRef.current;
 
       // Start charging
       if (!state.flying && !state.sliding && pressed && !state.charging) {
@@ -141,8 +169,18 @@ const Game = () => {
         setFellOff(false);
       }
 
-      // Update charge power while holding
+      // Adjust angle while charging with arrow keys
       if (state.charging) {
+        if (leftPressed && state.angle < MAX_ANGLE) {
+          state.angle = Math.min(MAX_ANGLE, state.angle + ANGLE_STEP);
+        }
+        if (rightPressed && state.angle > MIN_ANGLE) {
+          state.angle = Math.max(MIN_ANGLE, state.angle - ANGLE_STEP);
+        }
+      }
+
+      // Update charge power while holding
+      if (state.charging && pressed) {
         const dt = Math.min(performance.now() - state.chargeStart, CHARGE_MS) / CHARGE_MS;
         state.chargePower = dt;
       }
@@ -151,17 +189,34 @@ const Game = () => {
       if (state.charging && !pressed) {
         state.charging = false;
         state.flying = true;
-        // Power gives speed 3-7, making max distance around 50-60px
-        const power = 3 + 4 * state.chargePower;
-        state.vx = power * Math.cos(ANGLE) + state.wind;
-        state.vy = -power * Math.sin(ANGLE);
+        const power = MIN_POWER + (MAX_POWER - MIN_POWER) * state.chargePower;
+        const angleRad = (state.angle * Math.PI) / 180;
+        state.vx = power * Math.cos(angleRad);
+        state.vy = -power * Math.sin(angleRad);
+        state.initialSpeed = power;
         state.trail = [];
         state.chargePower = 0;
+        state.nudgeUsed = false;
+      }
+
+      // Mid-air nudge (single use) - press SPACE while flying
+      if (state.flying && pressed && !state.nudgeUsed && state.initialSpeed > 0) {
+        const nudgePower = state.initialSpeed * 0.1;
+        // Apply nudge opposite to wind direction
+        state.vx -= Math.sign(state.wind) * nudgePower;
+        state.nudgeUsed = true;
+        playSound(660, 0.03);
       }
 
       // Physics - flying
       if (state.flying) {
         state.vy += BASE_GRAV;
+        
+        // Dynamic wind resistance: stronger effect at higher speeds
+        const speed = Math.sqrt(state.vx * state.vx + state.vy * state.vy);
+        const dynamicWind = state.wind * (speed / MAX_POWER);
+        state.vx += dynamicWind;
+
         state.px += state.vx;
         state.py += state.vy;
         
@@ -173,7 +228,7 @@ const Game = () => {
           state.flying = false;
           state.sliding = true;
           state.py = H - 2;
-          state.vx *= 0.6; // Reduce speed on impact
+          state.vx *= 0.6;
           state.vy = 0;
         }
       }
@@ -184,7 +239,6 @@ const Game = () => {
         state.vx *= friction;
         state.px += state.vx;
         
-        // Record slide trail
         state.trail.push(state.px, state.py);
 
         // Stop sliding when slow enough
@@ -194,22 +248,20 @@ const Game = () => {
           
           const landedAt = Math.round(state.px);
           
-          // Did they fall off the cliff?
           if (landedAt > CLIFF_EDGE) {
             state.fellOff = true;
             state.dist = 0;
             setFellOff(true);
-            playSound(220, 0.15); // Low buzz = fail
+            playSound(220, 0.15);
           } else {
             state.dist = Math.max(0, landedAt);
             setFellOff(false);
             
-            // New best?
             if (state.dist > state.best) {
               state.best = state.dist;
               localStorage.setItem('omf_best', state.best.toString());
               setBestScore(state.best);
-              playSound(880, 0.05); // High beep = success
+              playSound(880, 0.05);
             }
           }
           
@@ -217,12 +269,10 @@ const Game = () => {
 
           state.tryCount++;
           
-          // Change wind every 5 tries
           if (state.tryCount % 5 === 0) {
             nextWind(state);
           }
 
-          // Auto reset
           setTimeout(() => {
             if (stateRef.current) {
               resetPhysics(stateRef.current);
@@ -262,7 +312,7 @@ const Game = () => {
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, H - 1, CLIFF_EDGE + 1, 1);
       
-      // Cliff edge marker (danger zone)
+      // Cliff edge marker
       ctx.fillStyle = 'rgba(255,255,255,0.3)';
       ctx.fillRect(CLIFF_EDGE - 2, H - 1, 3, 1);
 
@@ -273,8 +323,7 @@ const Game = () => {
         ctx.fillRect(state.best - 1, H - 4, 3, 1);
       }
 
-      // Wind indicator - simple arrow at top
-      const windStrength = Math.abs(state.wind);
+      // Wind indicator
       const windDir = state.wind > 0 ? 1 : -1;
       ctx.fillStyle = 'rgba(255,255,255,0.5)';
       const arrowX = W / 2;
@@ -286,12 +335,12 @@ const Game = () => {
         ctx.fillRect(arrowX - 3, 2, 1, 1);
         ctx.fillRect(arrowX - 3, 4, 1, 1);
       }
-      // Dots showing strength
+      const windStrength = Math.abs(state.wind);
       for (let i = 0; i < Math.round(windStrength * 8); i++) {
         ctx.fillRect(arrowX + windDir * (5 + i * 2), 3, 1, 1);
       }
 
-      // Current trail
+      // Trail
       if (state.flying || state.trail.length > 0) {
         ctx.fillStyle = 'rgba(255,255,255,0.3)';
         for (let i = 0; i < state.trail.length; i += 2) {
@@ -303,7 +352,7 @@ const Game = () => {
         }
       }
 
-      // Player pixel (red if fell off)
+      // Player pixel
       if (state.fellOff) {
         ctx.fillStyle = '#f00';
       } else {
@@ -313,6 +362,23 @@ const Game = () => {
       const drawY = Math.max(0, Math.min(H - 1, Math.floor(state.py)));
       ctx.fillRect(drawX, drawY, 1, 1);
 
+      // Angle indicator while charging
+      if (state.charging) {
+        const angleRad = (state.angle * Math.PI) / 180;
+        const lineLen = 10;
+        const startX = state.px;
+        const startY = state.py;
+        const endX = startX + Math.cos(angleRad) * lineLen;
+        const endY = startY - Math.sin(angleRad) * lineLen;
+
+        ctx.strokeStyle = '#ff0';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+      }
+
       // Power bar while charging
       if (state.charging) {
         const barWidth = Math.floor(state.chargePower * (W - 8));
@@ -320,6 +386,12 @@ const Game = () => {
         ctx.fillRect(4, H - 8, W - 8, 2);
         ctx.fillStyle = '#fff';
         ctx.fillRect(4, H - 8, barWidth, 2);
+      }
+
+      // Nudge available indicator (yellow dot top-left when flying)
+      if (state.flying && !state.nudgeUsed) {
+        ctx.fillStyle = '#ff0';
+        ctx.fillRect(2, 2, 2, 2);
       }
     };
 
@@ -348,9 +420,13 @@ const Game = () => {
       <div className="text-center max-w-xs">
         <h1 className="text-xl font-bold text-foreground mb-2">One-More-Flick</h1>
         <p className="text-muted-foreground text-sm leading-relaxed">
-          Hold <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">SPACE</kbd> to charge, release to launch.
+          Hold <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">SPACE</kbd> to charge,{' '}
+          <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">←</kbd>
+          <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">→</kbd> to aim.
           <br />
-          <span className="text-foreground font-medium">Land as close to the edge as possible — but don't fall off!</span>
+          <span className="text-foreground font-medium">Land close to the edge — don't fall off!</span>
+          <br />
+          <span className="text-yellow-500 text-xs">Yellow dot = press SPACE mid-air for 1 nudge</span>
         </p>
       </div>
 
