@@ -4,13 +4,12 @@ const W = 64;
 const H = 64;
 const CLIFF_EDGE = 58;
 const BASE_GRAV = 0.4;
-const CHARGE_MS = 600;
-const MIN_POWER = 3;
-const MAX_POWER = 7;
-const DEFAULT_ANGLE = 35; // degrees
-const MIN_ANGLE = 10;
+const CHARGE_MS = 800;
+const MIN_POWER = 2;
+const MAX_POWER = 8;
+const MIN_ANGLE = 15;
 const MAX_ANGLE = 75;
-const ANGLE_STEP = 1.5;
+const OPTIMAL_ANGLE = 45; // sweet spot for max distance
 
 interface GameState {
   px: number;
@@ -38,8 +37,6 @@ const Game = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<GameState | null>(null);
   const pressedRef = useRef(false);
-  const leftRef = useRef(false);
-  const rightRef = useRef(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const animFrameRef = useRef<number>(0);
   const [bestScore, setBestScore] = useState(+(localStorage.getItem('omf_best') || '0'));
@@ -60,7 +57,7 @@ const Game = () => {
       charging: false,
       chargeStart: 0,
       chargePower: 0,
-      angle: DEFAULT_ANGLE,
+      angle: MIN_ANGLE,
       dist: 0,
       best,
       trail: [],
@@ -88,7 +85,7 @@ const Game = () => {
     state.sliding = false;
     state.charging = false;
     state.chargePower = 0;
-    state.angle = DEFAULT_ANGLE;
+    state.angle = MIN_ANGLE;
     state.trail = [];
     state.fellOff = false;
     state.nudgeUsed = false;
@@ -126,26 +123,12 @@ const Game = () => {
         e.preventDefault();
         pressedRef.current = true;
       }
-      if (e.code === 'ArrowLeft') {
-        e.preventDefault();
-        leftRef.current = true;
-      }
-      if (e.code === 'ArrowRight') {
-        e.preventDefault();
-        rightRef.current = true;
-      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         e.preventDefault();
         pressedRef.current = false;
-      }
-      if (e.code === 'ArrowLeft') {
-        leftRef.current = false;
-      }
-      if (e.code === 'ArrowRight') {
-        rightRef.current = false;
       }
     };
 
@@ -159,8 +142,6 @@ const Game = () => {
 
     const update = (state: GameState) => {
       const pressed = pressedRef.current;
-      const leftPressed = leftRef.current;
-      const rightPressed = rightRef.current;
 
       // Start charging
       if (!state.flying && !state.sliding && pressed && !state.charging) {
@@ -169,20 +150,12 @@ const Game = () => {
         setFellOff(false);
       }
 
-      // Adjust angle while charging with arrow keys
-      if (state.charging) {
-        if (leftPressed && state.angle < MAX_ANGLE) {
-          state.angle = Math.min(MAX_ANGLE, state.angle + ANGLE_STEP);
-        }
-        if (rightPressed && state.angle > MIN_ANGLE) {
-          state.angle = Math.max(MIN_ANGLE, state.angle - ANGLE_STEP);
-        }
-      }
-
-      // Update charge power while holding
+      // Update charge power AND angle while holding (both increase together!)
       if (state.charging && pressed) {
         const dt = Math.min(performance.now() - state.chargeStart, CHARGE_MS) / CHARGE_MS;
         state.chargePower = dt;
+        // Angle increases from MIN to MAX as you hold longer
+        state.angle = MIN_ANGLE + (MAX_ANGLE - MIN_ANGLE) * dt;
       }
 
       // Launch on release
@@ -362,10 +335,10 @@ const Game = () => {
       const drawY = Math.max(0, Math.min(H - 1, Math.floor(state.py)));
       ctx.fillRect(drawX, drawY, 1, 1);
 
-      // Angle indicator while charging
+      // Angle indicator while charging (rotating line like Olympic games)
       if (state.charging) {
         const angleRad = (state.angle * Math.PI) / 180;
-        const lineLen = 10;
+        const lineLen = 8 + state.chargePower * 6; // grows with power
         const startX = state.px;
         const startY = state.py;
         const endX = startX + Math.cos(angleRad) * lineLen;
@@ -377,15 +350,15 @@ const Game = () => {
         ctx.moveTo(startX, startY);
         ctx.lineTo(endX, endY);
         ctx.stroke();
-      }
 
-      // Power bar while charging
-      if (state.charging) {
-        const barWidth = Math.floor(state.chargePower * (W - 8));
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.fillRect(4, H - 8, W - 8, 2);
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(4, H - 8, barWidth, 2);
+        // Optimal angle marker (45°)
+        const optRad = (OPTIMAL_ANGLE * Math.PI) / 180;
+        ctx.fillStyle = 'rgba(0,255,0,0.4)';
+        ctx.fillRect(
+          startX + Math.cos(optRad) * 12 - 1,
+          startY - Math.sin(optRad) * 12 - 1,
+          2, 2
+        );
       }
 
       // Nudge available indicator (yellow dot top-left when flying)
@@ -420,9 +393,9 @@ const Game = () => {
       <div className="text-center max-w-xs">
         <h1 className="text-xl font-bold text-foreground mb-2">One-More-Flick</h1>
         <p className="text-muted-foreground text-sm leading-relaxed">
-          Hold <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">SPACE</kbd> to charge,{' '}
-          <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">←</kbd>
-          <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">→</kbd> to aim.
+          Hold <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">SPACE</kbd> — power &amp; angle rise together.
+          <br />
+          Release at <span className="text-green-500">45°</span> for max distance. Green dot = sweet spot.
           <br />
           <span className="text-foreground font-medium">Land close to the edge — don't fall off!</span>
           <br />
