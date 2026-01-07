@@ -54,16 +54,23 @@ const Game = () => {
   const pressedRef = useRef(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const animFrameRef = useRef<number>(0);
-  const [bestScore, setBestScore] = useState(+(localStorage.getItem('omf_best') || '0'));
-  const [zenoTarget, setZenoTarget] = useState(+(localStorage.getItem('omf_zeno_target') || String((CLIFF_EDGE + 0) / 2)));
+  const [bestScore, setBestScore] = useState(parseFloat(localStorage.getItem('omf_best') || '0'));
+  const [zenoTarget, setZenoTarget] = useState(parseFloat(localStorage.getItem('omf_zeno_target') || String(CLIFF_EDGE / 2)));
   const [zenoLevel, setZenoLevel] = useState(+(localStorage.getItem('omf_zeno_level') || '0'));
   const [lastDist, setLastDist] = useState<number | null>(null);
   const [fellOff, setFellOff] = useState(false);
 
+  // Format score with small decimals
+  const formatScore = (score: number) => {
+    const intPart = Math.floor(score);
+    const decPart = (score - intPart).toFixed(4).substring(2); // Get 4 decimals without "0."
+    return { int: intPart, dec: decPart };
+  };
+
   const initState = useCallback((): GameState => {
-    const best = +(localStorage.getItem('omf_best') || '0');
+    const best = parseFloat(localStorage.getItem('omf_best') || '0');
     const seed = +(localStorage.getItem('omf_seed') || '0');
-    const savedZenoTarget = +(localStorage.getItem('omf_zeno_target') || '0');
+    const savedZenoTarget = parseFloat(localStorage.getItem('omf_zeno_target') || '0');
     const savedZenoLevel = +(localStorage.getItem('omf_zeno_level') || '0');
     const zenoTarget = savedZenoTarget || (best + CLIFF_EDGE) / 2;
 
@@ -286,9 +293,11 @@ const Game = () => {
           state.sliding = false;
           state.vx = 0;
           
-          const landedAt = Math.round(state.px);
-          
-          if (landedAt > CLIFF_EDGE) {
+          // Granular float scoring - 4 decimal precision for Zeno's infinite subdivision
+          const landedAt = Math.round(state.px * 10000) / 10000;
+
+          if (landedAt >= CLIFF_EDGE) {
+            // The edge is UNREACHABLE - Zeno's paradox!
             state.fellOff = true;
             state.dist = 0;
             setFellOff(true);
@@ -340,7 +349,7 @@ const Game = () => {
         }
         
         // Fall off while sliding
-        if (state.px > CLIFF_EDGE && state.sliding) {
+        if (state.px >= CLIFF_EDGE && state.sliding) {
           state.sliding = false;
           state.fellOff = true;
           state.dist = 0;
@@ -627,14 +636,17 @@ const Game = () => {
         className="game-canvas cursor-pointer"
       />
 
-      <div className="flex gap-6 text-center">
+      <div className="flex gap-5 text-center">
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Last</p>
           <p className="text-2xl font-bold font-mono">
             {fellOff ? (
               <span className="text-destructive">FELL!</span>
             ) : lastDist !== null ? (
-              <span className="text-foreground">{lastDist}</span>
+              <span className="text-foreground">
+                {formatScore(lastDist).int}
+                <span className="text-sm text-muted-foreground">.{formatScore(lastDist).dec}</span>
+              </span>
             ) : (
               <span className="text-muted-foreground">-</span>
             )}
@@ -642,11 +654,17 @@ const Game = () => {
         </div>
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Best</p>
-          <p className="text-2xl font-bold text-primary font-mono">{bestScore}</p>
+          <p className="text-2xl font-bold text-primary font-mono">
+            {formatScore(bestScore).int}
+            <span className="text-sm text-muted-foreground">.{formatScore(bestScore).dec}</span>
+          </p>
         </div>
         <div>
           <p className="text-xs text-cyan-500 uppercase tracking-wide">Target</p>
-          <p className="text-2xl font-bold text-cyan-400 font-mono">{Math.round(zenoTarget)}</p>
+          <p className="text-2xl font-bold text-cyan-400 font-mono">
+            {formatScore(zenoTarget).int}
+            <span className="text-sm text-cyan-600">.{formatScore(zenoTarget).dec}</span>
+          </p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Zeno</p>
