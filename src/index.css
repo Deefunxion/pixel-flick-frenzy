@@ -104,4 +104,52 @@
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   cursor: pointer;
+  touch-action: none; /* Prevent scroll/zoom on touch */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Mobile responsive - Portrait */
+@media (max-width: 680px) {
+  .game-canvas {
+    width: 95vw;
+    height: 47.5vw; /* Maintain 2:1 aspect ratio */
+    max-width: 640px;
+    max-height: 320px;
+  }
+}
+
+/* Mobile responsive - Landscape */
+@media (max-height: 500px) and (orientation: landscape) {
+  .game-canvas {
+    width: auto;
+    height: 60vh;
+    aspect-ratio: 2 / 1;
+    max-width: 95vw;
+  }
+}
+
+/* Samsung Galaxy specific tweaks */
+@media (max-width: 420px) {
+  .game-canvas {
+    width: 100vw;
+    height: 50vw;
+  }
+}
+
+/* Mobile UI adjustments */
+@media (max-width: 500px) {
+  body {
+    padding: 0.5rem;
+  }
+}
+
+/* Prevent pull-to-refresh on mobile */
+html, body {
+  overscroll-behavior: none;
+}
+
+/* Viewport meta handled but prevent zoom on double-tap */
+* {
+  touch-action: manipulation;
 }

@@ -183,10 +183,22 @@ const Game = () => {
     const handleMouseDown = () => pressedRef.current = true;
     const handleMouseUp = () => pressedRef.current = false;
 
+    // Touch controls for mobile
+    const handleTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      pressedRef.current = true;
+    };
+    const handleTouchEnd = (e: TouchEvent) => {
+      e.preventDefault();
+      pressedRef.current = false;
+    };
+
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
     canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
 
     const update = (state: GameState) => {
       const pressed = pressedRef.current;
@@ -614,18 +626,21 @@ const Game = () => {
       document.removeEventListener('keyup', handleKeyUp);
       canvas.removeEventListener('mousedown', handleMouseDown);
       canvas.removeEventListener('mouseup', handleMouseUp);
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchend', handleTouchEnd);
       cancelAnimationFrame(animFrameRef.current);
     };
   }, [initState, resetPhysics, nextWind, playSound, spawnParticles, setBestScore, setLastDist, setZenoTarget, setZenoLevel]);
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <div className="text-center max-w-sm">
-        <h1 className="text-xl font-bold text-foreground mb-2">One-More-Flick</h1>
-        <p className="text-muted-foreground text-sm leading-relaxed">
-          Hold <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">SPACE</kbd> to charge. Release at <span className="text-green-500">45°</span> for best distance.
-          <br />
-          <span className="text-cyan-400">Chase the cyan target</span> — but the edge is forever out of reach.
+      <div className="text-center max-w-sm px-2">
+        <h1 className="text-lg sm:text-xl font-bold text-foreground mb-1 sm:mb-2">One-More-Flick</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
+          <span className="hidden sm:inline">Hold </span>
+          <kbd className="px-1 sm:px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">SPACE</kbd>
+          <span className="sm:hidden"> or TAP</span> to charge.
+          <span className="text-cyan-400"> Chase the target</span> — the edge is unreachable.
         </p>
       </div>
 
@@ -636,16 +651,16 @@ const Game = () => {
         className="game-canvas cursor-pointer"
       />
 
-      <div className="flex gap-5 text-center">
+      <div className="flex flex-wrap justify-center gap-3 sm:gap-5 text-center">
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Last</p>
-          <p className="text-2xl font-bold font-mono">
+          <p className="text-xl sm:text-2xl font-bold font-mono">
             {fellOff ? (
               <span className="text-destructive">FELL!</span>
             ) : lastDist !== null ? (
               <span className="text-foreground">
                 {formatScore(lastDist).int}
-                <span className="text-sm text-muted-foreground">.{formatScore(lastDist).dec}</span>
+                <span className="text-xs sm:text-sm text-muted-foreground">.{formatScore(lastDist).dec}</span>
               </span>
             ) : (
               <span className="text-muted-foreground">-</span>
@@ -654,27 +669,26 @@ const Game = () => {
         </div>
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Best</p>
-          <p className="text-2xl font-bold text-primary font-mono">
+          <p className="text-xl sm:text-2xl font-bold text-primary font-mono">
             {formatScore(bestScore).int}
-            <span className="text-sm text-muted-foreground">.{formatScore(bestScore).dec}</span>
+            <span className="text-xs sm:text-sm text-muted-foreground">.{formatScore(bestScore).dec}</span>
           </p>
         </div>
         <div>
           <p className="text-xs text-cyan-500 uppercase tracking-wide">Target</p>
-          <p className="text-2xl font-bold text-cyan-400 font-mono">
+          <p className="text-xl sm:text-2xl font-bold text-cyan-400 font-mono">
             {formatScore(zenoTarget).int}
-            <span className="text-sm text-cyan-600">.{formatScore(zenoTarget).dec}</span>
+            <span className="text-xs sm:text-sm text-cyan-600">.{formatScore(zenoTarget).dec}</span>
           </p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Zeno</p>
-          <p className="text-2xl font-bold text-yellow-400 font-mono">Lv.{zenoLevel}</p>
+          <p className="text-xl sm:text-2xl font-bold text-yellow-400 font-mono">Lv.{zenoLevel}</p>
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground text-center max-w-xs">
-        <span className="text-cyan-500">Zeno's Paradox:</span> The target is always halfway to the edge.
-        <br />Beat it, and it moves. The edge ({CLIFF_EDGE}) is unreachable.
+      <p className="text-xs text-muted-foreground text-center max-w-xs px-2">
+        <span className="text-cyan-500">Zeno's Paradox</span> — Target moves halfway to {CLIFF_EDGE} each level.
       </p>
     </div>
   );
