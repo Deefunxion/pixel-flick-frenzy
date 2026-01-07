@@ -34,6 +34,8 @@ interface GameState {
   angle: number;
   dist: number;
   best: number;
+  zenoTarget: number;
+  zenoLevel: number;
   trail: { x: number; y: number; age: number }[];
   wind: number;
   seed: number;
@@ -53,13 +55,18 @@ const Game = () => {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const animFrameRef = useRef<number>(0);
   const [bestScore, setBestScore] = useState(+(localStorage.getItem('omf_best') || '0'));
+  const [zenoTarget, setZenoTarget] = useState(+(localStorage.getItem('omf_zeno_target') || String((CLIFF_EDGE + 0) / 2)));
+  const [zenoLevel, setZenoLevel] = useState(+(localStorage.getItem('omf_zeno_level') || '0'));
   const [lastDist, setLastDist] = useState<number | null>(null);
   const [fellOff, setFellOff] = useState(false);
 
   const initState = useCallback((): GameState => {
     const best = +(localStorage.getItem('omf_best') || '0');
     const seed = +(localStorage.getItem('omf_seed') || '0');
-    
+    const savedZenoTarget = +(localStorage.getItem('omf_zeno_target') || '0');
+    const savedZenoLevel = +(localStorage.getItem('omf_zeno_level') || '0');
+    const zenoTarget = savedZenoTarget || (best + CLIFF_EDGE) / 2;
+
     return {
       px: LAUNCH_PAD_X,
       py: H - 6,
@@ -73,6 +80,8 @@ const Game = () => {
       angle: MIN_ANGLE,
       dist: 0,
       best,
+      zenoTarget,
+      zenoLevel: savedZenoLevel,
       trail: [],
       wind: (Math.sin(seed) * 0.08) - 0.02,
       seed,
@@ -287,12 +296,31 @@ const Game = () => {
           } else {
             state.dist = Math.max(0, landedAt);
             setFellOff(false);
-            
-            if (state.dist > state.best) {
+
+            // Zeno's Paradox scoring: chase the ever-moving target
+            if (state.dist >= state.zenoTarget) {
+              // Beat the Zeno target! Level up and set new target
+              state.zenoLevel++;
+              state.best = state.dist;
+              // New target is halfway between new best and the unreachable edge
+              state.zenoTarget = (state.best + CLIFF_EDGE) / 2;
+
+              localStorage.setItem('omf_best', state.best.toString());
+              localStorage.setItem('omf_zeno_target', state.zenoTarget.toString());
+              localStorage.setItem('omf_zeno_level', state.zenoLevel.toString());
+
+              setBestScore(state.best);
+              setZenoTarget(state.zenoTarget);
+              setZenoLevel(state.zenoLevel);
+              playSound(880, 0.08);
+              // Extra celebration sound for leveling up
+              setTimeout(() => playSound(1100, 0.05), 100);
+            } else if (state.dist > state.best) {
+              // Beat personal best but not the Zeno target
               state.best = state.dist;
               localStorage.setItem('omf_best', state.best.toString());
               setBestScore(state.best);
-              playSound(880, 0.05);
+              playSound(660, 0.05);
             }
           }
           
@@ -395,6 +423,18 @@ const Game = () => {
         ctx.fillStyle = '#fff';
         ctx.fillRect(state.best, H - 7, 1, 4);
         ctx.fillRect(state.best - 1, H - 7, 3, 1);
+      }
+
+      // Zeno Target marker - the ever-moving goal (pulsing cyan)
+      if (state.zenoTarget > 0 && state.zenoTarget <= CLIFF_EDGE) {
+        const zenoPulse = Math.sin(performance.now() / 150) * 0.3 + 0.7;
+        ctx.fillStyle = `rgba(0,255,255,${zenoPulse * 0.3})`;
+        ctx.fillRect(Math.floor(state.zenoTarget) - 2, H - 12, 5, 9);
+        ctx.fillStyle = `rgba(0,255,255,${zenoPulse * 0.8})`;
+        ctx.fillRect(Math.floor(state.zenoTarget), H - 10, 1, 7);
+        // Small arrow pointing down at target
+        ctx.fillRect(Math.floor(state.zenoTarget) - 1, H - 11, 3, 1);
+        ctx.fillRect(Math.floor(state.zenoTarget), H - 12, 1, 1);
       }
 
       // Wind indicator - clearer design with box
@@ -567,20 +607,16 @@ const Game = () => {
       canvas.removeEventListener('mouseup', handleMouseUp);
       cancelAnimationFrame(animFrameRef.current);
     };
-  }, [initState, resetPhysics, nextWind, playSound, spawnParticles, setBestScore, setLastDist]);
+  }, [initState, resetPhysics, nextWind, playSound, spawnParticles, setBestScore, setLastDist, setZenoTarget, setZenoLevel]);
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <div className="text-center max-w-xs">
+      <div className="text-center max-w-sm">
         <h1 className="text-xl font-bold text-foreground mb-2">One-More-Flick</h1>
         <p className="text-muted-foreground text-sm leading-relaxed">
-          Hold <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">SPACE</kbd> — power &amp; angle rise together.
+          Hold <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">SPACE</kbd> to charge. Release at <span className="text-green-500">45°</span> for best distance.
           <br />
-          Release at <span className="text-green-500">45°</span> for max distance. Green dot = sweet spot.
-          <br />
-          <span className="text-foreground font-medium">Land close to the edge — don't fall off!</span>
-          <br />
-          <span className="text-yellow-500 text-xs">Yellow dot = press SPACE mid-air for 1 nudge</span>
+          <span className="text-cyan-400">Chase the cyan target</span> — but the edge is forever out of reach.
         </p>
       </div>
 
@@ -591,7 +627,7 @@ const Game = () => {
         className="game-canvas cursor-pointer"
       />
 
-      <div className="flex gap-8 text-center">
+      <div className="flex gap-6 text-center">
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Last</p>
           <p className="text-2xl font-bold font-mono">
@@ -608,10 +644,19 @@ const Game = () => {
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Best</p>
           <p className="text-2xl font-bold text-primary font-mono">{bestScore}</p>
         </div>
+        <div>
+          <p className="text-xs text-cyan-500 uppercase tracking-wide">Target</p>
+          <p className="text-2xl font-bold text-cyan-400 font-mono">{Math.round(zenoTarget)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Zeno</p>
+          <p className="text-2xl font-bold text-yellow-400 font-mono">Lv.{zenoLevel}</p>
+        </div>
       </div>
-      
-      <p className="text-xs text-muted-foreground">
-        Wind changes every 5 tries. Max: {CLIFF_EDGE}
+
+      <p className="text-xs text-muted-foreground text-center max-w-xs">
+        <span className="text-cyan-500">Zeno's Paradox:</span> The target is always halfway to the edge.
+        <br />Beat it, and it moves. The edge ({CLIFF_EDGE}) is unreachable.
       </p>
     </div>
   );
