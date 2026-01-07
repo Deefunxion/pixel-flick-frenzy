@@ -1,15 +1,16 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-const W = 64;
-const H = 64;
-const CLIFF_EDGE = 58;
-const BASE_GRAV = 0.35;
-const CHARGE_MS = 900;
-const MIN_POWER = 2.5;
-const MAX_POWER = 7.5;
+const W = 160;
+const H = 80;
+const CLIFF_EDGE = 145;
+const BASE_GRAV = 0.15;
+const CHARGE_MS = 1800;
+const MIN_POWER = 2;
+const MAX_POWER = 6;
 const MIN_ANGLE = 20;
 const MAX_ANGLE = 70;
 const OPTIMAL_ANGLE = 45;
+const LAUNCH_PAD_X = 10;
 
 interface Particle {
   x: number;
@@ -60,8 +61,8 @@ const Game = () => {
     const seed = +(localStorage.getItem('omf_seed') || '0');
     
     return {
-      px: 4,
-      py: H - 2,
+      px: LAUNCH_PAD_X,
+      py: H - 6,
       vx: 0,
       vy: 0,
       flying: false,
@@ -73,7 +74,7 @@ const Game = () => {
       dist: 0,
       best,
       trail: [],
-      wind: (Math.sin(seed) * 0.35) - 0.15,
+      wind: (Math.sin(seed) * 0.08) - 0.02,
       seed,
       tryCount: 0,
       fellOff: false,
@@ -100,13 +101,13 @@ const Game = () => {
 
   const nextWind = useCallback((state: GameState) => {
     state.seed++;
-    state.wind = (Math.sin(state.seed) * 0.3) - 0.1;
+    state.wind = (Math.sin(state.seed) * 0.08) - 0.02;
     localStorage.setItem('omf_seed', state.seed.toString());
   }, []);
 
   const resetPhysics = useCallback((state: GameState) => {
-    state.px = 4;
-    state.py = H - 2;
+    state.px = LAUNCH_PAD_X;
+    state.py = H - 6;
     state.vx = 0;
     state.vy = 0;
     state.flying = false;
@@ -215,11 +216,9 @@ const Game = () => {
       // Physics - flying
       if (state.flying) {
         state.vy += BASE_GRAV;
-        
-        // Dynamic wind resistance: stronger effect at higher speeds
-        const speed = Math.sqrt(state.vx * state.vx + state.vy * state.vy);
-        const dynamicWind = state.wind * (speed / MAX_POWER);
-        state.vx += dynamicWind;
+
+        // Gentle wind effect (subtle, not game-breaking)
+        state.vx += state.wind * 0.3;
 
         state.px += state.vx;
         state.py += state.vy;
@@ -228,10 +227,10 @@ const Game = () => {
         state.trail.push({ x: state.px, y: state.py, age: 0 });
 
         // Touched ground - start sliding
-        if (state.py >= H - 2) {
+        if (state.py >= H - 4) {
           state.flying = false;
           state.sliding = true;
-          state.py = H - 2;
+          state.py = H - 4;
           state.vx *= 0.55;
           state.vy = 0;
           state.landingFrame = 8;
@@ -357,49 +356,80 @@ const Game = () => {
 
       // Ground with texture
       ctx.fillStyle = '#fff';
-      ctx.fillRect(0, H - 1, CLIFF_EDGE + 1, 1);
+      ctx.fillRect(0, H - 3, CLIFF_EDGE + 1, 1);
       // Ground texture dots
       ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      for (let x = 2; x < CLIFF_EDGE; x += 3) {
-        ctx.fillRect(x, H - 2, 1, 1);
+      for (let x = 2; x < CLIFF_EDGE; x += 4) {
+        ctx.fillRect(x, H - 4, 1, 1);
       }
-      
+
+      // Launch pad platform
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.fillRect(LAUNCH_PAD_X - 4, H - 5, 9, 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.fillRect(LAUNCH_PAD_X - 5, H - 4, 11, 1);
+      // Launch pad stripes
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.fillRect(LAUNCH_PAD_X - 2, H - 5, 1, 2);
+      ctx.fillRect(LAUNCH_PAD_X + 2, H - 5, 1, 2);
+
       // Cliff edge danger zone
       ctx.fillStyle = 'rgba(255,255,255,0.15)';
-      ctx.fillRect(CLIFF_EDGE - 4, H - 1, 5, 1);
+      ctx.fillRect(CLIFF_EDGE - 6, H - 3, 7, 1);
       // Animated danger stripes at edge
       const t = performance.now() / 200;
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 5; i++) {
         if ((Math.floor(t) + i) % 2 === 0) {
           ctx.fillStyle = 'rgba(255,255,255,0.5)';
-          ctx.fillRect(CLIFF_EDGE - 1, H - 3 - i, 1, 1);
+          ctx.fillRect(CLIFF_EDGE - 1, H - 5 - i, 1, 1);
         }
       }
+      // "EDGE" warning zone highlight
+      ctx.fillStyle = 'rgba(255,100,100,0.2)';
+      ctx.fillRect(CLIFF_EDGE - 10, H - 3, 11, 1);
 
       // Best distance marker with glow effect
       if (state.best > 0 && state.best <= CLIFF_EDGE) {
         ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.fillRect(state.best - 1, H - 6, 3, 5);
+        ctx.fillRect(state.best - 1, H - 8, 3, 5);
         ctx.fillStyle = '#fff';
-        ctx.fillRect(state.best, H - 5, 1, 4);
-        ctx.fillRect(state.best - 1, H - 5, 3, 1);
+        ctx.fillRect(state.best, H - 7, 1, 4);
+        ctx.fillRect(state.best - 1, H - 7, 3, 1);
       }
 
-      // Wind indicator with animation
+      // Wind indicator - clearer design with box
       const windDir = state.wind > 0 ? 1 : -1;
-      const windAnim = Math.sin(performance.now() / 150) * 0.5;
-      ctx.fillStyle = 'rgba(255,255,255,0.6)';
-      const arrowX = W / 2;
-      ctx.fillRect(arrowX - 4, 3, 8, 1);
-      // Arrow head
-      ctx.fillRect(arrowX + windDir * 3, 2, 2, 1);
-      ctx.fillRect(arrowX + windDir * 3, 4, 2, 1);
-      ctx.fillRect(arrowX + windDir * 4, 3, 1, 1);
-      // Wind particles
       const windStrength = Math.abs(state.wind);
-      for (let i = 0; i < Math.round(windStrength * 10); i++) {
-        const wobble = Math.sin(performance.now() / 100 + i) * 0.5;
-        ctx.fillRect(arrowX + windDir * (6 + i * 2) + windAnim, 3 + wobble, 1, 1);
+      const windAnim = Math.sin(performance.now() / 150) * 0.5;
+
+      // Wind box background
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      ctx.fillRect(W - 45, 2, 42, 12);
+
+      // Wind label area
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      // Arrow base
+      const arrowX = W - 24;
+      ctx.fillRect(arrowX - 8, 7, 16, 1);
+
+      // Arrow head pointing in wind direction
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      if (windDir > 0) {
+        ctx.fillRect(arrowX + 6, 6, 2, 1);
+        ctx.fillRect(arrowX + 6, 8, 2, 1);
+        ctx.fillRect(arrowX + 8, 7, 1, 1);
+      } else {
+        ctx.fillRect(arrowX - 8, 6, 2, 1);
+        ctx.fillRect(arrowX - 8, 8, 2, 1);
+        ctx.fillRect(arrowX - 9, 7, 1, 1);
+      }
+
+      // Wind strength dots (more dots = stronger wind)
+      const numDots = Math.max(1, Math.ceil(windStrength * 60));
+      for (let i = 0; i < Math.min(numDots, 5); i++) {
+        const wobble = Math.sin(performance.now() / 80 + i * 0.5) * 0.5;
+        ctx.fillStyle = `rgba(255,255,255,${0.5 + i * 0.1})`;
+        ctx.fillRect(arrowX + windDir * (10 + i * 3) + windAnim, 7 + wobble, 1, 1);
       }
 
       // Trail with fading
@@ -448,17 +478,17 @@ const Game = () => {
       // Power/angle indicator while charging
       if (state.charging) {
         const angleRad = (state.angle * Math.PI) / 180;
-        const lineLen = 6 + state.chargePower * 10;
+        const lineLen = 8 + state.chargePower * 15;
         const startX = state.px;
         const startY = state.py;
-        
+
         // Draw arc showing angle range
         ctx.fillStyle = 'rgba(255,255,255,0.15)';
         for (let a = MIN_ANGLE; a <= MAX_ANGLE; a += 5) {
           const rad = (a * Math.PI) / 180;
           ctx.fillRect(
-            startX + Math.cos(rad) * 10,
-            startY - Math.sin(rad) * 10,
+            startX + Math.cos(rad) * 14,
+            startY - Math.sin(rad) * 14,
             1, 1
           );
         }
@@ -480,26 +510,40 @@ const Game = () => {
         const optPulse = Math.sin(performance.now() / 100) * 0.3 + 0.7;
         ctx.fillStyle = `rgba(0,255,0,${optPulse * 0.8})`;
         ctx.fillRect(
-          startX + Math.cos(optRad) * 14 - 1,
-          startY - Math.sin(optRad) * 14 - 1,
+          startX + Math.cos(optRad) * 18 - 1,
+          startY - Math.sin(optRad) * 18 - 1,
           3, 3
         );
-        
-        // Power meter bar at bottom
+
+        // Power meter bar at TOP LEFT (away from launch pad)
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(4, 4, 40, 6);
         ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        ctx.fillRect(2, H - 4, 20, 2);
+        ctx.fillRect(5, 5, 38, 4);
         const powerColor = state.chargePower > 0.8 ? '#f00' : state.chargePower > 0.5 ? '#ff0' : '#0f0';
         ctx.fillStyle = powerColor;
-        ctx.fillRect(2, H - 4, Math.floor(state.chargePower * 20), 2);
+        ctx.fillRect(5, 5, Math.floor(state.chargePower * 38), 4);
+
+        // Angle indicator text area
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        const angleDisplay = Math.round(state.angle);
+        // Simple angle display - dots for tens
+        const tens = Math.floor(angleDisplay / 10);
+        for (let i = 0; i < tens; i++) {
+          ctx.fillRect(6 + i * 3, 12, 2, 2);
+        }
       }
 
-      // Nudge available indicator (animated)
+      // Nudge available indicator (animated) - bottom left, more prominent
       if (state.flying && !state.nudgeUsed) {
         const nudgePulse = Math.sin(performance.now() / 80) * 0.4 + 0.6;
+        // Larger, more visible indicator
+        ctx.fillStyle = 'rgba(255,255,0,0.2)';
+        ctx.fillRect(3, H - 14, 14, 10);
         ctx.fillStyle = `rgba(255,255,0,${nudgePulse})`;
-        ctx.fillRect(2, 2, 3, 3);
-        ctx.fillStyle = 'rgba(255,255,0,0.3)';
-        ctx.fillRect(1, 1, 5, 5);
+        ctx.fillRect(5, H - 12, 10, 6);
+        ctx.fillStyle = `rgba(255,255,0,${nudgePulse * 0.8})`;
+        ctx.fillRect(8, H - 10, 4, 2);
       }
       
       ctx.restore();

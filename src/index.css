@@ -99,8 +99,8 @@
 
 /* Game canvas - crisp nearest-neighbor scaling */
 .game-canvas {
-  width: 512px;
-  height: 512px;
+  width: 640px;
+  height: 320px;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   cursor: pointer;
