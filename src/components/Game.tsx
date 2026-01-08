@@ -8,16 +8,14 @@ import {
   OPTIMAL_ANGLE,
   W,
 } from '@/game/constants';
-import { DEFAULT_THEME_KEY, isThemeKey, THEMES } from '@/game/themes';
+import { THEME } from '@/game/themes';
 import {
   loadDailyStats,
   loadJson,
   loadNumber,
-  loadString,
   loadStringSet,
   saveJson,
   saveNumber,
-  saveString,
   todayLocalISODate,
 } from '@/game/storage';
 import {
@@ -74,11 +72,6 @@ const Game = () => {
   });
   const [newAchievement, setNewAchievement] = useState<string | null>(null);
   const [showMobileHint, setShowMobileHint] = useState(true);
-  const [currentTheme, setCurrentTheme] = useState(() => {
-    const saved = loadString('theme', DEFAULT_THEME_KEY, 'omf_theme');
-    return isThemeKey(saved) ? saved : DEFAULT_THEME_KEY;
-  });
-  const themeRef = useRef(THEMES[currentTheme]);
 
   const [dailyStats, setDailyStats] = useState(() => loadDailyStats());
   const dailyStatsRef = useRef(dailyStats);
@@ -103,23 +96,6 @@ const Game = () => {
 
   const [hudPx, setHudPx] = useState(LAUNCH_PAD_X);
   const [hudFlying, setHudFlying] = useState(false);
-
-  // Theme unlocks via achievements (minimal meta-progression)
-  const themeUnlockReason = useCallback(
-    (themeKey: string): string | null => {
-      if (themeKey === 'flipbook') return null; // Default theme
-      if (themeKey === 'synthwave') return achievements.has('first_zeno') ? null : 'Unlock: Beat your first target';
-      if (themeKey === 'noir') return achievements.has('level_5') ? null : 'Unlock: Reach Zeno Level 5';
-      if (themeKey === 'golf') return achievements.has('perfect_10') ? null : 'Unlock: 10 perfect landings';
-      return null;
-    },
-    [achievements],
-  );
-
-  useEffect(() => {
-    themeRef.current = THEMES[currentTheme];
-    saveString('theme', currentTheme);
-  }, [currentTheme]);
 
   useEffect(() => {
     saveJson('reduce_fx', reduceFx);
@@ -374,7 +350,7 @@ const Game = () => {
       if (state) {
         const now = performance.now();
         updateFrame(state, {
-          theme: themeRef.current,
+          theme: THEME,
           nowMs: now,
           pressed: pressedRef.current,
           audio,
@@ -383,7 +359,7 @@ const Game = () => {
           scheduleReset,
           getDailyStats: () => dailyStatsRef.current,
         });
-        renderFrame(ctx, state, themeRef.current, now);
+        renderFrame(ctx, state, THEME, now);
       }
       animFrameRef.current = requestAnimationFrame(loop);
     };
@@ -405,7 +381,7 @@ const Game = () => {
     };
   }, [initState, playZenoJingle, triggerHaptic]);
 
-  const theme = THEMES[currentTheme];
+  const theme = THEME;
 
   const distToTarget = Math.round((zenoTarget - hudPx) * 10000) / 10000;
   const distToEdge = Math.round((CLIFF_EDGE - hudPx) * 10000) / 10000;
@@ -417,36 +393,9 @@ const Game = () => {
       className={`flex flex-col items-center gap-2 ${isMobileRef.current ? 'p-1' : 'p-2'}`}
       style={{ background: `linear-gradient(180deg, ${theme.background} 0%, ${theme.horizon} 100%)`, minHeight: '100vh' }}
     >
-      {/* Compact header with theme picker */}
-      <div className="flex items-center justify-between w-full max-w-md px-2">
+      {/* Header */}
+      <div className="flex items-center justify-center w-full max-w-md px-2">
         <h1 className="text-sm font-bold" style={{ color: theme.accent1 }}>One-More-Flick</h1>
-        {/* Theme dots */}
-        <div className="flex gap-1">
-          {Object.entries(THEMES).map(([key, t]) => (
-            <button
-              key={key}
-              onClick={() => {
-                const reason = themeUnlockReason(key);
-                if (!reason) setCurrentTheme(key);
-              }}
-              className="w-4 h-4 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-              title={(() => {
-                const reason = themeUnlockReason(key);
-                return reason ? `${t.name} — ${reason}` : t.name;
-              })()}
-              aria-label={`Theme: ${t.name}`}
-              disabled={!!themeUnlockReason(key)}
-              style={{
-                background: t.accent1,
-                border: currentTheme === key ? '2px solid #fff' : '2px solid transparent',
-                boxShadow: currentTheme === key ? `0 0 6px ${t.accent1}` : 'none',
-                transform: currentTheme === key ? 'scale(1.2)' : 'scale(1)',
-                opacity: themeUnlockReason(key) ? 0.35 : 1,
-                cursor: themeUnlockReason(key) ? 'not-allowed' : 'pointer',
-              }}
-            />
-          ))}
-        </div>
       </div>
 
       {/* Controls microcopy */}
@@ -464,13 +413,9 @@ const Game = () => {
             height={H}
             className="game-canvas cursor-pointer touch-none select-none"
             style={{
-              boxShadow: currentTheme === 'flipbook'
-                ? '2px 3px 8px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.05)'
-                : `0 0 15px ${theme.accent1}60`,
-              border: currentTheme === 'flipbook'
-                ? '2px solid #374151'
-                : `1px solid ${theme.accent1}`,
-              borderRadius: currentTheme === 'flipbook' ? '2px' : '0',
+              boxShadow: '2px 3px 8px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.05)',
+              border: '2px solid #374151',
+              borderRadius: '2px',
               width: isMobileRef.current ? 'min(calc(100vw - 0.5rem), 520px)' : 'min(calc(100vw - 1rem), 480px)',
               height: 'auto',
               aspectRatio: `${W} / ${H}`,
