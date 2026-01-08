@@ -201,10 +201,48 @@ export function updateFrame(state: GameState, svc: GameServices) {
   if (state.screenFlash > 0) state.screenFlash *= 0.85;
   if (state.zoom > 1) state.zoom = 1 + (state.zoom - 1) * 0.92;
 
+  // Record zone detection - Peggle-style epic moment
+  if ((state.flying || state.sliding) && !state.epicMomentTriggered) {
+    const approachingBest = state.px > state.best - 30 && state.px < state.best + 5;
+    const willBeatRecord = state.px > state.best - 10 && state.vx > 0;
+
+    if (approachingBest && state.best > 50) {
+      state.recordZoneActive = true;
+      // Intensity ramps up as we get closer
+      const distToBest = Math.abs(state.px - state.best);
+      state.recordZoneIntensity = Math.max(0, 1 - distToBest / 30);
+
+      if (willBeatRecord && state.px > state.best - 3) {
+        state.recordZonePeak = true;
+        state.epicMomentTriggered = true;
+      }
+    } else {
+      state.recordZoneActive = false;
+      state.recordZoneIntensity = 0;
+    }
+  }
+
   if ((state.flying || state.sliding) && state.px > 90) {
     const edgeProximity = (state.px - 90) / (CLIFF_EDGE - 90);
-    state.slowMo = state.reduceFx ? 0 : Math.min(0.7, edgeProximity * 0.8);
-    state.zoom = state.reduceFx ? 1 : (1 + edgeProximity * 0.3);
+
+    // Base slowMo from edge proximity
+    let targetSlowMo = state.reduceFx ? 0 : Math.min(0.7, edgeProximity * 0.8);
+    let targetZoom = state.reduceFx ? 1 : (1 + edgeProximity * 0.3);
+
+    // Epic record zone amplification
+    if (state.recordZoneActive && !state.reduceFx) {
+      targetSlowMo = Math.min(0.95, targetSlowMo + state.recordZoneIntensity * 0.4);
+      targetZoom = Math.min(2.2, targetZoom + state.recordZoneIntensity * 0.8);
+    }
+
+    // Peak moment freeze
+    if (state.recordZonePeak && !state.reduceFx) {
+      targetSlowMo = 0.98;
+      targetZoom = 2.5;
+    }
+
+    state.slowMo = targetSlowMo;
+    state.zoom = targetZoom;
     state.zoomTargetX = state.px;
     state.zoomTargetY = state.py;
     audio.edgeWarning(edgeProximity);
