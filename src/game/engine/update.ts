@@ -256,13 +256,21 @@ export function updateFrame(state: GameState, svc: GameServices) {
     let targetSlowMo = state.reduceFx ? 0 : Math.min(0.7, edgeProximity * 0.8);
     let targetZoom = state.reduceFx ? 1 : (1 + edgeProximity * 0.3);
 
-    // Epic record zone amplification
+    // Record Zone Bullet Time - Two Levels
     if (state.recordZoneActive && !state.reduceFx) {
-      targetSlowMo = Math.min(0.95, targetSlowMo + state.recordZoneIntensity * 0.4);
-      targetZoom = Math.min(2.2, targetZoom + state.recordZoneIntensity * 0.8);
+      // Level 1: Instant bullet time when entering record zone
+      // Base slowMo jumps to 0.7 immediately
+      targetSlowMo = Math.max(0.7, targetSlowMo);
+      targetZoom = Math.max(1.5, targetZoom);
+
+      // Level 2: Peggle super heat when really going for record (intensity > 0.6)
+      if (state.recordZoneIntensity > 0.6) {
+        targetSlowMo = 0.85 + state.recordZoneIntensity * 0.1; // 0.91-0.95
+        targetZoom = 1.8 + state.recordZoneIntensity * 0.5;    // 2.1-2.3
+      }
     }
 
-    // Peak moment freeze
+    // Peak moment - maximum freeze
     if (state.recordZonePeak && !state.reduceFx) {
       targetSlowMo = 0.98;
       targetZoom = 2.5;
@@ -270,8 +278,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
     // Heartbeat audio during record zone
     if (state.recordZoneActive && !state.reduceFx) {
-      // Play heartbeat every ~400ms based on frame count
-      if (Math.floor(nowMs / 400) !== Math.floor((nowMs - 16) / 400)) {
+      // Play heartbeat every ~400ms based on frame count (faster when intense)
+      const heartbeatInterval = state.recordZoneIntensity > 0.6 ? 300 : 400;
+      if (Math.floor(nowMs / heartbeatInterval) !== Math.floor((nowMs - 16) / heartbeatInterval)) {
         audio.heartbeat(state.recordZoneIntensity);
       }
     }

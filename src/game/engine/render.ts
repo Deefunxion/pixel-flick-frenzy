@@ -3,6 +3,7 @@ import { CLIFF_EDGE, H, LAUNCH_PAD_X, MAX_ANGLE, MIN_ANGLE, OPTIMAL_ANGLE, W } f
 import type { GameState } from './types';
 import {
   drawStickFigure,
+  drawFailingStickFigure,
   drawRuledLines,
   drawPaperTexture,
   drawSpiralHoles,
@@ -270,16 +271,42 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
 
   const playerColor = state.fellOff ? COLORS.danger : COLORS.player;
 
-  drawStickFigure(
-    ctx,
-    state.px,
-    state.py,
-    playerColor,
-    nowMs,
-    playerState,
-    state.angle,
-    { vx: state.vx, vy: state.vy },
-  );
+  // Check for failure animation
+  if (state.failureAnimating && state.failureType && (state.failureType === 'tumble' || state.failureType === 'dive')) {
+    drawFailingStickFigure(
+      ctx,
+      state.px,
+      state.py,
+      playerColor,
+      nowMs,
+      state.failureType,
+      state.failureFrame,
+    );
+  } else {
+    drawStickFigure(
+      ctx,
+      state.px,
+      state.py,
+      playerColor,
+      nowMs,
+      playerState,
+      state.angle,
+      { vx: state.vx, vy: state.vy },
+    );
+  }
+
+  // Funny failure text
+  if (state.failureAnimating && state.failureFrame < 30) {
+    const texts = ['NOOO!', 'AHHH!', 'OOF!', 'YIKES!'];
+    const text = texts[Math.floor(state.seed % texts.length)];
+
+    ctx.fillStyle = COLORS.danger;
+    ctx.font = 'bold 14px "Comic Sans MS", cursive, sans-serif';
+    ctx.textAlign = 'center';
+
+    const bounce = Math.sin(state.failureFrame * 0.3) * 3;
+    ctx.fillText(text, state.px, state.py - 30 + bounce);
+  }
 
   // Charging UI - hand-drawn power bar
   if (state.charging) {

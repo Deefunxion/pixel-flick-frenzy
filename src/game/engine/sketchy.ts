@@ -275,6 +275,113 @@ export function drawStickFigure(
   ctx.stroke();
 }
 
+// Draw a failing/falling stick figure
+export function drawFailingStickFigure(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string,
+  _nowMs: number,
+  failureType: 'tumble' | 'dive',
+  frame: number,
+) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+
+  const spin = (frame * 0.3) % (Math.PI * 2);
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  if (failureType === 'tumble') {
+    // Spinning tumble
+    ctx.rotate(spin);
+
+    // Head
+    ctx.beginPath();
+    ctx.arc(0, -12, 5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Body
+    ctx.beginPath();
+    ctx.moveTo(0, -7);
+    ctx.lineTo(0, 5);
+    ctx.stroke();
+
+    // Arms (flailing)
+    const armWave = Math.sin(frame * 0.5) * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(-8, -2 + armWave * 5);
+    ctx.lineTo(0, -3);
+    ctx.lineTo(8, -2 - armWave * 5);
+    ctx.stroke();
+
+    // Legs (kicking)
+    ctx.beginPath();
+    ctx.moveTo(-6, 12 + armWave * 3);
+    ctx.lineTo(0, 5);
+    ctx.lineTo(6, 12 - armWave * 3);
+    ctx.stroke();
+
+  } else if (failureType === 'dive') {
+    // Superman dive pose
+    ctx.rotate(-Math.PI / 6);
+
+    // Head looking down
+    ctx.beginPath();
+    ctx.arc(0, -10, 5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Panic eyes
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(-2, -11, 1.5, 0, Math.PI * 2);
+    ctx.arc(2, -11, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Open mouth (O shape)
+    ctx.beginPath();
+    ctx.arc(0, -8, 2, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Body stretched
+    ctx.beginPath();
+    ctx.moveTo(0, -5);
+    ctx.lineTo(0, 10);
+    ctx.stroke();
+
+    // Arms reaching forward
+    ctx.beginPath();
+    ctx.moveTo(-10, -8);
+    ctx.lineTo(0, -3);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(10, -8);
+    ctx.lineTo(0, -3);
+    ctx.stroke();
+
+    // Legs trailing
+    ctx.beginPath();
+    ctx.moveTo(-5, 18);
+    ctx.lineTo(0, 10);
+    ctx.lineTo(5, 18);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+
+  // Sweat drops / panic lines
+  if (frame % 4 < 2) {
+    ctx.beginPath();
+    ctx.moveTo(x + 10, y - 15);
+    ctx.lineTo(x + 14, y - 20);
+    ctx.moveTo(x - 10, y - 15);
+    ctx.lineTo(x - 14, y - 20);
+    ctx.stroke();
+  }
+}
+
 // Draw a wind spiral/swirl
 export function drawWindSpiral(
   ctx: CanvasRenderingContext2D,
