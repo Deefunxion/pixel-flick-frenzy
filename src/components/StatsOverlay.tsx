@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { loadJson, loadStringSet } from '@/game/storage';
 import { ACHIEVEMENTS } from '@/game/engine/achievements';
+import { getPersonalLeaderboard, getCurrentPrecision, getMaxAtPrecision } from '@/game/leaderboard';
 import type { Stats } from '@/game/engine/types';
 import type { Theme } from '@/game/themes';
 
@@ -24,6 +25,9 @@ export function StatsOverlay({ theme, onClose }: StatsOverlayProps) {
     loadJson('history', [], 'omf_history')
   );
   const [achievements] = useState<Set<string>>(() => loadStringSet('achievements', 'omf_achievements'));
+  const [leaderboard] = useState(() => getPersonalLeaderboard());
+  const precision = getCurrentPrecision();
+  const maxDistance = getMaxAtPrecision(precision);
 
   const successRate = stats.totalThrows > 0
     ? Math.round((stats.successfulLandings / stats.totalThrows) * 100)
@@ -66,6 +70,34 @@ export function StatsOverlay({ theme, onClose }: StatsOverlayProps) {
           <StatBox label="Max Multiplier" value={`${stats.maxMultiplier.toFixed(1)}x`} theme={theme} />
           <StatBox label="Achievements" value={`${achievements.size}/${Object.keys(ACHIEVEMENTS).length}`} theme={theme} />
         </div>
+
+        {/* Personal Leaderboard */}
+        {leaderboard.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-sm font-bold mb-2" style={{ color: theme.accent2 }}>
+              Personal Leaderboard
+              <span className="text-xs font-normal opacity-70 ml-2">
+                (Precision: {precision} decimals)
+              </span>
+            </h3>
+            <div className="text-xs" style={{ color: theme.uiText }}>
+              {leaderboard.map((entry, i) => (
+                <div
+                  key={i}
+                  className="flex justify-between py-1"
+                  style={{ color: i === 0 ? theme.highlight : theme.uiText }}
+                >
+                  <span>#{i + 1}</span>
+                  <span className="font-mono">{entry.displayDistance}</span>
+                  <span className="opacity-50">{new Date(entry.date).toLocaleDateString()}</span>
+                </div>
+              ))}
+            </div>
+            <div className="text-xs mt-2 opacity-70" style={{ color: theme.uiText }}>
+              Next decimal unlocks at: {maxDistance.toFixed(precision)}
+            </div>
+          </div>
+        )}
 
         {/* Achievement list */}
         <div className="mb-4">

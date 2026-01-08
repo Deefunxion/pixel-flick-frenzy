@@ -17,6 +17,7 @@ import {
   todayLocalISODate,
   updateTodayHistory,
 } from '@/game/storage';
+import { addToPersonalLeaderboard } from '@/game/leaderboard';
 import { updateGoals, type SessionGoal } from '@/game/goals';
 import type { DailyStats } from '@/game/storage';
 import type { GameState } from './types';
@@ -440,6 +441,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
       // Update history tracking for stats page
       updateTodayHistory(state.best, state.stats.totalThrows, state.totalScore);
+
+      // Add to personal leaderboard (only meaningful distances)
+      if (state.dist > 50) {
+        addToPersonalLeaderboard(state.dist);
+      }
 
       // Session goals
       // score_250 increments handled by caller by passing score deltas; keep minimal here
