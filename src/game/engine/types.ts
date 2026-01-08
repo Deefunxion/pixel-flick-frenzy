@@ -79,4 +79,9 @@ export interface GameState {
   runTrail: GhostPoint[];
   // Settings
   reduceFx: boolean;
+  // Record zone camera
+  recordZoneActive: boolean;      // True when approaching personal best
+  recordZoneIntensity: number;    // 0-1 based on how close to beating record
+  recordZonePeak: boolean;        // True at moment of potential record break
+  epicMomentTriggered: boolean;   // Prevents repeat triggers per throw
 }

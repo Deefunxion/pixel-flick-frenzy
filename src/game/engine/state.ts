@@ -81,6 +81,10 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     bestTrail: loadJson('best_trail', [], 'omf_best_trail'),
     runTrail: [],
     reduceFx: params.reduceFx,
+    recordZoneActive: false,
+    recordZoneIntensity: 0,
+    recordZonePeak: false,
+    epicMomentTriggered: false,
   };
 }
 
@@ -106,6 +110,10 @@ export function resetPhysics(state: GameState) {
   state.currentMultiplier = 1;
   state.perfectLanding = false;
   state.runTrail = [];
+  state.recordZoneActive = false;
+  state.recordZoneIntensity = 0;
+  state.recordZonePeak = false;
+  state.epicMomentTriggered = false;
 }
 
 export function nextWind(state: GameState) {
