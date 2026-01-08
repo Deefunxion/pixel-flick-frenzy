@@ -162,10 +162,10 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.runTrail.push({ x: state.px, y: state.py });
     }
 
-    if (state.py >= H - 4) {
+    if (state.py >= H - 20) {
       state.flying = false;
       state.sliding = true;
-      state.py = H - 4;
+      state.py = H - 20;
 
       const impactVelocity = Math.abs(state.vy);
       state.screenShake = state.reduceFx ? 0 : Math.min(8, 2 + impactVelocity * 1.5);
@@ -221,7 +221,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
   // Sliding
   if (state.sliding) {
-    const friction = 0.88;
+    const friction = 0.92;
     state.vx *= friction;
     state.px += state.vx;
 
