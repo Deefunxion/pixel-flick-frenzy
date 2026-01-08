@@ -76,6 +76,7 @@ const Game = () => {
   const [showMobileHint, setShowMobileHint] = useState(true);
   const [showStats, setShowStats] = useState(false);
   const [dailyChallenge, setDailyChallenge] = useState<DailyChallenge>(() => loadDailyChallenge());
+  const [hotStreak, setHotStreakState] = useState({ current: 0, best: loadNumber('best_hot_streak', 0, 'omf_best_hot_streak') });
 
   const [dailyStats, setDailyStats] = useState(() => loadDailyStats());
   const dailyStatsRef = useRef(dailyStats);
@@ -202,6 +203,7 @@ const Game = () => {
       setSessionGoals,
       setDailyStats,
       setDailyChallenge,
+      setHotStreak: (current, best) => setHotStreakState({ current, best }),
     };
 
     const audio: GameAudio = {
@@ -555,6 +557,11 @@ const Game = () => {
         <span>{stats.totalThrows > 0 ? Math.round((stats.successfulLandings / stats.totalThrows) * 100) : 0}% success</span>
         <span>★ {achievements.size}/{Object.keys(ACHIEVEMENTS).length}</span>
         <span>Daily {dailyStats.bestDistance.toFixed(2)}</span>
+        {(hotStreak.current > 0 || hotStreak.best > 0) && (
+          <span style={{ color: hotStreak.current > 0 ? theme.highlight : theme.uiText }}>
+            {hotStreak.current > 0 ? '🔥' : ''} {hotStreak.current > 0 ? hotStreak.current : hotStreak.best} streak
+          </span>
+        )}
       </div>
 
       {/* Session goals */}

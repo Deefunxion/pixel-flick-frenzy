@@ -88,4 +88,7 @@ export interface GameState {
   failureAnimating: boolean;
   failureFrame: number;
   failureType: 'tumble' | 'dive' | 'splat' | null;
+  // Hot streak (consecutive 419+ throws)
+  hotStreak: number;
+  bestHotStreak: number;
 }

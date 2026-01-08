@@ -56,6 +56,7 @@ export type GameUI = {
   setSessionGoals: (updater: (prev: SessionGoal[]) => SessionGoal[]) => void;
   setDailyStats: (v: DailyStats) => void;
   setDailyChallenge: (v: DailyChallenge) => void;
+  setHotStreak: (current: number, best: number) => void;
 };
 
 export type GameServices = {
@@ -452,6 +453,18 @@ export function updateFrame(state: GameState, svc: GameServices) {
       // Update daily challenge
       const updatedChallenge = updateDailyChallenge(state.dist, state.lastMultiplier, state.fellOff);
       ui.setDailyChallenge(updatedChallenge);
+
+      // Hot streak tracking (consecutive 419+ throws)
+      if (!state.fellOff && state.dist >= 419) {
+        state.hotStreak++;
+        if (state.hotStreak > state.bestHotStreak) {
+          state.bestHotStreak = state.hotStreak;
+          saveNumber('best_hot_streak', state.bestHotStreak);
+        }
+      } else {
+        state.hotStreak = 0;
+      }
+      ui.setHotStreak(state.hotStreak, state.bestHotStreak);
 
       // Session goals
       // score_250 increments handled by caller by passing score deltas; keep minimal here

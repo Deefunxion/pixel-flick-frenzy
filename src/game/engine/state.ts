@@ -88,6 +88,8 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     failureAnimating: false,
     failureFrame: 0,
     failureType: null,
+    hotStreak: 0,
+    bestHotStreak: loadNumber('best_hot_streak', 0, 'omf_best_hot_streak'),
   };
 }
 
