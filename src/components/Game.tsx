@@ -1463,6 +1463,11 @@ const Game = () => {
         <span>★ {achievements.size}/{Object.keys(ACHIEVEMENTS).length}</span>
       </div>
 
+      {/* Game info */}
+      <p className="text-[9px] text-center max-w-xs opacity-60" style={{ color: theme.uiText }}>
+        Hold SPACE to charge, release to flick. Get as close to 145 as possible without falling off. Beat the target to level up!
+      </p>
+
       {/* Achievement popup */}
       {newAchievement && (
         <div
