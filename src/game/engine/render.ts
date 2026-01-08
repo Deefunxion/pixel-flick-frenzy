@@ -85,19 +85,6 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     }
   }
 
-  // Launch pad marker - hand-drawn arrow
-  const padX = LAUNCH_PAD_X + 30;
-  drawHandCircle(ctx, padX, groundY - 8, 6, COLORS.accent1, 2, nowMs, false);
-  // Small arrow pointing right
-  ctx.strokeStyle = COLORS.accent1;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(padX + 8, groundY - 8);
-  ctx.lineTo(padX + 18, groundY - 8);
-  ctx.lineTo(padX + 14, groundY - 12);
-  ctx.moveTo(padX + 18, groundY - 8);
-  ctx.lineTo(padX + 14, groundY - 4);
-  ctx.stroke();
 
   // Cliff edge - jagged hand-drawn line going down
   const edgeX = CLIFF_EDGE;

@@ -1,0 +1,29 @@
+{
+	"nodes":[
+		{"id":"backlog","type":"group","x":0,"y":350,"width":400,"height":490,"color":"0","label":"Future Backlog"},
+		{"id":"phase1","type":"group","x":500,"y":-100,"width":400,"height":300,"color":"6","label":"Phase 1: Synthwave Visuals"},
+		{"id":"phase2","type":"group","x":500,"y":250,"width":400,"height":300,"color":"5","label":"Phase 2: Cinematic Effects"},
+		{"id":"phase4","type":"group","x":1000,"y":200,"width":400,"height":300,"color":"4","label":"Phase 4: Audio"},
+		{"id":"phase5","type":"group","x":1500,"y":50,"width":400,"height":300,"color":"3","label":"Phase 5: Meta Progression"},
+		{"id":"core","type":"group","x":0,"y":0,"width":400,"height":270,"color":"2","label":"CORE (Complete)"},
+		{"id":"phase3","type":"group","x":1000,"y":-100,"width":400,"height":250,"color":"2","label":"Phase 3: Risk/Reward"},
+		{"id":"core-mechanics","type":"text","text":"# v1.0 Complete\n- Zeno's Paradox scoring\n- 4-decimal precision\n- Mobile touch controls\n- Physics (gravity, wind, nudge)\n- GitHub Pages deploy","x":20,"y":40,"width":360,"height":210},
+		{"id":"phase1-items","type":"text","text":"## Visual Overhaul\n- [x] Neon color palette\n- [x] Perspective grid background\n- [x] Parallax starfield\n- [x] Glow effects\n- [x] Trail color change on target pass","x":520,"y":-60,"width":360,"height":240,"color":"4"},
+		{"id":"backlog-items","type":"text","text":"## Ideas for Future Sessions\n*Add new brainstorming ideas here*\n\n- (empty)","x":20,"y":390,"width":360,"height":390},
+		{"id":"principles","type":"text","text":"# Design Principles\n1. 145 is **forever unreachable**\n2. The limitation IS the design\n3. Juice everything\n4. Mobile-first\n5. Progress never resets","x":0,"y":-280,"width":400,"height":230,"color":"6"},
+		{"id":"phase3-items","type":"text","text":"## Scoring Depth\n- [x] Edge proximity multiplier\n- [x] Perfect Zeno landing bonus\n- [x] Multiplier UI display\n- [x] Risk zone indicator","x":1020,"y":-60,"width":360,"height":190,"color":"4"},
+		{"id":"phase4-items","type":"text","text":"## Synthwave Soundscape\n- [x] Charge-up tone (tempting)\n- [x] Zeno level-up jingle\n- [x] Wind ambient whoosh\n- [x] Landing impact sounds\n- [x] Edge warning tension","x":1020,"y":240,"width":360,"height":240,"color":"4"},
+		{"id":"phase5-items","type":"text","text":"## Long-term Engagement\n- [x] Achievements system\n- [x] Statistics tracking\n- [x] Daily challenge (fixed seed)\n- [x] Persistent ever-increasing score","x":1520,"y":90,"width":360,"height":240,"color":"4"},
+		{"id":"phase2-items","type":"text","text":"## Juice & Impact\n- [x] Slow-mo zoom (>90 throws)\n- [x] Screen flash (level-up)\n- [x] Celebration particles\n- [x] Enhanced screen shake\n- [x] Edge danger visuals","x":520,"y":270,"width":360,"height":240,"color":"4"}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"core","fromSide":"right","toNode":"phase1","toSide":"left"},
+		{"id":"e2","fromNode":"core","fromSide":"right","toNode":"phase2","toSide":"left"},
+		{"id":"e3","fromNode":"phase1","fromSide":"right","toNode":"phase3","toSide":"left"},
+		{"id":"e4","fromNode":"phase2","fromSide":"right","toNode":"phase4","toSide":"left"},
+		{"id":"e5","fromNode":"phase3","fromSide":"right","toNode":"phase5","toSide":"left"},
+		{"id":"e6","fromNode":"phase4","fromSide":"right","toNode":"phase5","toSide":"left"},
+		{"id":"e7","fromNode":"backlog","fromSide":"top","toNode":"phase1","toSide":"bottom","label":"promote"}
+	],
+	"metadata":{"project":"One-More-Flick","version":"1.0","lastBrainstorm":"Session #2","created":"2026-01-08"}
+}
