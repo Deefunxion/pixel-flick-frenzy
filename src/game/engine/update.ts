@@ -196,6 +196,29 @@ export function updateFrame(state: GameState, svc: GameServices) {
     return p.life > 0;
   });
 
+  // Failure animation update
+  if (state.failureAnimating) {
+    state.failureFrame++;
+
+    // Animate falling off the edge
+    if (state.failureType === 'tumble') {
+      state.px += 1;
+      state.py += state.failureFrame * 0.5;
+      // Spawn occasional particles
+      if (state.failureFrame % 5 === 0) {
+        spawnParticles(state, state.px, state.py, 2, 1, theme.danger);
+      }
+    } else if (state.failureType === 'dive') {
+      state.px += 2;
+      state.py += state.failureFrame * 0.8;
+    }
+
+    // End animation after falling off screen
+    if (state.py > H + 50) {
+      state.failureAnimating = false;
+    }
+  }
+
   if (state.screenShake > 0) state.screenShake *= 0.8;
   if (state.landingFrame > 0) state.landingFrame--;
 
@@ -299,6 +322,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
         ui.setFellOff(true);
         ui.setLastMultiplier(0);
         ui.setPerfectLanding(false);
+
+        // Trigger comedic failure
+        state.failureAnimating = true;
+        state.failureFrame = 0;
+        state.failureType = Math.random() > 0.5 ? 'tumble' : 'dive';
         audio.tone(220, 0.15);
       } else {
         state.dist = Math.max(0, landedAt);
@@ -410,13 +438,17 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.fellOff = true;
       state.dist = 0;
       ui.setFellOff(true);
-      audio.tone(220, 0.15);
-      ui.setLastDist(null);
 
+      // Comedic failure
+      state.failureAnimating = true;
+      state.failureFrame = 0;
+      state.failureType = state.vx > 2 ? 'dive' : 'tumble';
+      audio.tone(220, 0.15);
+
+      ui.setLastDist(null);
       state.tryCount++;
       if (state.tryCount % 5 === 0) nextWind(state);
-
-      svc.scheduleReset(1200);
+      svc.scheduleReset(2000); // Longer delay for animation
     }
   }
 }
