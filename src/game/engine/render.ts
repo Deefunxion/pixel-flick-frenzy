@@ -436,8 +436,9 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   }
 
   // Record zone vignette and visual effects
-  if (state.recordZoneActive && !state.reduceFx) {
-    const intensity = state.recordZoneIntensity;
+  if ((state.recordZoneActive || state.epicMomentTriggered) && !state.reduceFx) {
+    const intensity = state.recordZoneIntensity || 1;
+    const isFailing = state.fellOff || state.failureAnimating;
 
     // Vignette effect (darker edges)
     const gradient = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W * 0.7);
@@ -447,18 +448,28 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, W, H);
 
-    // Pulsing border glow
+    // Pulsing border glow - gold for success, red for failure
     const pulse = Math.sin(nowMs / 100) * 0.5 + 0.5;
-    ctx.strokeStyle = `rgba(255, 215, 0, ${intensity * pulse * 0.8})`;
+    if (isFailing) {
+      ctx.strokeStyle = `rgba(220, 20, 60, ${pulse * 0.9})`;
+    } else {
+      ctx.strokeStyle = `rgba(255, 215, 0, ${intensity * pulse * 0.8})`;
+    }
     ctx.lineWidth = 4 + intensity * 4;
     ctx.strokeRect(2, 2, W - 4, H - 4);
 
-    // "RECORD ZONE" text when intensity high
-    if (intensity > 0.5) {
+    // Text display - "RECORD ZONE" or "FAIL!"
+    ctx.font = 'bold 16px "Comic Sans MS", cursive, sans-serif';
+    ctx.textAlign = 'center';
+    const textPulse = Math.sin(nowMs / 150) * 2;
+
+    if (isFailing) {
+      // FAIL! text in bloody red
+      ctx.fillStyle = 'rgba(220, 20, 60, 1)';
+      ctx.fillText('FAIL!', W / 2, 25 + textPulse);
+    } else if (intensity > 0.5) {
+      // RECORD ZONE text in celebratory gold
       ctx.fillStyle = `rgba(255, 215, 0, ${(intensity - 0.5) * 2})`;
-      ctx.font = 'bold 16px "Comic Sans MS", cursive, sans-serif';
-      ctx.textAlign = 'center';
-      const textPulse = Math.sin(nowMs / 150) * 2;
       ctx.fillText('RECORD ZONE', W / 2, 25 + textPulse);
     }
   }
@@ -817,13 +828,18 @@ function renderClassicFrame(ctx: CanvasRenderingContext2D, state: GameState, COL
   }
 
   // Record zone vignette (classic theme)
-  if (state.recordZoneActive && !state.reduceFx) {
-    const intensity = state.recordZoneIntensity;
+  if ((state.recordZoneActive || state.epicMomentTriggered) && !state.reduceFx) {
+    const intensity = state.recordZoneIntensity || 1;
+    const isFailing = state.fellOff || state.failureAnimating;
 
-    // Gold border pulsing
+    // Border pulsing - gold for success, red for failure
     const pulse = Math.floor(nowMs / 80) % 2;
     if (pulse) {
-      ctx.fillStyle = `rgba(255, 215, 0, ${intensity * 0.6})`;
+      if (isFailing) {
+        ctx.fillStyle = `rgba(220, 20, 60, 0.8)`;
+      } else {
+        ctx.fillStyle = `rgba(255, 215, 0, ${intensity * 0.6})`;
+      }
       ctx.fillRect(0, 0, W, 2);
       ctx.fillRect(0, H - 2, W, 2);
       ctx.fillRect(0, 0, 2, H);

@@ -27,6 +27,8 @@ import {
   playWhoosh,
   playHeartbeat,
   playRecordBreak,
+  playFailureSound,
+  playWilhelmScream,
   resumeIfSuspended,
   startChargeTone,
   stopChargeTone,
@@ -233,6 +235,8 @@ const Game = () => {
       zenoJingle: () => playZenoJingle(),
       heartbeat: (i) => playHeartbeat(audioRefs.current, audioSettingsRef.current, i),
       recordBreak: () => playRecordBreak(audioRefs.current, audioSettingsRef.current),
+      failureSound: (type) => playFailureSound(audioRefs.current, audioSettingsRef.current, type),
+      wilhelmScream: () => playWilhelmScream(audioRefs.current, audioSettingsRef.current),
     };
 
     const scheduleReset = (ms: number) => {

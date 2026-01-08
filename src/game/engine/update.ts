@@ -34,6 +34,8 @@ export type GameAudio = {
   zenoJingle: () => void;
   heartbeat: (intensity: number) => void;
   recordBreak: () => void;
+  failureSound: (type: 'tumble' | 'dive' | 'splat') => void;
+  wilhelmScream: () => void;
 };
 
 export type GameUI = {
@@ -327,7 +329,13 @@ export function updateFrame(state: GameState, svc: GameServices) {
         state.failureAnimating = true;
         state.failureFrame = 0;
         state.failureType = Math.random() > 0.5 ? 'tumble' : 'dive';
-        audio.tone(220, 0.15);
+
+        // 10% chance of Wilhelm scream easter egg
+        if (Math.random() < 0.1) {
+          audio.wilhelmScream();
+        } else {
+          audio.failureSound(state.failureType);
+        }
       } else {
         state.dist = Math.max(0, landedAt);
         ui.setFellOff(false);
@@ -443,7 +451,13 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.failureAnimating = true;
       state.failureFrame = 0;
       state.failureType = state.vx > 2 ? 'dive' : 'tumble';
-      audio.tone(220, 0.15);
+
+      // 10% chance of Wilhelm scream easter egg
+      if (Math.random() < 0.1) {
+        audio.wilhelmScream();
+      } else {
+        audio.failureSound(state.failureType);
+      }
 
       ui.setLastDist(null);
       state.tryCount++;
