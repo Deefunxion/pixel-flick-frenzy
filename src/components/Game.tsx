@@ -12,23 +12,97 @@ const MAX_ANGLE = 70;
 const OPTIMAL_ANGLE = 45;
 const LAUNCH_PAD_X = 10;
 
-// Synthwave color palette
-const COLORS = {
-  background: '#0a0014',
-  horizon: '#1a0033',
-  gridPrimary: '#ff00ff',
-  gridSecondary: '#8800aa',
-  neonPink: '#ff0080',
-  neonCyan: '#00ffff',
-  neonPurple: '#bf00ff',
-  neonMagenta: '#ff00aa',
-  neonYellow: '#ffff00',
-  player: '#00ffff',
-  playerGlow: 'rgba(0,255,255,0.6)',
-  trailNormal: '#ff0080',
-  trailPastTarget: '#00ffff',
-  star: '#ffffff',
+// Theme definitions
+interface Theme {
+  name: string;
+  background: string;
+  backgroundGradientEnd: string;
+  horizon: string;
+  gridPrimary: string;
+  gridSecondary: string;
+  accent1: string;      // Primary accent (was neonPink)
+  accent2: string;      // Secondary accent (was neonCyan)
+  accent3: string;      // Tertiary accent (was neonPurple)
+  accent4: string;      // Quaternary accent (was neonMagenta)
+  highlight: string;    // Highlight color (was neonYellow)
+  player: string;
+  playerGlow: string;
+  trailNormal: string;
+  trailPastTarget: string;
+  star: string;
+  danger: string;
+  uiBg: string;
+  uiText: string;
+}
+
+const THEMES: Record<string, Theme> = {
+  synthwave: {
+    name: 'Synthwave',
+    background: '#0a0014',
+    backgroundGradientEnd: '#1a0044',
+    horizon: '#1a0033',
+    gridPrimary: '#ff00ff',
+    gridSecondary: '#8800aa',
+    accent1: '#ff0080',
+    accent2: '#00ffff',
+    accent3: '#bf00ff',
+    accent4: '#ff00aa',
+    highlight: '#ffff00',
+    player: '#00ffff',
+    playerGlow: 'rgba(0,255,255,0.6)',
+    trailNormal: '#ff0080',
+    trailPastTarget: '#00ffff',
+    star: '#ffffff',
+    danger: '#ff0040',
+    uiBg: 'rgba(0,0,0,0.6)',
+    uiText: '#ffffff',
+  },
+  noir: {
+    name: 'Dark Noir',
+    background: '#0a0a0a',
+    backgroundGradientEnd: '#1a1a1a',
+    horizon: '#151515',
+    gridPrimary: '#333333',
+    gridSecondary: '#222222',
+    accent1: '#ff4444',      // Blood red accents
+    accent2: '#888888',      // Silver/gray
+    accent3: '#666666',      // Dark gray
+    accent4: '#aa4444',      // Muted red
+    highlight: '#ffffff',    // Pure white highlights
+    player: '#ffffff',       // White player
+    playerGlow: 'rgba(255,255,255,0.4)',
+    trailNormal: '#666666',
+    trailPastTarget: '#ff4444',
+    star: '#444444',         // Dim stars
+    danger: '#ff2222',
+    uiBg: 'rgba(0,0,0,0.8)',
+    uiText: '#cccccc',
+  },
+  golf: {
+    name: 'Golf Classic',
+    background: '#0a1a0a',
+    backgroundGradientEnd: '#1a3a1a',
+    horizon: '#2a4a2a',
+    gridPrimary: '#3a6a3a',
+    gridSecondary: '#2a5a2a',
+    accent1: '#44aa44',      // Grass green
+    accent2: '#ffffff',      // Ball white
+    accent3: '#88cc88',      // Light green
+    accent4: '#66aa66',      // Medium green
+    highlight: '#ffdd44',    // Gold/flag yellow
+    player: '#ffffff',       // Golf ball white
+    playerGlow: 'rgba(255,255,255,0.5)',
+    trailNormal: '#88cc88',
+    trailPastTarget: '#ffdd44',
+    star: '#aaddaa',         // Pale green stars
+    danger: '#cc4444',       // Red hazard
+    uiBg: 'rgba(20,40,20,0.8)',
+    uiText: '#ccffcc',
+  },
 };
+
+// Current theme reference (updated by state)
+let COLORS = THEMES.synthwave;
 
 interface Star {
   x: number;
@@ -142,6 +216,16 @@ const Game = () => {
   });
   const [newAchievement, setNewAchievement] = useState<string | null>(null);
   const [showMobileHint, setShowMobileHint] = useState(true);
+  const [currentTheme, setCurrentTheme] = useState(() => {
+    const saved = localStorage.getItem('omf_theme');
+    return saved && THEMES[saved] ? saved : 'synthwave';
+  });
+
+  // Update COLORS reference when theme changes
+  useEffect(() => {
+    COLORS = THEMES[currentTheme];
+    localStorage.setItem('omf_theme', currentTheme);
+  }, [currentTheme]);
 
   // Format score with small decimals
   const formatScore = (score: number) => {
@@ -228,14 +312,14 @@ const Game = () => {
         vy: -Math.random() * spread * 0.8,
         life: 1,
         maxLife: 15 + Math.random() * 15,
-        color: color || COLORS.neonPink,
+        color: color || COLORS.accent1,
       });
     }
   }, []);
 
   // Phase 2: Celebration burst for Zeno level-up
   const spawnCelebration = useCallback((state: GameState, x: number, y: number) => {
-    const colors = [COLORS.neonCyan, COLORS.neonPink, COLORS.neonYellow, COLORS.neonMagenta, COLORS.neonPurple];
+    const colors = [COLORS.accent2, COLORS.accent1, COLORS.highlight, COLORS.accent4, COLORS.accent3];
     for (let i = 0; i < 30; i++) {
       const angle = (i / 30) * Math.PI * 2;
       const speed = 1.5 + Math.random() * 2;
@@ -637,7 +721,7 @@ const Game = () => {
           state.landingFrame = 8;
           // More particles for harder impacts
           const particleCount = Math.floor(4 + impactVelocity * 2);
-          spawnParticles(state, state.px, state.py, particleCount, 1.5 + impactVelocity * 0.3, COLORS.neonMagenta);
+          spawnParticles(state, state.px, state.py, particleCount, 1.5 + impactVelocity * 0.3, COLORS.accent4);
           state.vx *= 0.55;
           state.vy = 0;
           // Phase 4: Impact sound varies with velocity
@@ -705,7 +789,7 @@ const Game = () => {
 
         // Spawn dust while sliding fast
         if (Math.abs(state.vx) > 0.5 && Math.random() > 0.5) {
-          spawnParticles(state, state.px, state.py, 1, 0.5, COLORS.neonPink);
+          spawnParticles(state, state.px, state.py, 1, 0.5, COLORS.accent1);
         }
 
         const pastTarget = state.px >= state.zenoTarget;
@@ -873,7 +957,7 @@ const Game = () => {
       const gradient = ctx.createLinearGradient(0, 0, 0, H);
       gradient.addColorStop(0, COLORS.background);
       gradient.addColorStop(0.5, COLORS.horizon);
-      gradient.addColorStop(1, '#1a0044');
+      gradient.addColorStop(1, COLORS.backgroundGradientEnd);
       ctx.fillStyle = gradient;
       ctx.fillRect(-2, -2, W + 4, H + 4);
 
@@ -923,7 +1007,7 @@ const Game = () => {
       // Main ground line with glow
       ctx.fillStyle = 'rgba(255,0,128,0.3)';
       ctx.fillRect(0, H - 5, CLIFF_EDGE + 1, 3);
-      ctx.fillStyle = COLORS.neonPink;
+      ctx.fillStyle = COLORS.accent1;
       ctx.fillRect(0, H - 3, CLIFF_EDGE + 1, 1);
       ctx.fillStyle = 'rgba(255,0,128,0.5)';
       ctx.fillRect(0, H - 2, CLIFF_EDGE + 1, 2);
@@ -931,10 +1015,10 @@ const Game = () => {
       // === LAUNCH PAD (Neon Cyan Platform) ===
       ctx.fillStyle = 'rgba(0,255,255,0.2)';
       ctx.fillRect(LAUNCH_PAD_X - 5, H - 7, 11, 5);
-      ctx.fillStyle = COLORS.neonCyan;
+      ctx.fillStyle = COLORS.accent2;
       ctx.fillRect(LAUNCH_PAD_X - 4, H - 5, 9, 2);
       // Launch pad stripes
-      ctx.fillStyle = COLORS.neonMagenta;
+      ctx.fillStyle = COLORS.accent4;
       ctx.fillRect(LAUNCH_PAD_X - 2, H - 5, 1, 2);
       ctx.fillRect(LAUNCH_PAD_X + 2, H - 5, 1, 2);
 
@@ -955,7 +1039,7 @@ const Game = () => {
       if (state.best > 0 && state.best <= CLIFF_EDGE) {
         ctx.fillStyle = 'rgba(191,0,255,0.3)';
         ctx.fillRect(state.best - 1, H - 10, 3, 7);
-        ctx.fillStyle = COLORS.neonPurple;
+        ctx.fillStyle = COLORS.accent3;
         ctx.fillRect(state.best, H - 9, 1, 6);
         ctx.fillRect(state.best - 1, H - 9, 3, 1);
       }
@@ -981,17 +1065,17 @@ const Game = () => {
       // Wind box background
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
       ctx.fillRect(W - 46, 1, 44, 14);
-      ctx.strokeStyle = COLORS.neonPurple;
+      ctx.strokeStyle = COLORS.accent3;
       ctx.lineWidth = 1;
       ctx.strokeRect(W - 46, 1, 44, 14);
 
       // Arrow base
       const arrowX = W - 24;
-      ctx.fillStyle = COLORS.neonCyan;
+      ctx.fillStyle = COLORS.accent2;
       ctx.fillRect(arrowX - 8, 7, 16, 1);
 
       // Arrow head
-      ctx.fillStyle = COLORS.neonCyan;
+      ctx.fillStyle = COLORS.accent2;
       if (windDir > 0) {
         ctx.fillRect(arrowX + 6, 6, 2, 1);
         ctx.fillRect(arrowX + 6, 8, 2, 1);
@@ -1006,7 +1090,7 @@ const Game = () => {
       const numDots = Math.max(1, Math.ceil(windStrength * 60));
       for (let i = 0; i < Math.min(numDots, 5); i++) {
         const wobble = Math.sin(performance.now() / 80 + i * 0.5) * 0.5;
-        ctx.fillStyle = COLORS.neonPink;
+        ctx.fillStyle = COLORS.accent1;
         ctx.fillRect(arrowX + windDir * (10 + i * 3) + windAnim, 7 + wobble, 1, 1);
       }
 
@@ -1032,7 +1116,7 @@ const Game = () => {
       // === PARTICLES (with color) ===
       for (const p of state.particles) {
         const alpha = p.life / p.maxLife;
-        const color = p.color || COLORS.neonPink;
+        const color = p.color || COLORS.accent1;
         const r = parseInt(color.slice(1, 3), 16);
         const g = parseInt(color.slice(3, 5), 16);
         const b = parseInt(color.slice(5, 7), 16);
@@ -1098,13 +1182,13 @@ const Game = () => {
           const progress = i / lineLen;
           const px = startX + Math.cos(angleRad) * i;
           const py = startY - Math.sin(angleRad) * i;
-          ctx.fillStyle = progress < 0.5 ? COLORS.neonYellow : COLORS.neonMagenta;
+          ctx.fillStyle = progress < 0.5 ? COLORS.highlight : COLORS.accent4;
           ctx.fillRect(Math.floor(px), Math.floor(py), 1, 1);
         }
         // Arrow tip glow
         const endX = startX + Math.cos(angleRad) * lineLen;
         const endY = startY - Math.sin(angleRad) * lineLen;
-        ctx.fillStyle = COLORS.neonYellow;
+        ctx.fillStyle = COLORS.highlight;
         ctx.fillRect(Math.floor(endX), Math.floor(endY), 2, 2);
 
         // Optimal angle marker (45°)
@@ -1120,19 +1204,19 @@ const Game = () => {
         // Power meter bar (synthwave styled)
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         ctx.fillRect(3, 3, 42, 8);
-        ctx.strokeStyle = COLORS.neonPurple;
+        ctx.strokeStyle = COLORS.accent3;
         ctx.lineWidth = 1;
         ctx.strokeRect(3, 3, 42, 8);
 
         // Power fill
-        const powerColor = state.chargePower > 0.8 ? COLORS.neonPink
-          : state.chargePower > 0.5 ? COLORS.neonYellow
-          : COLORS.neonCyan;
+        const powerColor = state.chargePower > 0.8 ? COLORS.accent1
+          : state.chargePower > 0.5 ? COLORS.highlight
+          : COLORS.accent2;
         ctx.fillStyle = powerColor;
         ctx.fillRect(5, 5, Math.floor(state.chargePower * 38), 4);
 
         // Angle indicator dots
-        ctx.fillStyle = COLORS.neonMagenta;
+        ctx.fillStyle = COLORS.accent4;
         const angleDisplay = Math.round(state.angle);
         const tens = Math.floor(angleDisplay / 10);
         for (let i = 0; i < tens; i++) {
@@ -1147,7 +1231,7 @@ const Game = () => {
         ctx.fillRect(2, H - 15, 16, 12);
         ctx.fillStyle = `rgba(255,255,0,${nudgePulse})`;
         ctx.fillRect(4, H - 13, 12, 8);
-        ctx.fillStyle = COLORS.neonYellow;
+        ctx.fillStyle = COLORS.highlight;
         ctx.fillRect(7, H - 11, 6, 4);
       }
 
@@ -1169,9 +1253,9 @@ const Game = () => {
         const multPulse = Math.sin(performance.now() / 80) * 0.2 + 0.8;
 
         // Multiplier color based on value
-        let multColor = COLORS.neonCyan;
-        if (mult > 3) multColor = COLORS.neonPink;
-        else if (mult > 2) multColor = COLORS.neonYellow;
+        let multColor = COLORS.accent2;
+        if (mult > 3) multColor = COLORS.accent1;
+        else if (mult > 2) multColor = COLORS.highlight;
 
         // Multiplier background box - top left corner
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -1214,8 +1298,13 @@ const Game = () => {
       if (state.touchFeedback > 0.05) {
         // Cyan glow pulse from center
         const gradient = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W / 2);
-        gradient.addColorStop(0, `rgba(0,255,255,${state.touchFeedback * 0.3})`);
-        gradient.addColorStop(0.5, `rgba(255,0,255,${state.touchFeedback * 0.15})`);
+        // Parse accent2 for touch feedback glow
+        const a2 = COLORS.accent2;
+        const r2 = parseInt(a2.slice(1,3), 16);
+        const g2 = parseInt(a2.slice(3,5), 16);
+        const b2 = parseInt(a2.slice(5,7), 16);
+        gradient.addColorStop(0, `rgba(${r2},${g2},${b2},${state.touchFeedback * 0.3})`);
+        gradient.addColorStop(0.5, `rgba(${r2},${g2},${b2},${state.touchFeedback * 0.15})`);
         gradient.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, W, H);
@@ -1254,7 +1343,7 @@ const Game = () => {
         ctx.fillRect(W / 2 - 37, 9, 1, 1);
 
         // "UNLOCKED" text indicator
-        ctx.fillStyle = COLORS.neonCyan;
+        ctx.fillStyle = COLORS.accent2;
         ctx.fillRect(W / 2 - 34, 6, 3, 1);
         ctx.fillRect(W / 2 - 34, 9, 3, 1);
         ctx.fillRect(W / 2 - 34, 12, 3, 1);
@@ -1286,158 +1375,126 @@ const Game = () => {
     };
   }, [initState, resetPhysics, nextWind, playSound, spawnParticles, spawnCelebration, startChargeTone, updateChargeTone, stopChargeTone, playZenoJingle, updateEdgeWarning, stopEdgeWarning, checkAchievements, triggerHaptic, setBestScore, setLastDist, setZenoTarget, setZenoLevel]);
 
+  const theme = THEMES[currentTheme];
+
   return (
-    <div className="flex flex-col items-center gap-4 p-4" style={{ background: 'linear-gradient(180deg, #0a0014 0%, #1a0033 100%)' }}>
-      <div className="text-center max-w-sm px-2">
-        <h1 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2" style={{ color: '#ff00ff', textShadow: '0 0 10px #ff00ff, 0 0 20px #ff0080' }}>
-          One-More-Flick
-        </h1>
-        <p className="text-xs sm:text-sm leading-relaxed" style={{ color: '#bf00ff' }}>
-          <span className="hidden sm:inline">Hold </span>
-          <kbd className="px-1 sm:px-1.5 py-0.5 rounded text-xs font-mono" style={{ background: 'rgba(255,0,128,0.2)', border: '1px solid #ff0080', color: '#ff0080' }}>SPACE</kbd>
-          <span className="sm:hidden"> or TAP</span> to charge.
-          <span style={{ color: '#00ffff', textShadow: '0 0 5px #00ffff' }}> Chase the target</span> — the edge is unreachable.
-        </p>
+    <div className="flex flex-col items-center gap-2 p-2" style={{ background: `linear-gradient(180deg, ${theme.background} 0%, ${theme.horizon} 100%)`, minHeight: '100vh' }}>
+      {/* Compact header with theme picker */}
+      <div className="flex items-center justify-between w-full max-w-md px-2">
+        <h1 className="text-sm font-bold" style={{ color: theme.accent1 }}>One-More-Flick</h1>
+        {/* Theme dots */}
+        <div className="flex gap-1">
+          {Object.entries(THEMES).map(([key, t]) => (
+            <button
+              key={key}
+              onClick={() => setCurrentTheme(key)}
+              className="w-4 h-4 rounded-full transition-all"
+              title={t.name}
+              style={{
+                background: t.accent1,
+                border: currentTheme === key ? '2px solid #fff' : '2px solid transparent',
+                boxShadow: currentTheme === key ? `0 0 6px ${t.accent1}` : 'none',
+                transform: currentTheme === key ? 'scale(1.2)' : 'scale(1)',
+              }}
+            />
+          ))}
+        </div>
       </div>
 
-      {/* Canvas with improved mobile scaling */}
-      <div className="relative">
+      {/* Canvas - maximized */}
+      <div className="relative flex-1 flex items-center">
         <canvas
           ref={canvasRef}
           width={W}
           height={H}
           className="game-canvas cursor-pointer touch-none select-none"
           style={{
-            boxShadow: '0 0 20px rgba(255,0,255,0.5), 0 0 40px rgba(255,0,128,0.3)',
-            border: '2px solid #ff00ff',
-            // Mobile: larger touch target, scales up to 2.5x on small screens
-            width: 'min(100vw - 2rem, 400px)',
+            boxShadow: `0 0 15px ${theme.accent1}60`,
+            border: `1px solid ${theme.accent1}`,
+            width: 'min(100vw - 1rem, 480px)',
             height: 'auto',
             aspectRatio: `${W} / ${H}`,
             imageRendering: 'pixelated',
           }}
         />
 
-        {/* Mobile hint overlay - shown on first load */}
+        {/* Mobile hint overlay */}
         {showMobileHint && isMobileRef.current && (
           <div
             className="absolute inset-0 flex items-center justify-center pointer-events-none animate-pulse"
-            style={{
-              background: 'rgba(0,0,0,0.5)',
-              borderRadius: '4px',
-            }}
+            style={{ background: 'rgba(0,0,0,0.5)' }}
           >
-            <div className="text-center px-4">
-              <p className="text-lg font-bold" style={{ color: '#00ffff', textShadow: '0 0 10px #00ffff' }}>
-                TAP & HOLD
-              </p>
-              <p className="text-xs mt-1" style={{ color: '#ff00ff' }}>
-                Release to launch
-              </p>
+            <div className="text-center">
+              <p className="text-lg font-bold" style={{ color: theme.accent2 }}>TAP & HOLD</p>
+              <p className="text-xs" style={{ color: theme.uiText }}>Release to launch</p>
             </div>
           </div>
         )}
       </div>
 
-      <div className="flex flex-wrap justify-center gap-3 sm:gap-5 text-center">
+      {/* Compact score row */}
+      <div className="flex justify-center gap-4 text-center">
         <div>
-          <p className="text-xs uppercase tracking-wide" style={{ color: '#8800aa' }}>Last</p>
-          <p className="text-xl sm:text-2xl font-bold font-mono">
+          <p className="text-[10px] uppercase" style={{ color: theme.uiText }}>Last</p>
+          <p className="text-lg font-bold font-mono">
             {fellOff ? (
-              <span style={{ color: '#ff0040', textShadow: '0 0 10px #ff0040' }}>FELL!</span>
+              <span style={{ color: theme.danger }}>FELL</span>
             ) : lastDist !== null ? (
-              <span style={{ color: '#ff0080', textShadow: '0 0 8px #ff0080' }}>
-                {formatScore(lastDist).int}
-                <span className="text-xs sm:text-sm" style={{ color: '#8800aa' }}>.{formatScore(lastDist).dec}</span>
+              <span style={{ color: theme.accent1 }}>
+                {formatScore(lastDist).int}<span className="text-sm opacity-70">.{formatScore(lastDist).dec}</span>
               </span>
             ) : (
-              <span style={{ color: '#4a0066' }}>-</span>
+              <span style={{ color: theme.uiText }}>-</span>
             )}
           </p>
-          {/* Phase 3: Show multiplier and perfect landing */}
           {lastDist !== null && !fellOff && (
-            <p className="text-xs font-mono" style={{
-              color: lastMultiplier > 3 ? '#ff0080' : lastMultiplier > 2 ? '#ffff00' : '#00ffff',
-              textShadow: `0 0 5px ${lastMultiplier > 3 ? '#ff0080' : lastMultiplier > 2 ? '#ffff00' : '#00ffff'}`
-            }}>
-              x{lastMultiplier.toFixed(1)}
-              {perfectLanding && <span style={{ color: '#ffff00' }}> ★</span>}
+            <p className="text-[10px] font-mono" style={{ color: theme.accent2 }}>
+              x{lastMultiplier.toFixed(1)}{perfectLanding && <span style={{ color: theme.highlight }}> ★</span>}
             </p>
           )}
         </div>
         <div>
-          <p className="text-xs uppercase tracking-wide" style={{ color: '#bf00ff' }}>Best</p>
-          <p className="text-xl sm:text-2xl font-bold font-mono" style={{ color: '#bf00ff', textShadow: '0 0 10px #bf00ff' }}>
-            {formatScore(bestScore).int}
-            <span className="text-xs sm:text-sm" style={{ color: '#8800aa' }}>.{formatScore(bestScore).dec}</span>
+          <p className="text-[10px] uppercase" style={{ color: theme.uiText }}>Best</p>
+          <p className="text-lg font-bold font-mono" style={{ color: theme.accent2 }}>
+            {formatScore(bestScore).int}<span className="text-sm opacity-70">.{formatScore(bestScore).dec}</span>
           </p>
         </div>
         <div>
-          <p className="text-xs uppercase tracking-wide" style={{ color: '#00aaaa' }}>Target</p>
-          <p className="text-xl sm:text-2xl font-bold font-mono" style={{ color: '#00ffff', textShadow: '0 0 10px #00ffff' }}>
-            {formatScore(zenoTarget).int}
-            <span className="text-xs sm:text-sm" style={{ color: '#008888' }}>.{formatScore(zenoTarget).dec}</span>
+          <p className="text-[10px] uppercase" style={{ color: theme.uiText }}>Target</p>
+          <p className="text-lg font-bold font-mono" style={{ color: theme.accent2 }}>
+            {formatScore(zenoTarget).int}<span className="text-sm opacity-70">.{formatScore(zenoTarget).dec}</span>
           </p>
         </div>
         <div>
-          <p className="text-xs uppercase tracking-wide" style={{ color: '#aaaa00' }}>Zeno</p>
-          <p className="text-xl sm:text-2xl font-bold font-mono" style={{ color: '#ffff00', textShadow: '0 0 10px #ffff00' }}>Lv.{zenoLevel}</p>
+          <p className="text-[10px] uppercase" style={{ color: theme.uiText }}>Lv</p>
+          <p className="text-lg font-bold font-mono" style={{ color: theme.highlight }}>{zenoLevel}</p>
         </div>
-        {/* Phase 3: Total Score */}
         <div>
-          <p className="text-xs uppercase tracking-wide" style={{ color: '#ff00aa' }}>Score</p>
-          <p className="text-xl sm:text-2xl font-bold font-mono" style={{ color: '#ff00aa', textShadow: '0 0 10px #ff00aa' }}>
-            {Math.floor(totalScore).toLocaleString()}
-          </p>
+          <p className="text-[10px] uppercase" style={{ color: theme.uiText }}>Score</p>
+          <p className="text-lg font-bold font-mono" style={{ color: theme.accent4 }}>{Math.floor(totalScore).toLocaleString()}</p>
         </div>
       </div>
 
-      <p className="text-xs text-center max-w-xs px-2" style={{ color: '#8800aa' }}>
-        <span style={{ color: '#00ffff', textShadow: '0 0 5px #00ffff' }}>Zeno's Paradox</span> — Target moves halfway to {CLIFF_EDGE} each level.
-        <br />
-        <span style={{ color: '#ff0080' }}>Risk more for higher multipliers!</span>
-      </p>
+      {/* Minimal stats row */}
+      <div className="flex gap-3 text-[10px]" style={{ color: theme.uiText }}>
+        <span>{stats.totalThrows} throws</span>
+        <span>{stats.totalThrows > 0 ? Math.round((stats.successfulLandings / stats.totalThrows) * 100) : 0}% success</span>
+        <span>★ {achievements.size}/{Object.keys(ACHIEVEMENTS).length}</span>
+      </div>
 
-      {/* Phase 5: Achievement notification popup */}
+      {/* Achievement popup */}
       {newAchievement && (
         <div
-          className="fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg animate-pulse"
+          className="fixed top-2 left-1/2 transform -translate-x-1/2 px-3 py-1 rounded animate-pulse"
           style={{
-            background: 'linear-gradient(135deg, #1a0033 0%, #0a0014 100%)',
-            border: '2px solid #ffd700',
-            boxShadow: '0 0 20px rgba(255,215,0,0.5)',
+            background: theme.background,
+            border: `1px solid ${theme.highlight}`,
+            boxShadow: `0 0 10px ${theme.highlight}80`,
           }}
         >
-          <p className="text-sm font-bold" style={{ color: '#ffd700' }}>
-            ★ Achievement Unlocked!
-          </p>
-          <p className="text-xs" style={{ color: '#00ffff' }}>{newAchievement}</p>
+          <p className="text-xs font-bold" style={{ color: theme.highlight }}>★ {newAchievement}</p>
         </div>
       )}
-
-      {/* Phase 5: Stats and achievements summary */}
-      <div className="flex flex-wrap justify-center gap-4 text-center mt-2 text-xs" style={{ color: '#8800aa' }}>
-        <div>
-          <span style={{ color: '#bf00ff' }}>Throws:</span>{' '}
-          <span style={{ color: '#ff0080' }}>{stats.totalThrows}</span>
-        </div>
-        <div>
-          <span style={{ color: '#bf00ff' }}>Success:</span>{' '}
-          <span style={{ color: '#00ffff' }}>
-            {stats.totalThrows > 0 ? Math.round((stats.successfulLandings / stats.totalThrows) * 100) : 0}%
-          </span>
-        </div>
-        <div>
-          <span style={{ color: '#bf00ff' }}>Avg:</span>{' '}
-          <span style={{ color: '#ff0080' }}>
-            {stats.successfulLandings > 0 ? (stats.totalDistance / stats.successfulLandings).toFixed(1) : '0'}
-          </span>
-        </div>
-        <div>
-          <span style={{ color: '#bf00ff' }}>★:</span>{' '}
-          <span style={{ color: '#ffd700' }}>{achievements.size}/{Object.keys(ACHIEVEMENTS).length}</span>
-        </div>
-      </div>
     </div>
   );
 };
