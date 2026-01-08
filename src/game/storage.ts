@@ -117,3 +117,40 @@ export function dailySeedFromDate(date: string): number {
   }
   return Math.abs(h);
 }
+
+// History tracking for stats page
+export type HistoryEntry = {
+  date: string;
+  bestDistance: number;
+  throws: number;
+  score: number;
+};
+
+export function loadHistory(): HistoryEntry[] {
+  return loadJson<HistoryEntry[]>('history', [], 'omf_history');
+}
+
+export function saveHistory(history: HistoryEntry[]) {
+  // Keep only last 30 days
+  const trimmed = history.slice(-30);
+  saveJson('history', trimmed);
+}
+
+export function updateTodayHistory(bestDistance: number, throws: number, score: number) {
+  const today = todayLocalISODate();
+  const history = loadHistory();
+
+  const todayIndex = history.findIndex(h => h.date === today);
+  if (todayIndex >= 0) {
+    history[todayIndex] = {
+      date: today,
+      bestDistance: Math.max(history[todayIndex].bestDistance, bestDistance),
+      throws: throws,
+      score: Math.max(history[todayIndex].score, score),
+    };
+  } else {
+    history.push({ date: today, bestDistance, throws, score });
+  }
+
+  saveHistory(history);
+}
