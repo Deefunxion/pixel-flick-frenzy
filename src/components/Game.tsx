@@ -12,6 +12,32 @@ const MAX_ANGLE = 70;
 const OPTIMAL_ANGLE = 45;
 const LAUNCH_PAD_X = 10;
 
+// Synthwave color palette
+const COLORS = {
+  background: '#0a0014',
+  horizon: '#1a0033',
+  gridPrimary: '#ff00ff',
+  gridSecondary: '#8800aa',
+  neonPink: '#ff0080',
+  neonCyan: '#00ffff',
+  neonPurple: '#bf00ff',
+  neonMagenta: '#ff00aa',
+  neonYellow: '#ffff00',
+  player: '#00ffff',
+  playerGlow: 'rgba(0,255,255,0.6)',
+  trailNormal: '#ff0080',
+  trailPastTarget: '#00ffff',
+  star: '#ffffff',
+};
+
+interface Star {
+  x: number;
+  y: number;
+  speed: number;
+  brightness: number;
+  size: number;
+}
+
 interface Particle {
   x: number;
   y: number;
@@ -19,6 +45,7 @@ interface Particle {
   vy: number;
   life: number;
   maxLife: number;
+  color?: string;
 }
 
 interface GameState {
@@ -36,7 +63,7 @@ interface GameState {
   best: number;
   zenoTarget: number;
   zenoLevel: number;
-  trail: { x: number; y: number; age: number }[];
+  trail: { x: number; y: number; age: number; pastTarget?: boolean }[];
   wind: number;
   seed: number;
   tryCount: number;
@@ -46,7 +73,48 @@ interface GameState {
   particles: Particle[];
   screenShake: number;
   landingFrame: number;
+  stars: Star[];
+  gridOffset: number;
+  // Phase 2: Cinematic effects
+  slowMo: number;
+  screenFlash: number;
+  zoom: number;
+  zoomTargetX: number;
+  zoomTargetY: number;
+  celebrationBurst: boolean;
+  // Phase 3: Risk/Reward system
+  currentMultiplier: number;
+  lastMultiplier: number;
+  perfectLanding: boolean;
+  totalScore: number;
+  // Phase 5: Meta Progression
+  stats: {
+    totalThrows: number;
+    successfulLandings: number;
+    totalDistance: number;
+    perfectLandings: number;
+    maxMultiplier: number;
+  };
+  achievements: Set<string>;
+  newAchievement: string | null;
+  // Mobile UX enhancements
+  touchActive: boolean;
+  touchFeedback: number;
+  paused: boolean;
 }
+
+// Achievement definitions
+const ACHIEVEMENTS: Record<string, { name: string; desc: string; check: (stats: GameState['stats'], state: GameState) => boolean }> = {
+  first_zeno: { name: 'First Step', desc: 'Beat your first Zeno target', check: (_, s) => s.zenoLevel >= 1 },
+  level_5: { name: 'Halfway There', desc: 'Reach Zeno Level 5', check: (_, s) => s.zenoLevel >= 5 },
+  level_10: { name: 'Zeno Master', desc: 'Reach Zeno Level 10', check: (_, s) => s.zenoLevel >= 10 },
+  perfect_140: { name: 'Edge Walker', desc: 'Land beyond 140', check: (_, s) => s.best >= 140 },
+  perfect_landing: { name: 'Bullseye', desc: 'Get a perfect landing', check: (stats) => stats.perfectLandings >= 1 },
+  ten_perfects: { name: 'Sharpshooter', desc: 'Get 10 perfect landings', check: (stats) => stats.perfectLandings >= 10 },
+  hundred_throws: { name: 'Dedicated', desc: '100 total throws', check: (stats) => stats.totalThrows >= 100 },
+  high_roller: { name: 'High Roller', desc: 'Achieve 4x multiplier', check: (stats) => stats.maxMultiplier >= 4 },
+  thousand_score: { name: 'Scorer', desc: 'Accumulate 1000 total score', check: (_, s) => s.totalScore >= 1000 },
+};
 
 const Game = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -59,6 +127,21 @@ const Game = () => {
   const [zenoLevel, setZenoLevel] = useState(+(localStorage.getItem('omf_zeno_level') || '0'));
   const [lastDist, setLastDist] = useState<number | null>(null);
   const [fellOff, setFellOff] = useState(false);
+  // Phase 3: Risk/Reward states
+  const [lastMultiplier, setLastMultiplier] = useState(1);
+  const [totalScore, setTotalScore] = useState(parseFloat(localStorage.getItem('omf_total_score') || '0'));
+  const [perfectLanding, setPerfectLanding] = useState(false);
+  // Phase 5: Meta Progression states
+  const [stats, setStats] = useState(() => {
+    const saved = localStorage.getItem('omf_stats');
+    return saved ? JSON.parse(saved) : { totalThrows: 0, successfulLandings: 0, totalDistance: 0, perfectLandings: 0, maxMultiplier: 1 };
+  });
+  const [achievements, setAchievements] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('omf_achievements');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+  const [newAchievement, setNewAchievement] = useState<string | null>(null);
+  const [showMobileHint, setShowMobileHint] = useState(true);
 
   // Format score with small decimals
   const formatScore = (score: number) => {
@@ -73,6 +156,18 @@ const Game = () => {
     const savedZenoTarget = parseFloat(localStorage.getItem('omf_zeno_target') || '0');
     const savedZenoLevel = +(localStorage.getItem('omf_zeno_level') || '0');
     const zenoTarget = savedZenoTarget || (best + CLIFF_EDGE) / 2;
+
+    // Generate parallax starfield
+    const stars: Star[] = [];
+    for (let i = 0; i < 50; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * (H * 0.6), // Stars only in upper portion
+        speed: 0.05 + Math.random() * 0.15,
+        brightness: 0.3 + Math.random() * 0.7,
+        size: Math.random() > 0.8 ? 2 : 1,
+      });
+    }
 
     return {
       px: LAUNCH_PAD_X,
@@ -99,10 +194,32 @@ const Game = () => {
       particles: [],
       screenShake: 0,
       landingFrame: 0,
+      stars,
+      gridOffset: 0,
+      // Phase 2: Cinematic effects
+      slowMo: 0,
+      screenFlash: 0,
+      zoom: 1,
+      zoomTargetX: W / 2,
+      zoomTargetY: H / 2,
+      celebrationBurst: false,
+      // Phase 3: Risk/Reward system
+      currentMultiplier: 1,
+      lastMultiplier: 1,
+      perfectLanding: false,
+      totalScore: parseFloat(localStorage.getItem('omf_total_score') || '0'),
+      // Phase 5: Meta Progression
+      stats: JSON.parse(localStorage.getItem('omf_stats') || '{"totalThrows":0,"successfulLandings":0,"totalDistance":0,"perfectLandings":0,"maxMultiplier":1}'),
+      achievements: new Set(JSON.parse(localStorage.getItem('omf_achievements') || '[]')),
+      newAchievement: null,
+      // Mobile UX enhancements
+      touchActive: false,
+      touchFeedback: 0,
+      paused: false,
     };
   }, []);
 
-  const spawnParticles = useCallback((state: GameState, x: number, y: number, count: number, spread: number) => {
+  const spawnParticles = useCallback((state: GameState, x: number, y: number, count: number, spread: number, color?: string) => {
     for (let i = 0; i < count; i++) {
       state.particles.push({
         x,
@@ -111,6 +228,25 @@ const Game = () => {
         vy: -Math.random() * spread * 0.8,
         life: 1,
         maxLife: 15 + Math.random() * 15,
+        color: color || COLORS.neonPink,
+      });
+    }
+  }, []);
+
+  // Phase 2: Celebration burst for Zeno level-up
+  const spawnCelebration = useCallback((state: GameState, x: number, y: number) => {
+    const colors = [COLORS.neonCyan, COLORS.neonPink, COLORS.neonYellow, COLORS.neonMagenta, COLORS.neonPurple];
+    for (let i = 0; i < 30; i++) {
+      const angle = (i / 30) * Math.PI * 2;
+      const speed = 1.5 + Math.random() * 2;
+      state.particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1,
+        life: 1,
+        maxLife: 30 + Math.random() * 20,
+        color: colors[Math.floor(Math.random() * colors.length)],
       });
     }
   }, []);
@@ -138,23 +274,199 @@ const Game = () => {
     state.particles = [];
     state.screenShake = 0;
     state.landingFrame = 0;
+    // Keep stars persistent - don't reset them
+    // Phase 2: Reset cinematic effects
+    state.slowMo = 0;
+    state.zoom = 1;
+    state.celebrationBurst = false;
+    // Phase 3: Reset risk/reward
+    state.currentMultiplier = 1;
+    state.perfectLanding = false;
   }, []);
 
-  const playSound = useCallback((freq: number, duration: number) => {
+  const playSound = useCallback((freq: number, duration: number, type: OscillatorType = 'square', volume: number = 0.1) => {
     if (!audioCtxRef.current) {
       audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
     const ctx = audioCtxRef.current;
     const osc = ctx.createOscillator();
-    osc.type = 'square';
+    osc.type = type;
     osc.frequency.value = freq;
     const gain = ctx.createGain();
-    gain.gain.value = 0.1;
+    gain.gain.value = volume;
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + duration);
   }, []);
+
+  // Phase 4: Ascending charge tone
+  const chargeOscRef = useRef<OscillatorNode | null>(null);
+  const chargeGainRef = useRef<GainNode | null>(null);
+
+  const startChargeTone = useCallback(() => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    const ctx = audioCtxRef.current;
+
+    // Stop any existing charge tone
+    if (chargeOscRef.current) {
+      chargeOscRef.current.stop();
+    }
+
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = 220; // Start at A3
+
+    const gain = ctx.createGain();
+    gain.gain.value = 0.05;
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+
+    chargeOscRef.current = osc;
+    chargeGainRef.current = gain;
+  }, []);
+
+  const updateChargeTone = useCallback((chargePower: number) => {
+    if (chargeOscRef.current) {
+      // Ascending tone from 220Hz to 880Hz (2 octaves)
+      chargeOscRef.current.frequency.value = 220 + chargePower * 660;
+    }
+    if (chargeGainRef.current) {
+      // Increase volume slightly as power increases
+      chargeGainRef.current.gain.value = 0.03 + chargePower * 0.04;
+    }
+  }, []);
+
+  const stopChargeTone = useCallback(() => {
+    if (chargeOscRef.current) {
+      chargeOscRef.current.stop();
+      chargeOscRef.current = null;
+    }
+    if (chargeGainRef.current) {
+      chargeGainRef.current = null;
+    }
+  }, []);
+
+  // Phase 4: Zeno level-up arpeggio
+  const playZenoJingle = useCallback(() => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    const ctx = audioCtxRef.current;
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.08);
+      gain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + i * 0.08 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.08 + 0.2);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + i * 0.08);
+      osc.stop(ctx.currentTime + i * 0.08 + 0.25);
+    });
+  }, []);
+
+  // Phase 4: Edge warning tone
+  const edgeWarningRef = useRef<OscillatorNode | null>(null);
+  const edgeGainRef = useRef<GainNode | null>(null);
+
+  const updateEdgeWarning = useCallback((proximity: number) => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    const ctx = audioCtxRef.current;
+
+    if (proximity > 0.3) {
+      if (!edgeWarningRef.current) {
+        const osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = 100;
+
+        const gain = ctx.createGain();
+        gain.gain.value = 0;
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+
+        edgeWarningRef.current = osc;
+        edgeGainRef.current = gain;
+      }
+
+      // Increase pitch and volume as danger increases
+      edgeWarningRef.current.frequency.value = 80 + proximity * 120;
+      edgeGainRef.current!.gain.value = (proximity - 0.3) * 0.06;
+    } else {
+      if (edgeWarningRef.current) {
+        edgeWarningRef.current.stop();
+        edgeWarningRef.current = null;
+        edgeGainRef.current = null;
+      }
+    }
+  }, []);
+
+  const stopEdgeWarning = useCallback(() => {
+    if (edgeWarningRef.current) {
+      edgeWarningRef.current.stop();
+      edgeWarningRef.current = null;
+      edgeGainRef.current = null;
+    }
+  }, []);
+
+  // Phase 5: Check and award achievements
+  const checkAchievements = useCallback((state: GameState) => {
+    for (const [id, achievement] of Object.entries(ACHIEVEMENTS)) {
+      if (!state.achievements.has(id) && achievement.check(state.stats, state)) {
+        state.achievements.add(id);
+        state.newAchievement = achievement.name;
+        setAchievements(new Set(state.achievements));
+        setNewAchievement(achievement.name);
+        localStorage.setItem('omf_achievements', JSON.stringify([...state.achievements]));
+
+        // Play achievement sound
+        playSound(523, 0.1, 'sine', 0.06);
+        setTimeout(() => playSound(659, 0.1, 'sine', 0.06), 80);
+        setTimeout(() => playSound(784, 0.15, 'sine', 0.08), 160);
+
+        // Clear achievement notification after 3 seconds
+        setTimeout(() => {
+          setNewAchievement(null);
+          if (stateRef.current) stateRef.current.newAchievement = null;
+        }, 3000);
+
+        break; // Only show one achievement at a time
+      }
+    }
+  }, [playSound]);
+
+  // Mobile UX: Haptic feedback helper
+  const triggerHaptic = useCallback((pattern: number | number[] = 10) => {
+    if ('vibrate' in navigator) {
+      try {
+        navigator.vibrate(pattern);
+      } catch {
+        // Vibration not supported or blocked
+      }
+    }
+  }, []);
+
+  // Mobile UX: Detect if user is on mobile
+  const isMobileRef = useRef(
+    typeof window !== 'undefined' &&
+    ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -183,31 +495,70 @@ const Game = () => {
     const handleMouseDown = () => pressedRef.current = true;
     const handleMouseUp = () => pressedRef.current = false;
 
-    // Touch controls for mobile
+    // Touch controls for mobile with enhanced UX
     const handleTouchStart = (e: TouchEvent) => {
       e.preventDefault();
       pressedRef.current = true;
+      if (stateRef.current) {
+        stateRef.current.touchActive = true;
+        stateRef.current.touchFeedback = 1;
+      }
+      // Haptic feedback on touch
+      triggerHaptic(15);
+      // Hide mobile hint after first touch
+      setShowMobileHint(false);
     };
     const handleTouchEnd = (e: TouchEvent) => {
       e.preventDefault();
       pressedRef.current = false;
+      if (stateRef.current) {
+        stateRef.current.touchActive = false;
+      }
+      // Haptic on release (launch)
+      if (stateRef.current?.charging) {
+        triggerHaptic([10, 30, 20]);
+      }
+    };
+
+    // Mobile UX: Pause when tab/app goes to background (battery saver)
+    const handleVisibilityChange = () => {
+      if (stateRef.current) {
+        stateRef.current.paused = document.hidden;
+        // Stop any audio when going to background
+        if (document.hidden) {
+          stopChargeTone();
+          stopEdgeWarning();
+        }
+      }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('mouseup', handleMouseUp);
     canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
     canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
 
     const update = (state: GameState) => {
+      // Mobile UX: Skip update when paused (battery saver)
+      if (state.paused) return;
+
       const pressed = pressedRef.current;
+
+      // Mobile UX: Decay touch feedback visual
+      if (state.touchFeedback > 0) {
+        state.touchFeedback *= 0.9;
+        if (state.touchFeedback < 0.01) state.touchFeedback = 0;
+      }
 
       // Start charging
       if (!state.flying && !state.sliding && pressed && !state.charging) {
         state.charging = true;
         state.chargeStart = performance.now();
         setFellOff(false);
+        // Phase 4: Start ascending charge tone
+        startChargeTone();
       }
 
       // Update charge power AND angle while holding (both increase together!)
@@ -216,6 +567,8 @@ const Game = () => {
         state.chargePower = dt;
         // Angle increases from MIN to MAX as you hold longer
         state.angle = MIN_ANGLE + (MAX_ANGLE - MIN_ANGLE) * dt;
+        // Phase 4: Update charge tone frequency
+        updateChargeTone(dt);
       }
 
       // Launch on release
@@ -230,6 +583,10 @@ const Game = () => {
         state.trail = [];
         state.chargePower = 0;
         state.nudgeUsed = false;
+        // Phase 4: Stop charge tone on launch
+        stopChargeTone();
+        // Launch whoosh sound
+        playSound(200, 0.15, 'sawtooth', 0.05);
       }
 
       // Mid-air nudge (single use) - press SPACE while flying
@@ -241,6 +598,20 @@ const Game = () => {
         playSound(660, 0.03);
       }
 
+      // Update stars (parallax movement)
+      for (const star of state.stars) {
+        star.x -= star.speed;
+        if (star.x < 0) {
+          star.x = W;
+          star.y = Math.random() * (H * 0.6);
+        }
+        // Twinkle effect
+        star.brightness = 0.3 + Math.abs(Math.sin(performance.now() / 500 + star.x)) * 0.7;
+      }
+
+      // Animate grid
+      state.gridOffset = (state.gridOffset + 0.3) % 10;
+
       // Physics - flying
       if (state.flying) {
         state.vy += BASE_GRAV;
@@ -250,21 +621,32 @@ const Game = () => {
 
         state.px += state.vx;
         state.py += state.vy;
-        
-        // Record trail with age
-        state.trail.push({ x: state.px, y: state.py, age: 0 });
+
+        // Record trail with age - mark if past Zeno target for color change
+        const pastTarget = state.px >= state.zenoTarget;
+        state.trail.push({ x: state.px, y: state.py, age: 0, pastTarget });
 
         // Touched ground - start sliding
         if (state.py >= H - 4) {
           state.flying = false;
           state.sliding = true;
           state.py = H - 4;
+          // Phase 2: Enhanced screen shake based on impact velocity
+          const impactVelocity = Math.abs(state.vy);
+          state.screenShake = Math.min(8, 2 + impactVelocity * 1.5);
+          state.landingFrame = 8;
+          // More particles for harder impacts
+          const particleCount = Math.floor(4 + impactVelocity * 2);
+          spawnParticles(state, state.px, state.py, particleCount, 1.5 + impactVelocity * 0.3, COLORS.neonMagenta);
           state.vx *= 0.55;
           state.vy = 0;
-          state.landingFrame = 8;
-          state.screenShake = 4;
-          spawnParticles(state, state.px, state.py, 6, 1.5);
-          playSound(440, 0.02);
+          // Phase 4: Impact sound varies with velocity
+          const impactFreq = 200 + impactVelocity * 80;
+          playSound(impactFreq, 0.08, 'triangle', 0.08);
+          // Add a bass thud for heavier impacts
+          if (impactVelocity > 2) {
+            playSound(80, 0.12, 'sine', 0.06);
+          }
         }
       }
 
@@ -287,18 +669,47 @@ const Game = () => {
       if (state.screenShake > 0) state.screenShake *= 0.8;
       if (state.landingFrame > 0) state.landingFrame--;
 
+      // Phase 2: Cinematic effects decay
+      if (state.slowMo > 0) state.slowMo *= 0.95;
+      if (state.screenFlash > 0) state.screenFlash *= 0.85;
+      if (state.zoom > 1) state.zoom = 1 + (state.zoom - 1) * 0.92;
+
+      // Trigger slow-mo when player is past 90 and approaching edge
+      if ((state.flying || state.sliding) && state.px > 90) {
+        const edgeProximity = (state.px - 90) / (CLIFF_EDGE - 90);
+        state.slowMo = Math.min(0.7, edgeProximity * 0.8);
+        state.zoom = 1 + edgeProximity * 0.3;
+        state.zoomTargetX = state.px;
+        state.zoomTargetY = state.py;
+        // Phase 4: Edge warning audio
+        updateEdgeWarning(edgeProximity);
+      } else {
+        // Stop edge warning when not near edge
+        stopEdgeWarning();
+      }
+
+      // Phase 3: Calculate current multiplier based on edge proximity
+      if ((state.flying || state.sliding) && state.px > 50) {
+        // Multiplier increases exponentially as you approach the edge
+        const riskFactor = (state.px - 50) / (CLIFF_EDGE - 50);
+        state.currentMultiplier = 1 + riskFactor * riskFactor * 4; // 1x to 5x
+      } else {
+        state.currentMultiplier = 1;
+      }
+
       // Physics - sliding
       if (state.sliding) {
         const friction = 0.88;
         state.vx *= friction;
         state.px += state.vx;
-        
+
         // Spawn dust while sliding fast
         if (Math.abs(state.vx) > 0.5 && Math.random() > 0.5) {
-          spawnParticles(state, state.px, state.py, 1, 0.5);
+          spawnParticles(state, state.px, state.py, 1, 0.5, COLORS.neonPink);
         }
-        
-        state.trail.push({ x: state.px, y: state.py, age: 0 });
+
+        const pastTarget = state.px >= state.zenoTarget;
+        state.trail.push({ x: state.px, y: state.py, age: 0, pastTarget });
 
         // Stop sliding when slow enough
         if (Math.abs(state.vx) < 0.1) {
@@ -312,11 +723,35 @@ const Game = () => {
             // The edge is UNREACHABLE - Zeno's paradox!
             state.fellOff = true;
             state.dist = 0;
+            state.lastMultiplier = 0;
             setFellOff(true);
+            setLastMultiplier(0);
+            setPerfectLanding(false);
             playSound(220, 0.15);
           } else {
             state.dist = Math.max(0, landedAt);
             setFellOff(false);
+
+            // Phase 3: Calculate final multiplier and check for perfect landing
+            const finalMultiplier = state.currentMultiplier;
+            state.lastMultiplier = finalMultiplier;
+            setLastMultiplier(finalMultiplier);
+
+            // Check for perfect landing (within 0.5 of Zeno target)
+            const distFromTarget = Math.abs(landedAt - state.zenoTarget);
+            const isPerfect = distFromTarget < 0.5;
+            state.perfectLanding = isPerfect;
+            setPerfectLanding(isPerfect);
+
+            // Calculate score with multiplier
+            const basePoints = state.dist;
+            const multipliedPoints = basePoints * finalMultiplier;
+            const perfectBonus = isPerfect ? 10 : 0;
+            const scoreGained = multipliedPoints + perfectBonus;
+
+            state.totalScore += scoreGained;
+            localStorage.setItem('omf_total_score', state.totalScore.toString());
+            setTotalScore(state.totalScore);
 
             // Zeno's Paradox scoring: chase the ever-moving target
             if (state.dist >= state.zenoTarget) {
@@ -333,18 +768,50 @@ const Game = () => {
               setBestScore(state.best);
               setZenoTarget(state.zenoTarget);
               setZenoLevel(state.zenoLevel);
-              playSound(880, 0.08);
-              // Extra celebration sound for leveling up
-              setTimeout(() => playSound(1100, 0.05), 100);
+
+              // Phase 2: Cinematic celebration!
+              state.screenFlash = 1;
+              state.celebrationBurst = true;
+              spawnCelebration(state, state.px, state.py);
+
+              // Phase 4: Triumphant Zeno jingle!
+              playZenoJingle();
+              // Stop edge warning since we landed
+              stopEdgeWarning();
             } else if (state.dist > state.best) {
               // Beat personal best but not the Zeno target
               state.best = state.dist;
               localStorage.setItem('omf_best', state.best.toString());
               setBestScore(state.best);
-              playSound(660, 0.05);
+              playSound(660, 0.08, 'sine', 0.08);
+            }
+
+            // Stop edge warning since we landed safely
+            stopEdgeWarning();
+
+            // Perfect landing sound - sparkly arpeggio
+            if (isPerfect) {
+              setTimeout(() => playSound(1320, 0.05, 'sine', 0.06), 50);
+              setTimeout(() => playSound(1760, 0.04, 'sine', 0.05), 100);
+            }
+
+            // Phase 5: Update stats
+            state.stats.successfulLandings++;
+            state.stats.totalDistance += state.dist;
+            if (isPerfect) state.stats.perfectLandings++;
+            if (finalMultiplier > state.stats.maxMultiplier) {
+              state.stats.maxMultiplier = finalMultiplier;
             }
           }
-          
+
+          // Phase 5: Update total throws (for both success and fall)
+          state.stats.totalThrows++;
+          localStorage.setItem('omf_stats', JSON.stringify(state.stats));
+          setStats({ ...state.stats });
+
+          // Check for new achievements
+          checkAchievements(state);
+
           setLastDist(state.fellOff ? null : state.dist);
 
           state.tryCount++;
@@ -387,94 +854,144 @@ const Game = () => {
       // Apply screen shake
       const shakeX = state.screenShake > 0.1 ? (Math.random() - 0.5) * state.screenShake : 0;
       const shakeY = state.screenShake > 0.1 ? (Math.random() - 0.5) * state.screenShake : 0;
-      
+
       ctx.save();
+
+      // Phase 2: Apply zoom transform
+      if (state.zoom > 1.01) {
+        const zoomCenterX = state.zoomTargetX;
+        const zoomCenterY = state.zoomTargetY;
+        ctx.translate(zoomCenterX, zoomCenterY);
+        ctx.scale(state.zoom, state.zoom);
+        ctx.translate(-zoomCenterX, -zoomCenterY);
+      }
+
       ctx.translate(shakeX, shakeY);
-      
-      // Clear
-      ctx.fillStyle = '#000';
+
+      // === SYNTHWAVE BACKGROUND ===
+      // Gradient from dark purple to deep blue
+      const gradient = ctx.createLinearGradient(0, 0, 0, H);
+      gradient.addColorStop(0, COLORS.background);
+      gradient.addColorStop(0.5, COLORS.horizon);
+      gradient.addColorStop(1, '#1a0044');
+      ctx.fillStyle = gradient;
       ctx.fillRect(-2, -2, W + 4, H + 4);
 
-      // Dithered background pattern
-      ctx.fillStyle = 'rgba(255,255,255,0.03)';
-      for (let y = 0; y < H; y += 4) {
-        for (let x = (y % 8 === 0 ? 0 : 2); x < W; x += 4) {
-          ctx.fillRect(x, y, 1, 1);
+      // === PARALLAX STARFIELD ===
+      for (const star of state.stars) {
+        ctx.fillStyle = `rgba(255,255,255,${star.brightness})`;
+        ctx.fillRect(Math.floor(star.x), Math.floor(star.y), star.size, star.size);
+      }
+
+      // === PERSPECTIVE GRID ===
+      const horizonY = H * 0.55;
+      const gridColor = COLORS.gridSecondary;
+
+      // Horizontal lines with perspective (closer together near horizon)
+      ctx.fillStyle = gridColor;
+      for (let i = 0; i < 12; i++) {
+        const progress = i / 12;
+        const yPos = horizonY + (H - horizonY) * Math.pow(progress, 0.7) + state.gridOffset * progress;
+        if (yPos < H - 3) {
+          const alpha = 0.2 + progress * 0.4;
+          ctx.fillStyle = `rgba(136,0,170,${alpha})`;
+          ctx.fillRect(0, Math.floor(yPos), W, 1);
         }
       }
 
-      // Ground with texture
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, H - 3, CLIFF_EDGE + 1, 1);
-      // Ground texture dots
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      for (let x = 2; x < CLIFF_EDGE; x += 4) {
-        ctx.fillRect(x, H - 4, 1, 1);
+      // Vertical lines converging to center horizon
+      const vanishX = W / 2;
+      for (let i = -8; i <= 8; i++) {
+        const baseX = vanishX + i * 12;
+        const bottomX = vanishX + i * 25;
+        ctx.strokeStyle = gridColor;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(vanishX + i * 3, horizonY);
+        ctx.lineTo(bottomX, H - 3);
+        ctx.stroke();
       }
 
-      // Launch pad platform
-      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      // Horizon glow line
+      const glowPulse = Math.sin(performance.now() / 300) * 0.2 + 0.8;
+      ctx.fillStyle = `rgba(255,0,255,${glowPulse * 0.6})`;
+      ctx.fillRect(0, Math.floor(horizonY) - 1, W, 2);
+      ctx.fillStyle = `rgba(255,0,255,${glowPulse * 0.3})`;
+      ctx.fillRect(0, Math.floor(horizonY) - 2, W, 4);
+
+      // === GROUND (Neon Platform) ===
+      // Main ground line with glow
+      ctx.fillStyle = 'rgba(255,0,128,0.3)';
+      ctx.fillRect(0, H - 5, CLIFF_EDGE + 1, 3);
+      ctx.fillStyle = COLORS.neonPink;
+      ctx.fillRect(0, H - 3, CLIFF_EDGE + 1, 1);
+      ctx.fillStyle = 'rgba(255,0,128,0.5)';
+      ctx.fillRect(0, H - 2, CLIFF_EDGE + 1, 2);
+
+      // === LAUNCH PAD (Neon Cyan Platform) ===
+      ctx.fillStyle = 'rgba(0,255,255,0.2)';
+      ctx.fillRect(LAUNCH_PAD_X - 5, H - 7, 11, 5);
+      ctx.fillStyle = COLORS.neonCyan;
       ctx.fillRect(LAUNCH_PAD_X - 4, H - 5, 9, 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.fillRect(LAUNCH_PAD_X - 5, H - 4, 11, 1);
       // Launch pad stripes
-      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.fillStyle = COLORS.neonMagenta;
       ctx.fillRect(LAUNCH_PAD_X - 2, H - 5, 1, 2);
       ctx.fillRect(LAUNCH_PAD_X + 2, H - 5, 1, 2);
 
-      // Cliff edge danger zone
-      ctx.fillStyle = 'rgba(255,255,255,0.15)';
-      ctx.fillRect(CLIFF_EDGE - 6, H - 3, 7, 1);
-      // Animated danger stripes at edge
+      // === CLIFF EDGE DANGER ZONE ===
       const t = performance.now() / 200;
-      for (let i = 0; i < 5; i++) {
+      // Danger zone glow
+      ctx.fillStyle = 'rgba(255,0,80,0.3)';
+      ctx.fillRect(CLIFF_EDGE - 12, H - 6, 13, 4);
+      // Animated danger stripes
+      for (let i = 0; i < 6; i++) {
         if ((Math.floor(t) + i) % 2 === 0) {
-          ctx.fillStyle = 'rgba(255,255,255,0.5)';
-          ctx.fillRect(CLIFF_EDGE - 1, H - 5 - i, 1, 1);
+          ctx.fillStyle = `rgba(255,0,80,${0.6 + Math.sin(t * 2) * 0.3})`;
+          ctx.fillRect(CLIFF_EDGE - 1, H - 6 - i, 1, 1);
         }
       }
-      // "EDGE" warning zone highlight
-      ctx.fillStyle = 'rgba(255,100,100,0.2)';
-      ctx.fillRect(CLIFF_EDGE - 10, H - 3, 11, 1);
 
-      // Best distance marker with glow effect
+      // === BEST DISTANCE MARKER (Neon Purple) ===
       if (state.best > 0 && state.best <= CLIFF_EDGE) {
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.fillRect(state.best - 1, H - 8, 3, 5);
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(state.best, H - 7, 1, 4);
-        ctx.fillRect(state.best - 1, H - 7, 3, 1);
+        ctx.fillStyle = 'rgba(191,0,255,0.3)';
+        ctx.fillRect(state.best - 1, H - 10, 3, 7);
+        ctx.fillStyle = COLORS.neonPurple;
+        ctx.fillRect(state.best, H - 9, 1, 6);
+        ctx.fillRect(state.best - 1, H - 9, 3, 1);
       }
 
-      // Zeno Target marker - the ever-moving goal (pulsing cyan)
+      // === ZENO TARGET MARKER (Pulsing Cyan) ===
       if (state.zenoTarget > 0 && state.zenoTarget <= CLIFF_EDGE) {
         const zenoPulse = Math.sin(performance.now() / 150) * 0.3 + 0.7;
-        ctx.fillStyle = `rgba(0,255,255,${zenoPulse * 0.3})`;
-        ctx.fillRect(Math.floor(state.zenoTarget) - 2, H - 12, 5, 9);
-        ctx.fillStyle = `rgba(0,255,255,${zenoPulse * 0.8})`;
-        ctx.fillRect(Math.floor(state.zenoTarget), H - 10, 1, 7);
-        // Small arrow pointing down at target
-        ctx.fillRect(Math.floor(state.zenoTarget) - 1, H - 11, 3, 1);
-        ctx.fillRect(Math.floor(state.zenoTarget), H - 12, 1, 1);
+        // Glow
+        ctx.fillStyle = `rgba(0,255,255,${zenoPulse * 0.2})`;
+        ctx.fillRect(Math.floor(state.zenoTarget) - 3, H - 14, 7, 12);
+        // Marker
+        ctx.fillStyle = `rgba(0,255,255,${zenoPulse * 0.9})`;
+        ctx.fillRect(Math.floor(state.zenoTarget), H - 12, 1, 9);
+        ctx.fillRect(Math.floor(state.zenoTarget) - 1, H - 13, 3, 1);
+        ctx.fillRect(Math.floor(state.zenoTarget), H - 14, 1, 1);
       }
 
-      // Wind indicator - clearer design with box
+      // === WIND INDICATOR (Synthwave styled) ===
       const windDir = state.wind > 0 ? 1 : -1;
       const windStrength = Math.abs(state.wind);
       const windAnim = Math.sin(performance.now() / 150) * 0.5;
 
       // Wind box background
-      ctx.fillStyle = 'rgba(255,255,255,0.1)';
-      ctx.fillRect(W - 45, 2, 42, 12);
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(W - 46, 1, 44, 14);
+      ctx.strokeStyle = COLORS.neonPurple;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(W - 46, 1, 44, 14);
 
-      // Wind label area
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
       // Arrow base
       const arrowX = W - 24;
+      ctx.fillStyle = COLORS.neonCyan;
       ctx.fillRect(arrowX - 8, 7, 16, 1);
 
-      // Arrow head pointing in wind direction
-      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      // Arrow head
+      ctx.fillStyle = COLORS.neonCyan;
       if (windDir > 0) {
         ctx.fillRect(arrowX + 6, 6, 2, 1);
         ctx.fillRect(arrowX + 6, 8, 2, 1);
@@ -485,66 +1002,88 @@ const Game = () => {
         ctx.fillRect(arrowX - 9, 7, 1, 1);
       }
 
-      // Wind strength dots (more dots = stronger wind)
+      // Wind strength dots
       const numDots = Math.max(1, Math.ceil(windStrength * 60));
       for (let i = 0; i < Math.min(numDots, 5); i++) {
         const wobble = Math.sin(performance.now() / 80 + i * 0.5) * 0.5;
-        ctx.fillStyle = `rgba(255,255,255,${0.5 + i * 0.1})`;
+        ctx.fillStyle = COLORS.neonPink;
         ctx.fillRect(arrowX + windDir * (10 + i * 3) + windAnim, 7 + wobble, 1, 1);
       }
 
-      // Trail with fading
-      for (const t of state.trail) {
-        const alpha = Math.max(0, 1 - t.age / 40) * 0.5;
-        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-        if (t.x >= 0 && t.x < W && t.y >= 0 && t.y < H) {
-          ctx.fillRect(Math.floor(t.x), Math.floor(t.y), 1, 1);
+      // === TRAIL (Color changes past Zeno target) ===
+      for (const tr of state.trail) {
+        const alpha = Math.max(0, 1 - tr.age / 40) * 0.8;
+        // Pink before target, Cyan after passing target
+        const baseColor = tr.pastTarget ? COLORS.trailPastTarget : COLORS.trailNormal;
+        // Parse hex and apply alpha
+        const r = parseInt(baseColor.slice(1, 3), 16);
+        const g = parseInt(baseColor.slice(3, 5), 16);
+        const b = parseInt(baseColor.slice(5, 7), 16);
+        ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+        if (tr.x >= 0 && tr.x < W && tr.y >= 0 && tr.y < H) {
+          ctx.fillRect(Math.floor(tr.x), Math.floor(tr.y), 1, 1);
+          // Glow effect
+          ctx.fillStyle = `rgba(${r},${g},${b},${alpha * 0.3})`;
+          ctx.fillRect(Math.floor(tr.x) - 1, Math.floor(tr.y), 3, 1);
+          ctx.fillRect(Math.floor(tr.x), Math.floor(tr.y) - 1, 1, 3);
         }
       }
 
-      // Particles
+      // === PARTICLES (with color) ===
       for (const p of state.particles) {
         const alpha = p.life / p.maxLife;
-        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+        const color = p.color || COLORS.neonPink;
+        const r = parseInt(color.slice(1, 3), 16);
+        const g = parseInt(color.slice(3, 5), 16);
+        const b = parseInt(color.slice(5, 7), 16);
+        ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
         ctx.fillRect(Math.floor(p.x), Math.floor(p.y), 1, 1);
       }
 
-      // Player pixel with squash/stretch
+      // === PLAYER (Neon Cyan with glow) ===
       let pxW = 1, pxH = 1;
       if (state.flying) {
-        const speed = Math.sqrt(state.vx * state.vx + state.vy * state.vy);
         if (state.vy < -1) {
-          pxW = 1; pxH = 2; // stretch up
+          pxW = 1; pxH = 2;
         } else if (state.vy > 1) {
-          pxW = 1; pxH = 2; // stretch down  
+          pxW = 1; pxH = 2;
         }
       }
       if (state.landingFrame > 4) {
-        pxW = 2; pxH = 1; // squash on land
+        pxW = 2; pxH = 1;
       }
-      
-      if (state.fellOff) {
-        ctx.fillStyle = '#f00';
-      } else if (state.charging) {
-        // Pulsing while charging
-        const pulse = Math.sin(performance.now() / 50) * 0.3 + 0.7;
-        ctx.fillStyle = `rgba(255,255,${Math.floor(pulse * 255)},1)`;
-      } else {
-        ctx.fillStyle = '#fff';
-      }
+
       const drawX = Math.max(0, Math.min(W - pxW, Math.floor(state.px)));
       const drawY = Math.max(0, Math.min(H - pxH, Math.floor(state.py) - (pxH - 1)));
+
+      // Player glow
+      if (!state.fellOff) {
+        ctx.fillStyle = state.charging
+          ? `rgba(255,255,0,${0.3 + Math.sin(performance.now() / 50) * 0.2})`
+          : COLORS.playerGlow;
+        ctx.fillRect(drawX - 1, drawY - 1, pxW + 2, pxH + 2);
+      }
+
+      // Player core
+      if (state.fellOff) {
+        ctx.fillStyle = '#ff0040';
+      } else if (state.charging) {
+        const pulse = Math.sin(performance.now() / 50) * 0.3 + 0.7;
+        ctx.fillStyle = `rgb(255,255,${Math.floor(pulse * 200)})`;
+      } else {
+        ctx.fillStyle = COLORS.player;
+      }
       ctx.fillRect(drawX, drawY, pxW, pxH);
 
-      // Power/angle indicator while charging
+      // === POWER/ANGLE INDICATOR (Synthwave styled) ===
       if (state.charging) {
         const angleRad = (state.angle * Math.PI) / 180;
         const lineLen = 8 + state.chargePower * 15;
         const startX = state.px;
         const startY = state.py;
 
-        // Draw arc showing angle range
-        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        // Arc showing angle range
+        ctx.fillStyle = 'rgba(191,0,255,0.3)';
         for (let a = MIN_ANGLE; a <= MAX_ANGLE; a += 5) {
           const rad = (a * Math.PI) / 180;
           ctx.fillRect(
@@ -554,59 +1093,173 @@ const Game = () => {
           );
         }
 
-        // Power bar line with dotted effect
-        ctx.fillStyle = '#ff0';
+        // Power bar line (yellow/magenta gradient effect)
         for (let i = 0; i < lineLen; i += 2) {
+          const progress = i / lineLen;
           const px = startX + Math.cos(angleRad) * i;
           const py = startY - Math.sin(angleRad) * i;
+          ctx.fillStyle = progress < 0.5 ? COLORS.neonYellow : COLORS.neonMagenta;
           ctx.fillRect(Math.floor(px), Math.floor(py), 1, 1);
         }
-        // Arrow tip
+        // Arrow tip glow
         const endX = startX + Math.cos(angleRad) * lineLen;
         const endY = startY - Math.sin(angleRad) * lineLen;
+        ctx.fillStyle = COLORS.neonYellow;
         ctx.fillRect(Math.floor(endX), Math.floor(endY), 2, 2);
 
-        // Optimal angle marker (45°) - pulsing green
+        // Optimal angle marker (45°)
         const optRad = (OPTIMAL_ANGLE * Math.PI) / 180;
         const optPulse = Math.sin(performance.now() / 100) * 0.3 + 0.7;
-        ctx.fillStyle = `rgba(0,255,0,${optPulse * 0.8})`;
+        ctx.fillStyle = `rgba(0,255,128,${optPulse * 0.8})`;
         ctx.fillRect(
           startX + Math.cos(optRad) * 18 - 1,
           startY - Math.sin(optRad) * 18 - 1,
           3, 3
         );
 
-        // Power meter bar at TOP LEFT (away from launch pad)
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.fillRect(4, 4, 40, 6);
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        ctx.fillRect(5, 5, 38, 4);
-        const powerColor = state.chargePower > 0.8 ? '#f00' : state.chargePower > 0.5 ? '#ff0' : '#0f0';
+        // Power meter bar (synthwave styled)
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(3, 3, 42, 8);
+        ctx.strokeStyle = COLORS.neonPurple;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(3, 3, 42, 8);
+
+        // Power fill
+        const powerColor = state.chargePower > 0.8 ? COLORS.neonPink
+          : state.chargePower > 0.5 ? COLORS.neonYellow
+          : COLORS.neonCyan;
         ctx.fillStyle = powerColor;
         ctx.fillRect(5, 5, Math.floor(state.chargePower * 38), 4);
 
-        // Angle indicator text area
-        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        // Angle indicator dots
+        ctx.fillStyle = COLORS.neonMagenta;
         const angleDisplay = Math.round(state.angle);
-        // Simple angle display - dots for tens
         const tens = Math.floor(angleDisplay / 10);
         for (let i = 0; i < tens; i++) {
-          ctx.fillRect(6 + i * 3, 12, 2, 2);
+          ctx.fillRect(5 + i * 3, 13, 2, 2);
         }
       }
 
-      // Nudge available indicator (animated) - bottom left, more prominent
+      // === NUDGE AVAILABLE INDICATOR ===
       if (state.flying && !state.nudgeUsed) {
         const nudgePulse = Math.sin(performance.now() / 80) * 0.4 + 0.6;
-        // Larger, more visible indicator
-        ctx.fillStyle = 'rgba(255,255,0,0.2)';
-        ctx.fillRect(3, H - 14, 14, 10);
+        ctx.fillStyle = `rgba(255,255,0,${nudgePulse * 0.2})`;
+        ctx.fillRect(2, H - 15, 16, 12);
         ctx.fillStyle = `rgba(255,255,0,${nudgePulse})`;
-        ctx.fillRect(5, H - 12, 10, 6);
-        ctx.fillStyle = `rgba(255,255,0,${nudgePulse * 0.8})`;
-        ctx.fillRect(8, H - 10, 4, 2);
+        ctx.fillRect(4, H - 13, 12, 8);
+        ctx.fillStyle = COLORS.neonYellow;
+        ctx.fillRect(7, H - 11, 6, 4);
       }
-      
+
+      // === PHASE 2: EDGE DANGER ZONE VISUAL ===
+      if ((state.flying || state.sliding) && state.px > 120) {
+        const dangerIntensity = (state.px - 120) / (CLIFF_EDGE - 120);
+        const pulse = Math.sin(performance.now() / 100) * 0.3 + 0.7;
+        // Red vignette on edges
+        ctx.fillStyle = `rgba(255,0,40,${dangerIntensity * pulse * 0.3})`;
+        ctx.fillRect(0, 0, 8, H);
+        ctx.fillRect(W - 8, 0, 8, H);
+        ctx.fillRect(0, 0, W, 6);
+        ctx.fillRect(0, H - 6, W, 6);
+      }
+
+      // === PHASE 3: MULTIPLIER UI (top left, below power bar area) ===
+      if ((state.flying || state.sliding) && state.currentMultiplier > 1.01) {
+        const mult = state.currentMultiplier;
+        const multPulse = Math.sin(performance.now() / 80) * 0.2 + 0.8;
+
+        // Multiplier color based on value
+        let multColor = COLORS.neonCyan;
+        if (mult > 3) multColor = COLORS.neonPink;
+        else if (mult > 2) multColor = COLORS.neonYellow;
+
+        // Multiplier background box - top left corner
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(2, 18, 28, 10);
+
+        // Multiplier border glow
+        ctx.strokeStyle = multColor;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(2, 18, 28, 10);
+
+        // Draw "x" and multiplier bars
+        ctx.fillStyle = `rgba(255,255,255,${multPulse})`;
+        ctx.fillRect(5, 22, 1, 1);
+        ctx.fillRect(7, 22, 1, 1);
+        ctx.fillRect(6, 23, 1, 1);
+
+        // Multiplier bars (more bars = higher multiplier)
+        ctx.fillStyle = multColor;
+        const bars = Math.min(4, Math.floor(mult));
+        for (let i = 0; i < bars; i++) {
+          ctx.fillRect(10 + i * 5, 20, 3, 6);
+        }
+      }
+
+      // === PHASE 2: SLOW-MO VISUAL INDICATOR ===
+      if (state.slowMo > 0.1) {
+        // Subtle vignette effect during slow-mo
+        ctx.fillStyle = `rgba(0,255,255,${state.slowMo * 0.1})`;
+        ctx.fillRect(0, 0, W, 2);
+        ctx.fillRect(0, H - 2, W, 2);
+      }
+
+      // === PHASE 2: SCREEN FLASH OVERLAY ===
+      if (state.screenFlash > 0.01) {
+        ctx.fillStyle = `rgba(255,255,255,${state.screenFlash * 0.8})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      // === MOBILE UX: TOUCH FEEDBACK GLOW ===
+      if (state.touchFeedback > 0.05) {
+        // Cyan glow pulse from center
+        const gradient = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W / 2);
+        gradient.addColorStop(0, `rgba(0,255,255,${state.touchFeedback * 0.3})`);
+        gradient.addColorStop(0.5, `rgba(255,0,255,${state.touchFeedback * 0.15})`);
+        gradient.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      // === MOBILE UX: TAP ZONE INDICATOR (shown when idle on mobile) ===
+      if (state.touchActive && !state.flying && !state.sliding && !state.charging) {
+        // Pulsing ring around player to indicate touch registered
+        const ringPulse = Math.sin(performance.now() / 100) * 0.3 + 0.7;
+        ctx.strokeStyle = `rgba(0,255,255,${ringPulse})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(state.px, state.py, 8, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // === PHASE 5: ACHIEVEMENT NOTIFICATION ===
+      if (state.newAchievement) {
+        const achPulse = Math.sin(performance.now() / 100) * 0.1 + 0.9;
+
+        // Achievement banner background
+        ctx.fillStyle = 'rgba(0,0,0,0.85)';
+        ctx.fillRect(W / 2 - 45, 2, 90, 18);
+
+        // Golden border
+        ctx.strokeStyle = `rgba(255,215,0,${achPulse})`;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(W / 2 - 45, 2, 90, 18);
+
+        // Achievement icon (star)
+        ctx.fillStyle = `rgba(255,215,0,${achPulse})`;
+        ctx.fillRect(W / 2 - 40, 8, 2, 2);
+        ctx.fillRect(W / 2 - 39, 7, 2, 1);
+        ctx.fillRect(W / 2 - 39, 11, 2, 1);
+        ctx.fillRect(W / 2 - 41, 9, 1, 1);
+        ctx.fillRect(W / 2 - 37, 9, 1, 1);
+
+        // "UNLOCKED" text indicator
+        ctx.fillStyle = COLORS.neonCyan;
+        ctx.fillRect(W / 2 - 34, 6, 3, 1);
+        ctx.fillRect(W / 2 - 34, 9, 3, 1);
+        ctx.fillRect(W / 2 - 34, 12, 3, 1);
+      }
+
       ctx.restore();
     };
 
@@ -624,72 +1277,167 @@ const Game = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keyup', handleKeyUp);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       canvas.removeEventListener('mousedown', handleMouseDown);
       canvas.removeEventListener('mouseup', handleMouseUp);
       canvas.removeEventListener('touchstart', handleTouchStart);
       canvas.removeEventListener('touchend', handleTouchEnd);
       cancelAnimationFrame(animFrameRef.current);
     };
-  }, [initState, resetPhysics, nextWind, playSound, spawnParticles, setBestScore, setLastDist, setZenoTarget, setZenoLevel]);
+  }, [initState, resetPhysics, nextWind, playSound, spawnParticles, spawnCelebration, startChargeTone, updateChargeTone, stopChargeTone, playZenoJingle, updateEdgeWarning, stopEdgeWarning, checkAchievements, triggerHaptic, setBestScore, setLastDist, setZenoTarget, setZenoLevel]);
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-4 p-4" style={{ background: 'linear-gradient(180deg, #0a0014 0%, #1a0033 100%)' }}>
       <div className="text-center max-w-sm px-2">
-        <h1 className="text-lg sm:text-xl font-bold text-foreground mb-1 sm:mb-2">One-More-Flick</h1>
-        <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
+        <h1 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2" style={{ color: '#ff00ff', textShadow: '0 0 10px #ff00ff, 0 0 20px #ff0080' }}>
+          One-More-Flick
+        </h1>
+        <p className="text-xs sm:text-sm leading-relaxed" style={{ color: '#bf00ff' }}>
           <span className="hidden sm:inline">Hold </span>
-          <kbd className="px-1 sm:px-1.5 py-0.5 bg-muted border border-border rounded text-xs font-mono">SPACE</kbd>
+          <kbd className="px-1 sm:px-1.5 py-0.5 rounded text-xs font-mono" style={{ background: 'rgba(255,0,128,0.2)', border: '1px solid #ff0080', color: '#ff0080' }}>SPACE</kbd>
           <span className="sm:hidden"> or TAP</span> to charge.
-          <span className="text-cyan-400"> Chase the target</span> — the edge is unreachable.
+          <span style={{ color: '#00ffff', textShadow: '0 0 5px #00ffff' }}> Chase the target</span> — the edge is unreachable.
         </p>
       </div>
 
-      <canvas
-        ref={canvasRef}
-        width={W}
-        height={H}
-        className="game-canvas cursor-pointer"
-      />
+      {/* Canvas with improved mobile scaling */}
+      <div className="relative">
+        <canvas
+          ref={canvasRef}
+          width={W}
+          height={H}
+          className="game-canvas cursor-pointer touch-none select-none"
+          style={{
+            boxShadow: '0 0 20px rgba(255,0,255,0.5), 0 0 40px rgba(255,0,128,0.3)',
+            border: '2px solid #ff00ff',
+            // Mobile: larger touch target, scales up to 2.5x on small screens
+            width: 'min(100vw - 2rem, 400px)',
+            height: 'auto',
+            aspectRatio: `${W} / ${H}`,
+            imageRendering: 'pixelated',
+          }}
+        />
+
+        {/* Mobile hint overlay - shown on first load */}
+        {showMobileHint && isMobileRef.current && (
+          <div
+            className="absolute inset-0 flex items-center justify-center pointer-events-none animate-pulse"
+            style={{
+              background: 'rgba(0,0,0,0.5)',
+              borderRadius: '4px',
+            }}
+          >
+            <div className="text-center px-4">
+              <p className="text-lg font-bold" style={{ color: '#00ffff', textShadow: '0 0 10px #00ffff' }}>
+                TAP & HOLD
+              </p>
+              <p className="text-xs mt-1" style={{ color: '#ff00ff' }}>
+                Release to launch
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="flex flex-wrap justify-center gap-3 sm:gap-5 text-center">
         <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Last</p>
+          <p className="text-xs uppercase tracking-wide" style={{ color: '#8800aa' }}>Last</p>
           <p className="text-xl sm:text-2xl font-bold font-mono">
             {fellOff ? (
-              <span className="text-destructive">FELL!</span>
+              <span style={{ color: '#ff0040', textShadow: '0 0 10px #ff0040' }}>FELL!</span>
             ) : lastDist !== null ? (
-              <span className="text-foreground">
+              <span style={{ color: '#ff0080', textShadow: '0 0 8px #ff0080' }}>
                 {formatScore(lastDist).int}
-                <span className="text-xs sm:text-sm text-muted-foreground">.{formatScore(lastDist).dec}</span>
+                <span className="text-xs sm:text-sm" style={{ color: '#8800aa' }}>.{formatScore(lastDist).dec}</span>
               </span>
             ) : (
-              <span className="text-muted-foreground">-</span>
+              <span style={{ color: '#4a0066' }}>-</span>
             )}
           </p>
+          {/* Phase 3: Show multiplier and perfect landing */}
+          {lastDist !== null && !fellOff && (
+            <p className="text-xs font-mono" style={{
+              color: lastMultiplier > 3 ? '#ff0080' : lastMultiplier > 2 ? '#ffff00' : '#00ffff',
+              textShadow: `0 0 5px ${lastMultiplier > 3 ? '#ff0080' : lastMultiplier > 2 ? '#ffff00' : '#00ffff'}`
+            }}>
+              x{lastMultiplier.toFixed(1)}
+              {perfectLanding && <span style={{ color: '#ffff00' }}> ★</span>}
+            </p>
+          )}
         </div>
         <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Best</p>
-          <p className="text-xl sm:text-2xl font-bold text-primary font-mono">
+          <p className="text-xs uppercase tracking-wide" style={{ color: '#bf00ff' }}>Best</p>
+          <p className="text-xl sm:text-2xl font-bold font-mono" style={{ color: '#bf00ff', textShadow: '0 0 10px #bf00ff' }}>
             {formatScore(bestScore).int}
-            <span className="text-xs sm:text-sm text-muted-foreground">.{formatScore(bestScore).dec}</span>
+            <span className="text-xs sm:text-sm" style={{ color: '#8800aa' }}>.{formatScore(bestScore).dec}</span>
           </p>
         </div>
         <div>
-          <p className="text-xs text-cyan-500 uppercase tracking-wide">Target</p>
-          <p className="text-xl sm:text-2xl font-bold text-cyan-400 font-mono">
+          <p className="text-xs uppercase tracking-wide" style={{ color: '#00aaaa' }}>Target</p>
+          <p className="text-xl sm:text-2xl font-bold font-mono" style={{ color: '#00ffff', textShadow: '0 0 10px #00ffff' }}>
             {formatScore(zenoTarget).int}
-            <span className="text-xs sm:text-sm text-cyan-600">.{formatScore(zenoTarget).dec}</span>
+            <span className="text-xs sm:text-sm" style={{ color: '#008888' }}>.{formatScore(zenoTarget).dec}</span>
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Zeno</p>
-          <p className="text-xl sm:text-2xl font-bold text-yellow-400 font-mono">Lv.{zenoLevel}</p>
+          <p className="text-xs uppercase tracking-wide" style={{ color: '#aaaa00' }}>Zeno</p>
+          <p className="text-xl sm:text-2xl font-bold font-mono" style={{ color: '#ffff00', textShadow: '0 0 10px #ffff00' }}>Lv.{zenoLevel}</p>
+        </div>
+        {/* Phase 3: Total Score */}
+        <div>
+          <p className="text-xs uppercase tracking-wide" style={{ color: '#ff00aa' }}>Score</p>
+          <p className="text-xl sm:text-2xl font-bold font-mono" style={{ color: '#ff00aa', textShadow: '0 0 10px #ff00aa' }}>
+            {Math.floor(totalScore).toLocaleString()}
+          </p>
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground text-center max-w-xs px-2">
-        <span className="text-cyan-500">Zeno's Paradox</span> — Target moves halfway to {CLIFF_EDGE} each level.
+      <p className="text-xs text-center max-w-xs px-2" style={{ color: '#8800aa' }}>
+        <span style={{ color: '#00ffff', textShadow: '0 0 5px #00ffff' }}>Zeno's Paradox</span> — Target moves halfway to {CLIFF_EDGE} each level.
+        <br />
+        <span style={{ color: '#ff0080' }}>Risk more for higher multipliers!</span>
       </p>
+
+      {/* Phase 5: Achievement notification popup */}
+      {newAchievement && (
+        <div
+          className="fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg animate-pulse"
+          style={{
+            background: 'linear-gradient(135deg, #1a0033 0%, #0a0014 100%)',
+            border: '2px solid #ffd700',
+            boxShadow: '0 0 20px rgba(255,215,0,0.5)',
+          }}
+        >
+          <p className="text-sm font-bold" style={{ color: '#ffd700' }}>
+            ★ Achievement Unlocked!
+          </p>
+          <p className="text-xs" style={{ color: '#00ffff' }}>{newAchievement}</p>
+        </div>
+      )}
+
+      {/* Phase 5: Stats and achievements summary */}
+      <div className="flex flex-wrap justify-center gap-4 text-center mt-2 text-xs" style={{ color: '#8800aa' }}>
+        <div>
+          <span style={{ color: '#bf00ff' }}>Throws:</span>{' '}
+          <span style={{ color: '#ff0080' }}>{stats.totalThrows}</span>
+        </div>
+        <div>
+          <span style={{ color: '#bf00ff' }}>Success:</span>{' '}
+          <span style={{ color: '#00ffff' }}>
+            {stats.totalThrows > 0 ? Math.round((stats.successfulLandings / stats.totalThrows) * 100) : 0}%
+          </span>
+        </div>
+        <div>
+          <span style={{ color: '#bf00ff' }}>Avg:</span>{' '}
+          <span style={{ color: '#ff0080' }}>
+            {stats.successfulLandings > 0 ? (stats.totalDistance / stats.successfulLandings).toFixed(1) : '0'}
+          </span>
+        </div>
+        <div>
+          <span style={{ color: '#bf00ff' }}>★:</span>{' '}
+          <span style={{ color: '#ffd700' }}>{achievements.size}/{Object.keys(ACHIEVEMENTS).length}</span>
+        </div>
+      </div>
     </div>
   );
 };
