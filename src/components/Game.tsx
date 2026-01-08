@@ -404,7 +404,10 @@ const Game = () => {
   const controlsLabel = isMobileRef.current ? 'TAP & HOLD' : 'SPACE / CLICK (hold) — drag up/down to aim';
 
   return (
-    <div className="flex flex-col items-center gap-2 p-2" style={{ background: `linear-gradient(180deg, ${theme.background} 0%, ${theme.horizon} 100%)`, minHeight: '100vh' }}>
+    <div
+      className={`flex flex-col items-center gap-2 ${isMobileRef.current ? 'p-1' : 'p-2'}`}
+      style={{ background: `linear-gradient(180deg, ${theme.background} 0%, ${theme.horizon} 100%)`, minHeight: '100vh' }}
+    >
       {/* Compact header with theme picker */}
       <div className="flex items-center justify-between w-full max-w-md px-2">
         <h1 className="text-sm font-bold" style={{ color: theme.accent1 }}>One-More-Flick</h1>
@@ -443,16 +446,17 @@ const Game = () => {
       </div>
 
       {/* Canvas - maximized */}
-      <div className="relative flex-1 flex items-center">
-        {/* Input pad: larger touch target so finger doesn't cover the game */}
+      <div className="relative flex-1 w-full flex items-stretch justify-center">
+        {/* Full-area input overlay so you can tap/hold outside the canvas on mobile */}
         <div
           ref={inputPadRef}
-          className="relative"
-          style={{
-            padding: isMobileRef.current ? '18px 18px 52px 18px' : '10px',
-            touchAction: 'none',
-          }}
-        >
+          className="absolute inset-0"
+          style={{ touchAction: 'none' }}
+          aria-label="Game input area"
+        />
+
+        {/* Visual canvas centered within the available space */}
+        <div className="relative flex items-center justify-center" style={{ padding: isMobileRef.current ? '6px 6px 10px 6px' : '10px' }}>
           <canvas
             ref={canvasRef}
             width={W}
@@ -461,7 +465,7 @@ const Game = () => {
             style={{
               boxShadow: `0 0 15px ${theme.accent1}60`,
               border: `1px solid ${theme.accent1}`,
-              width: 'min(100vw - 1rem, 480px)',
+              width: isMobileRef.current ? 'min(calc(100vw - 0.5rem), 520px)' : 'min(calc(100vw - 1rem), 480px)',
               height: 'auto',
               aspectRatio: `${W} / ${H}`,
               imageRendering: 'pixelated',
