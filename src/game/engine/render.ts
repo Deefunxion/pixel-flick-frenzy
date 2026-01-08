@@ -435,6 +435,34 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.stroke();
   }
 
+  // Record zone vignette and visual effects
+  if (state.recordZoneActive && !state.reduceFx) {
+    const intensity = state.recordZoneIntensity;
+
+    // Vignette effect (darker edges)
+    const gradient = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W * 0.7);
+    gradient.addColorStop(0, 'rgba(0,0,0,0)');
+    gradient.addColorStop(0.7, `rgba(0,0,0,${intensity * 0.2})`);
+    gradient.addColorStop(1, `rgba(0,0,0,${intensity * 0.5})`);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, W, H);
+
+    // Pulsing border glow
+    const pulse = Math.sin(nowMs / 100) * 0.5 + 0.5;
+    ctx.strokeStyle = `rgba(255, 215, 0, ${intensity * pulse * 0.8})`;
+    ctx.lineWidth = 4 + intensity * 4;
+    ctx.strokeRect(2, 2, W - 4, H - 4);
+
+    // "RECORD ZONE" text when intensity high
+    if (intensity > 0.5) {
+      ctx.fillStyle = `rgba(255, 215, 0, ${(intensity - 0.5) * 2})`;
+      ctx.font = 'bold 16px "Comic Sans MS", cursive, sans-serif';
+      ctx.textAlign = 'center';
+      const textPulse = Math.sin(nowMs / 150) * 2;
+      ctx.fillText('RECORD ZONE', W / 2, 25 + textPulse);
+    }
+  }
+
   // Touch feedback crosshair
   if (state.touchFeedback > 0.3) {
     const cx = W / 2;
@@ -786,6 +814,21 @@ function renderClassicFrame(ctx: CanvasRenderingContext2D, state: GameState, COL
     ctx.fillRect(0, H - 4, 1, 4);
     ctx.fillRect(W - 4, H - 1, 4, 1);
     ctx.fillRect(W - 1, H - 4, 1, 4);
+  }
+
+  // Record zone vignette (classic theme)
+  if (state.recordZoneActive && !state.reduceFx) {
+    const intensity = state.recordZoneIntensity;
+
+    // Gold border pulsing
+    const pulse = Math.floor(nowMs / 80) % 2;
+    if (pulse) {
+      ctx.fillStyle = `rgba(255, 215, 0, ${intensity * 0.6})`;
+      ctx.fillRect(0, 0, W, 2);
+      ctx.fillRect(0, H - 2, W, 2);
+      ctx.fillRect(0, 0, 2, H);
+      ctx.fillRect(W - 2, 0, 2, H);
+    }
   }
 
   if (!state.reduceFx && state.screenFlash > 0.5) {
