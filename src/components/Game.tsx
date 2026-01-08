@@ -447,14 +447,6 @@ const Game = () => {
 
       {/* Canvas - maximized */}
       <div className="relative flex-1 w-full flex items-stretch justify-center">
-        {/* Full-area input overlay so you can tap/hold outside the canvas on mobile */}
-        <div
-          ref={inputPadRef}
-          className="absolute inset-0"
-          style={{ touchAction: 'none' }}
-          aria-label="Game input area"
-        />
-
         {/* Visual canvas centered within the available space */}
         <div className="relative flex items-center justify-center" style={{ padding: isMobileRef.current ? '6px 6px 10px 6px' : '10px' }}>
           <canvas
@@ -473,9 +465,19 @@ const Game = () => {
               WebkitImageRendering: 'pixelated',
               MozImageRendering: 'crisp-edges',
               msInterpolationMode: 'nearest-neighbor',
+              // Ensure the input overlay receives the pointer events
+              pointerEvents: 'none',
             }}
           />
         </div>
+
+        {/* Full-area input overlay so you can tap/hold outside the canvas on mobile */}
+        <div
+          ref={inputPadRef}
+          className="absolute inset-0 z-10"
+          style={{ touchAction: 'none', cursor: 'pointer' }}
+          aria-label="Game input area"
+        />
 
         {/* Mobile hint overlay */}
         {showMobileHint && isMobileRef.current && (
