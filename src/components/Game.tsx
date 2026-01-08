@@ -42,6 +42,7 @@ import { renderFrame } from '@/game/engine/render';
 import { createInitialState, resetPhysics } from '@/game/engine/state';
 import { updateFrame, type GameAudio, type GameUI } from '@/game/engine/update';
 import type { GameState } from '@/game/engine/types';
+import { StatsOverlay } from './StatsOverlay';
 
 const Game = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -72,6 +73,7 @@ const Game = () => {
   });
   const [newAchievement, setNewAchievement] = useState<string | null>(null);
   const [showMobileHint, setShowMobileHint] = useState(true);
+  const [showStats, setShowStats] = useState(false);
 
   const [dailyStats, setDailyStats] = useState(() => loadDailyStats());
   const dailyStatsRef = useRef(dailyStats);
@@ -491,6 +493,14 @@ const Game = () => {
         >
           {reduceFx ? 'FX: Low' : 'FX: On'}
         </button>
+        <button
+          className="px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          style={{ background: theme.uiBg, border: `1px solid ${theme.accent3}` }}
+          onClick={() => setShowStats(true)}
+          aria-label="View stats"
+        >
+          Stats
+        </button>
       </div>
 
       {/* Compact score row */}
@@ -570,6 +580,11 @@ const Game = () => {
         >
           <p className="text-xs font-bold" style={{ color: theme.highlight }}>★ {newAchievement}</p>
         </div>
+      )}
+
+      {/* Stats overlay */}
+      {showStats && (
+        <StatsOverlay theme={theme} onClose={() => setShowStats(false)} />
       )}
     </div>
   );
