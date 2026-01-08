@@ -38,66 +38,66 @@ interface Theme {
 const THEMES: Record<string, Theme> = {
   synthwave: {
     name: 'Synthwave',
-    background: '#0a0014',
-    backgroundGradientEnd: '#1a0044',
-    horizon: '#1a0033',
-    gridPrimary: '#ff00ff',
-    gridSecondary: '#8800aa',
-    accent1: '#ff0080',
-    accent2: '#00ffff',
-    accent3: '#bf00ff',
-    accent4: '#ff00aa',
-    highlight: '#ffff00',
-    player: '#00ffff',
-    playerGlow: 'rgba(0,255,255,0.6)',
-    trailNormal: '#ff0080',
-    trailPastTarget: '#00ffff',
-    star: '#ffffff',
-    danger: '#ff0040',
-    uiBg: 'rgba(0,0,0,0.6)',
-    uiText: '#ffffff',
+    background: '#0c0c0f',           // Neutral dark, no purple
+    backgroundGradientEnd: '#1a1a2e', // Deep blue-black
+    horizon: '#16213e',              // Navy horizon
+    gridPrimary: '#e84393',          // Soft pink grid
+    gridSecondary: '#6c5ce7',        // Muted purple lines
+    accent1: '#fd79a8',              // Soft pink (primary)
+    accent2: '#74b9ff',              // Soft blue (secondary)
+    accent3: '#a29bfe',              // Lavender (tertiary)
+    accent4: '#ff7675',              // Coral
+    highlight: '#ffeaa7',            // Warm cream yellow
+    player: '#74b9ff',               // Soft blue player
+    playerGlow: 'rgba(116,185,255,0.5)',
+    trailNormal: '#fd79a8',
+    trailPastTarget: '#74b9ff',
+    star: '#dfe6e9',                 // Soft white stars
+    danger: '#d63031',               // Deep red
+    uiBg: 'rgba(12,12,15,0.7)',
+    uiText: '#dfe6e9',               // Off-white text
   },
   noir: {
     name: 'Dark Noir',
-    background: '#0a0a0a',
+    background: '#0d0d0d',           // True black
     backgroundGradientEnd: '#1a1a1a',
-    horizon: '#151515',
-    gridPrimary: '#333333',
-    gridSecondary: '#222222',
-    accent1: '#ff4444',      // Blood red accents
-    accent2: '#888888',      // Silver/gray
-    accent3: '#666666',      // Dark gray
-    accent4: '#aa4444',      // Muted red
-    highlight: '#ffffff',    // Pure white highlights
-    player: '#ffffff',       // White player
-    playerGlow: 'rgba(255,255,255,0.4)',
-    trailNormal: '#666666',
-    trailPastTarget: '#ff4444',
-    star: '#444444',         // Dim stars
-    danger: '#ff2222',
-    uiBg: 'rgba(0,0,0,0.8)',
-    uiText: '#cccccc',
+    horizon: '#141414',
+    gridPrimary: '#2d2d2d',          // Subtle grid
+    gridSecondary: '#1f1f1f',
+    accent1: '#c0392b',              // Deep cinematic red
+    accent2: '#636e72',              // Warm gray
+    accent3: '#4a4a4a',              // Medium gray
+    accent4: '#922b21',              // Dark red
+    highlight: '#dfe6e9',            // Off-white
+    player: '#ecf0f1',               // Soft white player
+    playerGlow: 'rgba(236,240,241,0.35)',
+    trailNormal: '#4a4a4a',
+    trailPastTarget: '#c0392b',
+    star: '#2d2d2d',                 // Very dim stars
+    danger: '#e74c3c',               // Alert red
+    uiBg: 'rgba(13,13,13,0.85)',
+    uiText: '#b2bec3',               // Muted off-white
   },
   golf: {
     name: 'Golf Classic',
-    background: '#0a1a0a',
-    backgroundGradientEnd: '#1a3a1a',
-    horizon: '#2a4a2a',
-    gridPrimary: '#3a6a3a',
-    gridSecondary: '#2a5a2a',
-    accent1: '#44aa44',      // Grass green
-    accent2: '#ffffff',      // Ball white
-    accent3: '#88cc88',      // Light green
-    accent4: '#66aa66',      // Medium green
-    highlight: '#ffdd44',    // Gold/flag yellow
-    player: '#ffffff',       // Golf ball white
-    playerGlow: 'rgba(255,255,255,0.5)',
-    trailNormal: '#88cc88',
-    trailPastTarget: '#ffdd44',
-    star: '#aaddaa',         // Pale green stars
-    danger: '#cc4444',       // Red hazard
-    uiBg: 'rgba(20,40,20,0.8)',
-    uiText: '#ccffcc',
+    background: '#0d1f0d',           // Deep forest
+    backgroundGradientEnd: '#1a3320',
+    horizon: '#2d4a2d',              // Grass horizon
+    gridPrimary: '#27ae60',          // Rich grass green
+    gridSecondary: '#1e8449',        // Darker green
+    accent1: '#2ecc71',              // Vibrant green (primary)
+    accent2: '#ecf0f1',              // Clean white
+    accent3: '#58d68d',              // Light green
+    accent4: '#27ae60',              // Medium green
+    highlight: '#f39c12',            // Amber gold
+    player: '#ecf0f1',               // White golf ball
+    playerGlow: 'rgba(236,240,241,0.45)',
+    trailNormal: '#58d68d',
+    trailPastTarget: '#f39c12',
+    star: '#82e0aa',                 // Pale green stars
+    danger: '#c0392b',               // Red hazard
+    uiBg: 'rgba(13,31,13,0.8)',
+    uiText: '#a9dfbf',               // Soft green text
   },
 };
 
@@ -996,24 +996,30 @@ const Game = () => {
         ctx.stroke();
       }
 
-      // Horizon glow line
+      // Horizon glow line - use gridPrimary color
       const glowPulse = Math.sin(performance.now() / 300) * 0.2 + 0.8;
-      ctx.fillStyle = `rgba(255,0,255,${glowPulse * 0.6})`;
+      const gp = COLORS.gridPrimary;
+      const gpR = parseInt(gp.slice(1,3), 16), gpG = parseInt(gp.slice(3,5), 16), gpB = parseInt(gp.slice(5,7), 16);
+      ctx.fillStyle = `rgba(${gpR},${gpG},${gpB},${glowPulse * 0.5})`;
       ctx.fillRect(0, Math.floor(horizonY) - 1, W, 2);
-      ctx.fillStyle = `rgba(255,0,255,${glowPulse * 0.3})`;
+      ctx.fillStyle = `rgba(${gpR},${gpG},${gpB},${glowPulse * 0.25})`;
       ctx.fillRect(0, Math.floor(horizonY) - 2, W, 4);
 
-      // === GROUND (Neon Platform) ===
-      // Main ground line with glow
-      ctx.fillStyle = 'rgba(255,0,128,0.3)';
+      // === GROUND (Platform) ===
+      // Parse accent1 for glow effects
+      const a1 = COLORS.accent1;
+      const a1R = parseInt(a1.slice(1,3), 16), a1G = parseInt(a1.slice(3,5), 16), a1B = parseInt(a1.slice(5,7), 16);
+      ctx.fillStyle = `rgba(${a1R},${a1G},${a1B},0.25)`;
       ctx.fillRect(0, H - 5, CLIFF_EDGE + 1, 3);
       ctx.fillStyle = COLORS.accent1;
       ctx.fillRect(0, H - 3, CLIFF_EDGE + 1, 1);
-      ctx.fillStyle = 'rgba(255,0,128,0.5)';
+      ctx.fillStyle = `rgba(${a1R},${a1G},${a1B},0.4)`;
       ctx.fillRect(0, H - 2, CLIFF_EDGE + 1, 2);
 
-      // === LAUNCH PAD (Neon Cyan Platform) ===
-      ctx.fillStyle = 'rgba(0,255,255,0.2)';
+      // === LAUNCH PAD ===
+      const a2 = COLORS.accent2;
+      const a2R = parseInt(a2.slice(1,3), 16), a2G = parseInt(a2.slice(3,5), 16), a2B = parseInt(a2.slice(5,7), 16);
+      ctx.fillStyle = `rgba(${a2R},${a2G},${a2B},0.15)`;
       ctx.fillRect(LAUNCH_PAD_X - 5, H - 7, 11, 5);
       ctx.fillStyle = COLORS.accent2;
       ctx.fillRect(LAUNCH_PAD_X - 4, H - 5, 9, 2);
@@ -1024,34 +1030,37 @@ const Game = () => {
 
       // === CLIFF EDGE DANGER ZONE ===
       const t = performance.now() / 200;
-      // Danger zone glow
-      ctx.fillStyle = 'rgba(255,0,80,0.3)';
+      const dng = COLORS.danger;
+      const dngR = parseInt(dng.slice(1,3), 16), dngG = parseInt(dng.slice(3,5), 16), dngB = parseInt(dng.slice(5,7), 16);
+      ctx.fillStyle = `rgba(${dngR},${dngG},${dngB},0.25)`;
       ctx.fillRect(CLIFF_EDGE - 12, H - 6, 13, 4);
       // Animated danger stripes
       for (let i = 0; i < 6; i++) {
         if ((Math.floor(t) + i) % 2 === 0) {
-          ctx.fillStyle = `rgba(255,0,80,${0.6 + Math.sin(t * 2) * 0.3})`;
+          ctx.fillStyle = `rgba(${dngR},${dngG},${dngB},${0.5 + Math.sin(t * 2) * 0.25})`;
           ctx.fillRect(CLIFF_EDGE - 1, H - 6 - i, 1, 1);
         }
       }
 
-      // === BEST DISTANCE MARKER (Neon Purple) ===
+      // === BEST DISTANCE MARKER ===
       if (state.best > 0 && state.best <= CLIFF_EDGE) {
-        ctx.fillStyle = 'rgba(191,0,255,0.3)';
+        const a3 = COLORS.accent3;
+        const a3R = parseInt(a3.slice(1,3), 16), a3G = parseInt(a3.slice(3,5), 16), a3B = parseInt(a3.slice(5,7), 16);
+        ctx.fillStyle = `rgba(${a3R},${a3G},${a3B},0.25)`;
         ctx.fillRect(state.best - 1, H - 10, 3, 7);
         ctx.fillStyle = COLORS.accent3;
         ctx.fillRect(state.best, H - 9, 1, 6);
         ctx.fillRect(state.best - 1, H - 9, 3, 1);
       }
 
-      // === ZENO TARGET MARKER (Pulsing Cyan) ===
+      // === ZENO TARGET MARKER ===
       if (state.zenoTarget > 0 && state.zenoTarget <= CLIFF_EDGE) {
         const zenoPulse = Math.sin(performance.now() / 150) * 0.3 + 0.7;
-        // Glow
-        ctx.fillStyle = `rgba(0,255,255,${zenoPulse * 0.2})`;
+        // Glow using accent2
+        ctx.fillStyle = `rgba(${a2R},${a2G},${a2B},${zenoPulse * 0.15})`;
         ctx.fillRect(Math.floor(state.zenoTarget) - 3, H - 14, 7, 12);
         // Marker
-        ctx.fillStyle = `rgba(0,255,255,${zenoPulse * 0.9})`;
+        ctx.fillStyle = `rgba(${a2R},${a2G},${a2B},${zenoPulse * 0.85})`;
         ctx.fillRect(Math.floor(state.zenoTarget), H - 12, 1, 9);
         ctx.fillRect(Math.floor(state.zenoTarget) - 1, H - 13, 3, 1);
         ctx.fillRect(Math.floor(state.zenoTarget), H - 14, 1, 1);
@@ -1150,7 +1159,7 @@ const Game = () => {
 
       // Player core
       if (state.fellOff) {
-        ctx.fillStyle = '#ff0040';
+        ctx.fillStyle = COLORS.danger;
       } else if (state.charging) {
         const pulse = Math.sin(performance.now() / 50) * 0.3 + 0.7;
         ctx.fillStyle = `rgb(255,255,${Math.floor(pulse * 200)})`;
@@ -1194,7 +1203,10 @@ const Game = () => {
         // Optimal angle marker (45°)
         const optRad = (OPTIMAL_ANGLE * Math.PI) / 180;
         const optPulse = Math.sin(performance.now() / 100) * 0.3 + 0.7;
-        ctx.fillStyle = `rgba(0,255,128,${optPulse * 0.8})`;
+        // Optimal angle marker using highlight color
+        const hl = COLORS.highlight;
+        const hlR = parseInt(hl.slice(1,3), 16), hlG = parseInt(hl.slice(3,5), 16), hlB = parseInt(hl.slice(5,7), 16);
+        ctx.fillStyle = `rgba(${hlR},${hlG},${hlB},${optPulse * 0.7})`;
         ctx.fillRect(
           startX + Math.cos(optRad) * 18 - 1,
           startY - Math.sin(optRad) * 18 - 1,
@@ -1240,7 +1252,7 @@ const Game = () => {
         const dangerIntensity = (state.px - 120) / (CLIFF_EDGE - 120);
         const pulse = Math.sin(performance.now() / 100) * 0.3 + 0.7;
         // Red vignette on edges
-        ctx.fillStyle = `rgba(255,0,40,${dangerIntensity * pulse * 0.3})`;
+        ctx.fillStyle = `rgba(${dngR},${dngG},${dngB},${dangerIntensity * pulse * 0.25})`;
         ctx.fillRect(0, 0, 8, H);
         ctx.fillRect(W - 8, 0, 8, H);
         ctx.fillRect(0, 0, W, 6);
@@ -1283,7 +1295,7 @@ const Game = () => {
       // === PHASE 2: SLOW-MO VISUAL INDICATOR ===
       if (state.slowMo > 0.1) {
         // Subtle vignette effect during slow-mo
-        ctx.fillStyle = `rgba(0,255,255,${state.slowMo * 0.1})`;
+        ctx.fillStyle = `rgba(${a2R},${a2G},${a2B},${state.slowMo * 0.08})`;
         ctx.fillRect(0, 0, W, 2);
         ctx.fillRect(0, H - 2, W, 2);
       }
@@ -1314,7 +1326,7 @@ const Game = () => {
       if (state.touchActive && !state.flying && !state.sliding && !state.charging) {
         // Pulsing ring around player to indicate touch registered
         const ringPulse = Math.sin(performance.now() / 100) * 0.3 + 0.7;
-        ctx.strokeStyle = `rgba(0,255,255,${ringPulse})`;
+        ctx.strokeStyle = `rgba(${a2R},${a2G},${a2B},${ringPulse})`;
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.arc(state.px, state.py, 8, 0, Math.PI * 2);
