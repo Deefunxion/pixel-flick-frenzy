@@ -1,5 +1,5 @@
 import type { Theme } from '@/game/themes';
-import { CLIFF_EDGE, H, LAUNCH_PAD_X, MAX_ANGLE, MIN_ANGLE, OPTIMAL_ANGLE, W } from '@/game/constants';
+import { CLIFF_EDGE, H, MAX_ANGLE, MIN_ANGLE, OPTIMAL_ANGLE, W } from '@/game/constants';
 import type { GameState } from './types';
 import {
   drawStickFigure,
@@ -9,14 +9,10 @@ import {
   drawSpiralHoles,
   drawHandLine,
   drawHandCircle,
-  drawWindsock,
-  drawWindSpiral,
   drawCheckeredFlag,
   drawCloud,
   drawBird,
   drawDashedCurve,
-  INK_BLUE,
-  INK_LIGHT,
 } from './sketchy';
 
 export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, theme: Theme, nowMs: number) {
