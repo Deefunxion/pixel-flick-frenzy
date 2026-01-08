@@ -85,6 +85,9 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     recordZoneIntensity: 0,
     recordZonePeak: false,
     epicMomentTriggered: false,
+    failureAnimating: false,
+    failureFrame: 0,
+    failureType: null,
   };
 }
 
@@ -114,6 +117,9 @@ export function resetPhysics(state: GameState) {
   state.recordZoneIntensity = 0;
   state.recordZonePeak = false;
   state.epicMomentTriggered = false;
+  state.failureAnimating = false;
+  state.failureFrame = 0;
+  state.failureType = null;
 }
 
 export function nextWind(state: GameState) {

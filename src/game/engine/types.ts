@@ -84,4 +84,8 @@ export interface GameState {
   recordZoneIntensity: number;    // 0-1 based on how close to beating record
   recordZonePeak: boolean;        // True at moment of potential record break
   epicMomentTriggered: boolean;   // Prevents repeat triggers per throw
+  // Comedic failure
+  failureAnimating: boolean;
+  failureFrame: number;
+  failureType: 'tumble' | 'dive' | 'splat' | null;
 }
