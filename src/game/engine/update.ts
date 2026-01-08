@@ -32,6 +32,8 @@ export type GameAudio = {
   stopEdgeWarning: () => void;
   tone: (freq: number, duration: number, type?: OscillatorType, volume?: number) => void;
   zenoJingle: () => void;
+  heartbeat: (intensity: number) => void;
+  recordBreak: () => void;
 };
 
 export type GameUI = {
@@ -239,6 +241,20 @@ export function updateFrame(state: GameState, svc: GameServices) {
     if (state.recordZonePeak && !state.reduceFx) {
       targetSlowMo = 0.98;
       targetZoom = 2.5;
+    }
+
+    // Heartbeat audio during record zone
+    if (state.recordZoneActive && !state.reduceFx) {
+      // Play heartbeat every ~400ms based on frame count
+      if (Math.floor(nowMs / 400) !== Math.floor((nowMs - 16) / 400)) {
+        audio.heartbeat(state.recordZoneIntensity);
+      }
+    }
+
+    // Record break celebration
+    if (state.recordZonePeak) {
+      audio.recordBreak();
+      state.recordZonePeak = false; // Only trigger once
     }
 
     state.slowMo = targetSlowMo;

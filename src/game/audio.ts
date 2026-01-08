@@ -205,3 +205,67 @@ export function updateEdgeWarning(refs: AudioRefs, settings: AudioSettings, prox
     stopEdgeWarning(refs);
   }
 }
+
+export function playHeartbeat(refs: AudioRefs, settings: AudioSettings, intensity01: number) {
+  if (settings.muted || settings.volume <= 0) return;
+
+  const ctx = ensureAudioContext(refs);
+  const now = ctx.currentTime;
+
+  // Double-thump heartbeat
+  const freq = 50 + intensity01 * 30;
+  const vol = (0.08 + intensity01 * 0.12) * settings.volume;
+
+  // First thump
+  const osc1 = ctx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.value = freq;
+  const gain1 = ctx.createGain();
+  gain1.gain.setValueAtTime(0, now);
+  gain1.gain.linearRampToValueAtTime(vol, now + 0.02);
+  gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+  osc1.connect(gain1);
+  gain1.connect(ctx.destination);
+  osc1.start(now);
+  osc1.stop(now + 0.15);
+
+  // Second thump (slightly quieter, higher)
+  const osc2 = ctx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = freq * 1.2;
+  const gain2 = ctx.createGain();
+  gain2.gain.setValueAtTime(0, now + 0.12);
+  gain2.gain.linearRampToValueAtTime(vol * 0.7, now + 0.14);
+  gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+  osc2.connect(gain2);
+  gain2.connect(ctx.destination);
+  osc2.start(now + 0.12);
+  osc2.stop(now + 0.25);
+}
+
+export function playRecordBreak(refs: AudioRefs, settings: AudioSettings) {
+  if (settings.muted || settings.volume <= 0) return;
+
+  const ctx = ensureAudioContext(refs);
+  const now = ctx.currentTime;
+
+  // Rising triumphant arpeggio
+  const notes = [392, 494, 587, 784, 988]; // G4, B4, D5, G5, B5
+
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+
+    const gain = ctx.createGain();
+    const startTime = now + i * 0.06;
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(0.12 * settings.volume, startTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + 0.45);
+  });
+}

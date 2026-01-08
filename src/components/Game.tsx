@@ -25,6 +25,8 @@ import {
   playImpact,
   playTone,
   playWhoosh,
+  playHeartbeat,
+  playRecordBreak,
   resumeIfSuspended,
   startChargeTone,
   stopChargeTone,
@@ -229,6 +231,8 @@ const Game = () => {
       stopEdgeWarning: () => stopEdgeWarning(audioRefs.current),
       tone: (freq, dur, type = 'square', vol = 0.1) => playTone(audioRefs.current, audioSettingsRef.current, freq, dur, type, vol),
       zenoJingle: () => playZenoJingle(),
+      heartbeat: (i) => playHeartbeat(audioRefs.current, audioSettingsRef.current, i),
+      recordBreak: () => playRecordBreak(audioRefs.current, audioSettingsRef.current),
     };
 
     const scheduleReset = (ms: number) => {
