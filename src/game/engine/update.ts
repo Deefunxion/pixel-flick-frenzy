@@ -18,6 +18,7 @@ import {
   updateTodayHistory,
 } from '@/game/storage';
 import { addToPersonalLeaderboard } from '@/game/leaderboard';
+import { updateDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 import { updateGoals, type SessionGoal } from '@/game/goals';
 import type { DailyStats } from '@/game/storage';
 import type { GameState } from './types';
@@ -54,6 +55,7 @@ export type GameUI = {
   setLastDist: (v: number | null) => void;
   setSessionGoals: (updater: (prev: SessionGoal[]) => SessionGoal[]) => void;
   setDailyStats: (v: DailyStats) => void;
+  setDailyChallenge: (v: DailyChallenge) => void;
 };
 
 export type GameServices = {
@@ -446,6 +448,10 @@ export function updateFrame(state: GameState, svc: GameServices) {
       if (state.dist > 50) {
         addToPersonalLeaderboard(state.dist);
       }
+
+      // Update daily challenge
+      const updatedChallenge = updateDailyChallenge(state.dist, state.lastMultiplier, state.fellOff);
+      ui.setDailyChallenge(updatedChallenge);
 
       // Session goals
       // score_250 increments handled by caller by passing score deltas; keep minimal here

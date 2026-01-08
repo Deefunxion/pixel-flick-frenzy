@@ -43,6 +43,7 @@ import { createInitialState, resetPhysics } from '@/game/engine/state';
 import { updateFrame, type GameAudio, type GameUI } from '@/game/engine/update';
 import type { GameState } from '@/game/engine/types';
 import { StatsOverlay } from './StatsOverlay';
+import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 
 const Game = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -74,6 +75,7 @@ const Game = () => {
   const [newAchievement, setNewAchievement] = useState<string | null>(null);
   const [showMobileHint, setShowMobileHint] = useState(true);
   const [showStats, setShowStats] = useState(false);
+  const [dailyChallenge, setDailyChallenge] = useState<DailyChallenge>(() => loadDailyChallenge());
 
   const [dailyStats, setDailyStats] = useState(() => loadDailyStats());
   const dailyStatsRef = useRef(dailyStats);
@@ -199,6 +201,7 @@ const Game = () => {
       setLastDist,
       setSessionGoals,
       setDailyStats,
+      setDailyChallenge,
     };
 
     const audio: GameAudio = {
@@ -561,6 +564,29 @@ const Game = () => {
             {g.label}: {Math.min(g.target, g.progress)}/{g.target}
           </span>
         ))}
+      </div>
+
+      {/* Daily Challenge */}
+      <div
+        className="text-[10px] text-center max-w-md p-2 rounded"
+        style={{
+          background: dailyChallenge.completed ? `${theme.highlight}20` : `${theme.accent3}10`,
+          border: `1px solid ${dailyChallenge.completed ? theme.highlight : theme.accent3}`,
+          color: theme.uiText,
+        }}
+      >
+        <span className="font-bold" style={{ color: theme.accent1 }}>
+          Daily Challenge:{' '}
+        </span>
+        <span className={dailyChallenge.completed ? 'line-through opacity-50' : ''}>
+          {dailyChallenge.description}
+        </span>
+        {dailyChallenge.completed && (
+          <span style={{ color: theme.highlight }}> Complete!</span>
+        )}
+        {!dailyChallenge.completed && dailyChallenge.progress > 0 && (
+          <span style={{ color: theme.accent2 }}> ({Math.floor(dailyChallenge.progress)}/{dailyChallenge.target})</span>
+        )}
       </div>
 
       {/* Game info */}
