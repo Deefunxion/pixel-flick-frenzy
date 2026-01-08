@@ -38,66 +38,66 @@ interface Theme {
 const THEMES: Record<string, Theme> = {
   synthwave: {
     name: 'Synthwave',
-    background: '#0c0c0f',           // Neutral dark, no purple
-    backgroundGradientEnd: '#1a1a2e', // Deep blue-black
-    horizon: '#16213e',              // Navy horizon
-    gridPrimary: '#e84393',          // Soft pink grid
-    gridSecondary: '#6c5ce7',        // Muted purple lines
-    accent1: '#fd79a8',              // Soft pink (primary)
-    accent2: '#74b9ff',              // Soft blue (secondary)
-    accent3: '#a29bfe',              // Lavender (tertiary)
-    accent4: '#ff7675',              // Coral
-    highlight: '#ffeaa7',            // Warm cream yellow
-    player: '#74b9ff',               // Soft blue player
-    playerGlow: 'rgba(116,185,255,0.5)',
-    trailNormal: '#fd79a8',
-    trailPastTarget: '#74b9ff',
-    star: '#dfe6e9',                 // Soft white stars
-    danger: '#d63031',               // Deep red
-    uiBg: 'rgba(12,12,15,0.7)',
-    uiText: '#dfe6e9',               // Off-white text
+    background: '#000008',           // Pure dark blue-black
+    backgroundGradientEnd: '#0a0a1a', // Deep navy
+    horizon: '#101028',              // Dark purple horizon
+    gridPrimary: '#ff0080',          // Hot pink grid
+    gridSecondary: '#4400aa',        // Deep purple lines
+    accent1: '#ff0080',              // Hot pink (primary)
+    accent2: '#00ffff',              // Cyan (secondary)
+    accent3: '#8800ff',              // Purple (tertiary)
+    accent4: '#ff4444',              // Bright red
+    highlight: '#ffff00',            // Pure yellow
+    player: '#00ffff',               // Cyan player
+    playerGlow: 'rgba(0,255,255,0.5)',
+    trailNormal: '#ff0080',
+    trailPastTarget: '#00ffff',
+    star: '#ffffff',                 // Pure white stars
+    danger: '#ff0000',               // Pure red
+    uiBg: 'rgba(0,0,8,0.9)',
+    uiText: '#ffffff',               // Pure white text
   },
   noir: {
     name: 'Dark Noir',
-    background: '#0d0d0d',           // True black
-    backgroundGradientEnd: '#1a1a1a',
-    horizon: '#141414',
-    gridPrimary: '#2d2d2d',          // Subtle grid
-    gridSecondary: '#1f1f1f',
-    accent1: '#c0392b',              // Deep cinematic red
-    accent2: '#636e72',              // Warm gray
-    accent3: '#4a4a4a',              // Medium gray
-    accent4: '#922b21',              // Dark red
-    highlight: '#dfe6e9',            // Off-white
-    player: '#ecf0f1',               // Soft white player
-    playerGlow: 'rgba(236,240,241,0.35)',
-    trailNormal: '#4a4a4a',
-    trailPastTarget: '#c0392b',
-    star: '#2d2d2d',                 // Very dim stars
-    danger: '#e74c3c',               // Alert red
-    uiBg: 'rgba(13,13,13,0.85)',
-    uiText: '#b2bec3',               // Muted off-white
+    background: '#000000',           // True black
+    backgroundGradientEnd: '#0a0a0a',
+    horizon: '#101010',
+    gridPrimary: '#333333',          // Gray grid
+    gridSecondary: '#1a1a1a',
+    accent1: '#ff0000',              // Pure red
+    accent2: '#888888',              // Gray
+    accent3: '#555555',              // Medium gray
+    accent4: '#aa0000',              // Dark red
+    highlight: '#ffffff',            // Pure white
+    player: '#ffffff',               // White player
+    playerGlow: 'rgba(255,255,255,0.35)',
+    trailNormal: '#555555',
+    trailPastTarget: '#ff0000',
+    star: '#333333',                 // Dim stars
+    danger: '#ff0000',               // Red
+    uiBg: 'rgba(0,0,0,0.9)',
+    uiText: '#cccccc',               // Light gray text
   },
   golf: {
     name: 'Golf Classic',
-    background: '#0d1f0d',           // Deep forest
-    backgroundGradientEnd: '#1a3320',
-    horizon: '#2d4a2d',              // Grass horizon
-    gridPrimary: '#27ae60',          // Rich grass green
-    gridSecondary: '#1e8449',        // Darker green
-    accent1: '#2ecc71',              // Vibrant green (primary)
-    accent2: '#ecf0f1',              // Clean white
-    accent3: '#58d68d',              // Light green
-    accent4: '#27ae60',              // Medium green
-    highlight: '#f39c12',            // Amber gold
-    player: '#ecf0f1',               // White golf ball
-    playerGlow: 'rgba(236,240,241,0.45)',
-    trailNormal: '#58d68d',
-    trailPastTarget: '#f39c12',
-    star: '#82e0aa',                 // Pale green stars
-    danger: '#c0392b',               // Red hazard
-    uiBg: 'rgba(13,31,13,0.8)',
-    uiText: '#a9dfbf',               // Soft green text
+    background: '#001100',           // Deep green-black
+    backgroundGradientEnd: '#002200',
+    horizon: '#003300',              // Dark green horizon
+    gridPrimary: '#00ff00',          // Bright green grid
+    gridSecondary: '#006600',        // Medium green
+    accent1: '#00ff00',              // Bright green (primary)
+    accent2: '#ffffff',              // Pure white
+    accent3: '#88ff88',              // Light green
+    accent4: '#00cc00',              // Medium green
+    highlight: '#ffaa00',            // Orange gold
+    player: '#ffffff',               // White golf ball
+    playerGlow: 'rgba(255,255,255,0.45)',
+    trailNormal: '#88ff88',
+    trailPastTarget: '#ffaa00',
+    star: '#aaffaa',                 // Pale green stars
+    danger: '#ff0000',               // Red hazard
+    uiBg: 'rgba(0,17,0,0.9)',
+    uiText: '#88ff88',               // Green text
   },
 };
 
@@ -952,115 +952,93 @@ const Game = () => {
 
       ctx.translate(shakeX, shakeY);
 
-      // === SYNTHWAVE BACKGROUND ===
-      // Gradient from dark purple to deep blue
-      const gradient = ctx.createLinearGradient(0, 0, 0, H);
-      gradient.addColorStop(0, COLORS.background);
-      gradient.addColorStop(0.5, COLORS.horizon);
-      gradient.addColorStop(1, COLORS.backgroundGradientEnd);
-      ctx.fillStyle = gradient;
-      ctx.fillRect(-2, -2, W + 4, H + 4);
+      // === CRISP PIXEL BACKGROUND ===
+      // Solid color bands instead of gradient for sharp pixel art look
+      const horizonY = H * 0.55;
+      ctx.fillStyle = COLORS.background;
+      ctx.fillRect(0, 0, W, Math.floor(horizonY * 0.5));
+      ctx.fillStyle = COLORS.horizon;
+      ctx.fillRect(0, Math.floor(horizonY * 0.5), W, Math.floor(horizonY * 0.5));
+      ctx.fillStyle = COLORS.backgroundGradientEnd;
+      ctx.fillRect(0, Math.floor(horizonY), W, H - Math.floor(horizonY));
 
-      // === PARALLAX STARFIELD ===
+      // === PARALLAX STARFIELD - Crisp ===
       for (const star of state.stars) {
-        ctx.fillStyle = `rgba(255,255,255,${star.brightness})`;
-        ctx.fillRect(Math.floor(star.x), Math.floor(star.y), star.size, star.size);
+        // Binary twinkle instead of alpha fade
+        const twinkle = Math.floor(performance.now() / 300 + star.x * 10) % 3;
+        if (twinkle > 0) {
+          ctx.fillStyle = COLORS.star;
+          ctx.fillRect(Math.floor(star.x), Math.floor(star.y), star.size, star.size);
+        }
       }
 
-      // === PERSPECTIVE GRID ===
-      const horizonY = H * 0.55;
-      const gridColor = COLORS.gridSecondary;
+      // === PERSPECTIVE GRID - Crisp ===
+      ctx.fillStyle = COLORS.gridSecondary;
 
-      // Horizontal lines with perspective (closer together near horizon)
-      ctx.fillStyle = gridColor;
-      for (let i = 0; i < 12; i++) {
-        const progress = i / 12;
-        const yPos = horizonY + (H - horizonY) * Math.pow(progress, 0.7) + state.gridOffset * progress;
+      // Horizontal lines with perspective
+      for (let i = 0; i < 8; i++) {
+        const progress = i / 8;
+        const yPos = horizonY + (H - horizonY) * Math.pow(progress, 0.7) + Math.floor(state.gridOffset * progress);
         if (yPos < H - 3) {
-          const alpha = 0.2 + progress * 0.4;
-          ctx.fillStyle = `rgba(136,0,170,${alpha})`;
           ctx.fillRect(0, Math.floor(yPos), W, 1);
         }
       }
 
-      // Vertical lines converging to center horizon
-      const vanishX = W / 2;
-      for (let i = -8; i <= 8; i++) {
-        const baseX = vanishX + i * 12;
-        const bottomX = vanishX + i * 25;
-        ctx.strokeStyle = gridColor;
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(vanishX + i * 3, horizonY);
-        ctx.lineTo(bottomX, H - 3);
-        ctx.stroke();
+      // Vertical lines - pixel perfect
+      const vanishX = Math.floor(W / 2);
+      for (let i = -6; i <= 6; i++) {
+        const topX = vanishX + i * 4;
+        const bottomX = vanishX + i * 20;
+        // Draw as discrete pixels for crisp look
+        for (let y = Math.floor(horizonY); y < H - 3; y += 2) {
+          const t = (y - horizonY) / (H - 3 - horizonY);
+          const x = Math.floor(topX + (bottomX - topX) * t);
+          ctx.fillRect(x, y, 1, 1);
+        }
       }
 
-      // Horizon glow line - use gridPrimary color
-      const glowPulse = Math.sin(performance.now() / 300) * 0.2 + 0.8;
-      const gp = COLORS.gridPrimary;
-      const gpR = parseInt(gp.slice(1,3), 16), gpG = parseInt(gp.slice(3,5), 16), gpB = parseInt(gp.slice(5,7), 16);
-      ctx.fillStyle = `rgba(${gpR},${gpG},${gpB},${glowPulse * 0.5})`;
-      ctx.fillRect(0, Math.floor(horizonY) - 1, W, 2);
-      ctx.fillStyle = `rgba(${gpR},${gpG},${gpB},${glowPulse * 0.25})`;
-      ctx.fillRect(0, Math.floor(horizonY) - 2, W, 4);
+      // Horizon line - crisp single pixel line
+      ctx.fillStyle = COLORS.gridPrimary;
+      ctx.fillRect(0, Math.floor(horizonY), W, 1);
 
-      // === GROUND (Platform) ===
-      // Parse accent1 for glow effects
-      const a1 = COLORS.accent1;
-      const a1R = parseInt(a1.slice(1,3), 16), a1G = parseInt(a1.slice(3,5), 16), a1B = parseInt(a1.slice(5,7), 16);
-      ctx.fillStyle = `rgba(${a1R},${a1G},${a1B},0.25)`;
-      ctx.fillRect(0, H - 5, CLIFF_EDGE + 1, 3);
+      // === GROUND (Platform) - Crisp pixel art style ===
       ctx.fillStyle = COLORS.accent1;
-      ctx.fillRect(0, H - 3, CLIFF_EDGE + 1, 1);
-      ctx.fillStyle = `rgba(${a1R},${a1G},${a1B},0.4)`;
-      ctx.fillRect(0, H - 2, CLIFF_EDGE + 1, 2);
+      ctx.fillRect(0, H - 3, CLIFF_EDGE + 1, 3);
 
-      // === LAUNCH PAD ===
-      const a2 = COLORS.accent2;
-      const a2R = parseInt(a2.slice(1,3), 16), a2G = parseInt(a2.slice(3,5), 16), a2B = parseInt(a2.slice(5,7), 16);
-      ctx.fillStyle = `rgba(${a2R},${a2G},${a2B},0.15)`;
-      ctx.fillRect(LAUNCH_PAD_X - 5, H - 7, 11, 5);
+      // === LAUNCH PAD - Crisp ===
       ctx.fillStyle = COLORS.accent2;
       ctx.fillRect(LAUNCH_PAD_X - 4, H - 5, 9, 2);
       // Launch pad stripes
       ctx.fillStyle = COLORS.accent4;
       ctx.fillRect(LAUNCH_PAD_X - 2, H - 5, 1, 2);
       ctx.fillRect(LAUNCH_PAD_X + 2, H - 5, 1, 2);
+      // Keep a2 vars for later use
+      const a2 = COLORS.accent2;
+      const a2R = parseInt(a2.slice(1,3), 16), a2G = parseInt(a2.slice(3,5), 16), a2B = parseInt(a2.slice(5,7), 16);
 
-      // === CLIFF EDGE DANGER ZONE ===
+      // === CLIFF EDGE DANGER ZONE - Crisp ===
       const t = performance.now() / 200;
       const dng = COLORS.danger;
       const dngR = parseInt(dng.slice(1,3), 16), dngG = parseInt(dng.slice(3,5), 16), dngB = parseInt(dng.slice(5,7), 16);
-      ctx.fillStyle = `rgba(${dngR},${dngG},${dngB},0.25)`;
-      ctx.fillRect(CLIFF_EDGE - 12, H - 6, 13, 4);
-      // Animated danger stripes
+      // Animated danger stripes - crisp pixel pattern
+      ctx.fillStyle = COLORS.danger;
       for (let i = 0; i < 6; i++) {
         if ((Math.floor(t) + i) % 2 === 0) {
-          ctx.fillStyle = `rgba(${dngR},${dngG},${dngB},${0.5 + Math.sin(t * 2) * 0.25})`;
           ctx.fillRect(CLIFF_EDGE - 1, H - 6 - i, 1, 1);
         }
       }
 
-      // === BEST DISTANCE MARKER ===
+      // === BEST DISTANCE MARKER - Crisp ===
       if (state.best > 0 && state.best <= CLIFF_EDGE) {
-        const a3 = COLORS.accent3;
-        const a3R = parseInt(a3.slice(1,3), 16), a3G = parseInt(a3.slice(3,5), 16), a3B = parseInt(a3.slice(5,7), 16);
-        ctx.fillStyle = `rgba(${a3R},${a3G},${a3B},0.25)`;
-        ctx.fillRect(state.best - 1, H - 10, 3, 7);
         ctx.fillStyle = COLORS.accent3;
-        ctx.fillRect(state.best, H - 9, 1, 6);
-        ctx.fillRect(state.best - 1, H - 9, 3, 1);
+        ctx.fillRect(Math.floor(state.best), H - 9, 1, 6);
+        ctx.fillRect(Math.floor(state.best) - 1, H - 9, 3, 1);
       }
 
-      // === ZENO TARGET MARKER ===
+      // === ZENO TARGET MARKER - Crisp ===
       if (state.zenoTarget > 0 && state.zenoTarget <= CLIFF_EDGE) {
-        const zenoPulse = Math.sin(performance.now() / 150) * 0.3 + 0.7;
-        // Glow using accent2
-        ctx.fillStyle = `rgba(${a2R},${a2G},${a2B},${zenoPulse * 0.15})`;
-        ctx.fillRect(Math.floor(state.zenoTarget) - 3, H - 14, 7, 12);
-        // Marker
-        ctx.fillStyle = `rgba(${a2R},${a2G},${a2B},${zenoPulse * 0.85})`;
+        const zenoPulse = Math.floor(performance.now() / 300) % 2; // Binary blink
+        ctx.fillStyle = zenoPulse ? COLORS.accent2 : COLORS.highlight;
         ctx.fillRect(Math.floor(state.zenoTarget), H - 12, 1, 9);
         ctx.fillRect(Math.floor(state.zenoTarget) - 1, H - 13, 3, 1);
         ctx.fillRect(Math.floor(state.zenoTarget), H - 14, 1, 1);
@@ -1103,42 +1081,28 @@ const Game = () => {
         ctx.fillRect(arrowX + windDir * (10 + i * 3) + windAnim, 7 + wobble, 1, 1);
       }
 
-      // === TRAIL (Color changes past Zeno target) ===
+      // === TRAIL - Crisp single pixels ===
       for (const tr of state.trail) {
-        const alpha = Math.max(0, 1 - tr.age / 40) * 0.8;
+        // Skip faded trail points for crisp look
+        if (tr.age > 30) continue;
         // Pink before target, Cyan after passing target
-        const baseColor = tr.pastTarget ? COLORS.trailPastTarget : COLORS.trailNormal;
-        // Parse hex and apply alpha
-        const r = parseInt(baseColor.slice(1, 3), 16);
-        const g = parseInt(baseColor.slice(3, 5), 16);
-        const b = parseInt(baseColor.slice(5, 7), 16);
-        ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+        ctx.fillStyle = tr.pastTarget ? COLORS.trailPastTarget : COLORS.trailNormal;
         if (tr.x >= 0 && tr.x < W && tr.y >= 0 && tr.y < H) {
           ctx.fillRect(Math.floor(tr.x), Math.floor(tr.y), 1, 1);
-          // Glow effect
-          ctx.fillStyle = `rgba(${r},${g},${b},${alpha * 0.3})`;
-          ctx.fillRect(Math.floor(tr.x) - 1, Math.floor(tr.y), 3, 1);
-          ctx.fillRect(Math.floor(tr.x), Math.floor(tr.y) - 1, 1, 3);
         }
       }
 
-      // === PARTICLES (with color) ===
+      // === PARTICLES - Crisp solid pixels ===
       for (const p of state.particles) {
-        const alpha = p.life / p.maxLife;
-        const color = p.color || COLORS.accent1;
-        const r = parseInt(color.slice(1, 3), 16);
-        const g = parseInt(color.slice(3, 5), 16);
-        const b = parseInt(color.slice(5, 7), 16);
-        ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+        if (p.life < 3) continue; // Skip nearly dead particles
+        ctx.fillStyle = p.color || COLORS.accent1;
         ctx.fillRect(Math.floor(p.x), Math.floor(p.y), 1, 1);
       }
 
-      // === PLAYER (Neon Cyan with glow) ===
+      // === PLAYER - Crisp pixel, no glow ===
       let pxW = 1, pxH = 1;
       if (state.flying) {
-        if (state.vy < -1) {
-          pxW = 1; pxH = 2;
-        } else if (state.vy > 1) {
+        if (state.vy < -1 || state.vy > 1) {
           pxW = 1; pxH = 2;
         }
       }
@@ -1149,78 +1113,71 @@ const Game = () => {
       const drawX = Math.max(0, Math.min(W - pxW, Math.floor(state.px)));
       const drawY = Math.max(0, Math.min(H - pxH, Math.floor(state.py) - (pxH - 1)));
 
-      // Player glow
-      if (!state.fellOff) {
-        ctx.fillStyle = state.charging
-          ? `rgba(255,255,0,${0.3 + Math.sin(performance.now() / 50) * 0.2})`
-          : COLORS.playerGlow;
-        ctx.fillRect(drawX - 1, drawY - 1, pxW + 2, pxH + 2);
-      }
-
-      // Player core
+      // Player core - solid color, no glow
       if (state.fellOff) {
         ctx.fillStyle = COLORS.danger;
       } else if (state.charging) {
-        const pulse = Math.sin(performance.now() / 50) * 0.3 + 0.7;
-        ctx.fillStyle = `rgb(255,255,${Math.floor(pulse * 200)})`;
+        // Binary blink when charging
+        const pulse = Math.floor(performance.now() / 100) % 2;
+        ctx.fillStyle = pulse ? COLORS.highlight : COLORS.player;
       } else {
         ctx.fillStyle = COLORS.player;
       }
       ctx.fillRect(drawX, drawY, pxW, pxH);
 
-      // === POWER/ANGLE INDICATOR (Synthwave styled) ===
+      // === POWER/ANGLE INDICATOR - Crisp ===
       if (state.charging) {
         const angleRad = (state.angle * Math.PI) / 180;
-        const lineLen = 8 + state.chargePower * 15;
-        const startX = state.px;
-        const startY = state.py;
+        const lineLen = Math.floor(8 + state.chargePower * 15);
+        const startX = Math.floor(state.px);
+        const startY = Math.floor(state.py);
 
-        // Arc showing angle range
-        ctx.fillStyle = 'rgba(191,0,255,0.3)';
-        for (let a = MIN_ANGLE; a <= MAX_ANGLE; a += 5) {
+        // Arc showing angle range - crisp dots
+        ctx.fillStyle = COLORS.accent3;
+        for (let a = MIN_ANGLE; a <= MAX_ANGLE; a += 10) {
           const rad = (a * Math.PI) / 180;
           ctx.fillRect(
-            startX + Math.cos(rad) * 14,
-            startY - Math.sin(rad) * 14,
+            Math.floor(startX + Math.cos(rad) * 14),
+            Math.floor(startY - Math.sin(rad) * 14),
             1, 1
           );
         }
 
-        // Power bar line (yellow/magenta gradient effect)
+        // Power bar line - solid color
+        ctx.fillStyle = COLORS.highlight;
         for (let i = 0; i < lineLen; i += 2) {
-          const progress = i / lineLen;
           const px = startX + Math.cos(angleRad) * i;
           const py = startY - Math.sin(angleRad) * i;
-          ctx.fillStyle = progress < 0.5 ? COLORS.highlight : COLORS.accent4;
           ctx.fillRect(Math.floor(px), Math.floor(py), 1, 1);
         }
-        // Arrow tip glow
+        // Arrow tip
         const endX = startX + Math.cos(angleRad) * lineLen;
         const endY = startY - Math.sin(angleRad) * lineLen;
-        ctx.fillStyle = COLORS.highlight;
+        ctx.fillStyle = COLORS.accent1;
         ctx.fillRect(Math.floor(endX), Math.floor(endY), 2, 2);
 
-        // Optimal angle marker (45°)
+        // Optimal angle marker (45°) - blinking
         const optRad = (OPTIMAL_ANGLE * Math.PI) / 180;
-        const optPulse = Math.sin(performance.now() / 100) * 0.3 + 0.7;
-        // Optimal angle marker using highlight color
-        const hl = COLORS.highlight;
-        const hlR = parseInt(hl.slice(1,3), 16), hlG = parseInt(hl.slice(3,5), 16), hlB = parseInt(hl.slice(5,7), 16);
-        ctx.fillStyle = `rgba(${hlR},${hlG},${hlB},${optPulse * 0.7})`;
-        ctx.fillRect(
-          startX + Math.cos(optRad) * 18 - 1,
-          startY - Math.sin(optRad) * 18 - 1,
-          3, 3
-        );
+        const optBlink = Math.floor(performance.now() / 200) % 2;
+        if (optBlink) {
+          ctx.fillStyle = COLORS.highlight;
+          ctx.fillRect(
+            Math.floor(startX + Math.cos(optRad) * 18),
+            Math.floor(startY - Math.sin(optRad) * 18),
+            2, 2
+          );
+        }
 
-        // Power meter bar (synthwave styled)
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        // Power meter bar - crisp
+        ctx.fillStyle = COLORS.background;
         ctx.fillRect(3, 3, 42, 8);
-        ctx.strokeStyle = COLORS.accent3;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(3, 3, 42, 8);
+        ctx.fillStyle = COLORS.accent3;
+        ctx.fillRect(3, 3, 42, 1);
+        ctx.fillRect(3, 10, 42, 1);
+        ctx.fillRect(3, 3, 1, 8);
+        ctx.fillRect(44, 3, 1, 8);
 
-        // Power fill
+        // Power fill - solid
         const powerColor = state.chargePower > 0.8 ? COLORS.accent1
           : state.chargePower > 0.5 ? COLORS.highlight
           : COLORS.accent2;
@@ -1229,62 +1186,64 @@ const Game = () => {
 
         // Angle indicator dots
         ctx.fillStyle = COLORS.accent4;
-        const angleDisplay = Math.round(state.angle);
-        const tens = Math.floor(angleDisplay / 10);
+        const tens = Math.floor(Math.round(state.angle) / 10);
         for (let i = 0; i < tens; i++) {
           ctx.fillRect(5 + i * 3, 13, 2, 2);
         }
       }
 
-      // === NUDGE AVAILABLE INDICATOR ===
+      // === NUDGE AVAILABLE INDICATOR - Crisp ===
       if (state.flying && !state.nudgeUsed) {
-        const nudgePulse = Math.sin(performance.now() / 80) * 0.4 + 0.6;
-        ctx.fillStyle = `rgba(255,255,0,${nudgePulse * 0.2})`;
-        ctx.fillRect(2, H - 15, 16, 12);
-        ctx.fillStyle = `rgba(255,255,0,${nudgePulse})`;
+        const nudgeBlink = Math.floor(performance.now() / 150) % 2;
+        ctx.fillStyle = nudgeBlink ? COLORS.highlight : COLORS.accent2;
         ctx.fillRect(4, H - 13, 12, 8);
+        ctx.fillStyle = COLORS.background;
+        ctx.fillRect(6, H - 11, 8, 4);
         ctx.fillStyle = COLORS.highlight;
-        ctx.fillRect(7, H - 11, 6, 4);
+        ctx.fillRect(7, H - 10, 6, 2);
       }
 
-      // === PHASE 2: EDGE DANGER ZONE VISUAL ===
+      // === EDGE DANGER ZONE - Crisp border ===
       if ((state.flying || state.sliding) && state.px > 120) {
-        const dangerIntensity = (state.px - 120) / (CLIFF_EDGE - 120);
-        const pulse = Math.sin(performance.now() / 100) * 0.3 + 0.7;
-        // Red vignette on edges
-        ctx.fillStyle = `rgba(${dngR},${dngG},${dngB},${dangerIntensity * pulse * 0.25})`;
-        ctx.fillRect(0, 0, 8, H);
-        ctx.fillRect(W - 8, 0, 8, H);
-        ctx.fillRect(0, 0, W, 6);
-        ctx.fillRect(0, H - 6, W, 6);
+        const dangerBlink = Math.floor(performance.now() / 200) % 2;
+        if (dangerBlink) {
+          ctx.fillStyle = COLORS.danger;
+          // Top and bottom border lines
+          ctx.fillRect(0, 0, W, 1);
+          ctx.fillRect(0, H - 1, W, 1);
+          // Side border lines
+          ctx.fillRect(0, 0, 1, H);
+          ctx.fillRect(W - 1, 0, 1, H);
+        }
       }
 
-      // === PHASE 3: MULTIPLIER UI (top left, below power bar area) ===
+      // === MULTIPLIER UI - Crisp ===
       if ((state.flying || state.sliding) && state.currentMultiplier > 1.01) {
         const mult = state.currentMultiplier;
-        const multPulse = Math.sin(performance.now() / 80) * 0.2 + 0.8;
 
         // Multiplier color based on value
         let multColor = COLORS.accent2;
         if (mult > 3) multColor = COLORS.accent1;
         else if (mult > 2) multColor = COLORS.highlight;
 
-        // Multiplier background box - top left corner
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        // Multiplier background box
+        ctx.fillStyle = COLORS.background;
         ctx.fillRect(2, 18, 28, 10);
+        ctx.fillStyle = multColor;
+        ctx.fillRect(2, 18, 28, 1);
+        ctx.fillRect(2, 27, 28, 1);
+        ctx.fillRect(2, 18, 1, 10);
+        ctx.fillRect(29, 18, 1, 10);
 
-        // Multiplier border glow
-        ctx.strokeStyle = multColor;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(2, 18, 28, 10);
+        // Draw "x"
+        ctx.fillStyle = COLORS.uiText;
+        ctx.fillRect(5, 21, 1, 1);
+        ctx.fillRect(7, 21, 1, 1);
+        ctx.fillRect(6, 22, 1, 1);
+        ctx.fillRect(5, 23, 1, 1);
+        ctx.fillRect(7, 23, 1, 1);
 
-        // Draw "x" and multiplier bars
-        ctx.fillStyle = `rgba(255,255,255,${multPulse})`;
-        ctx.fillRect(5, 22, 1, 1);
-        ctx.fillRect(7, 22, 1, 1);
-        ctx.fillRect(6, 23, 1, 1);
-
-        // Multiplier bars (more bars = higher multiplier)
+        // Multiplier bars
         ctx.fillStyle = multColor;
         const bars = Math.min(4, Math.floor(mult));
         for (let i = 0; i < bars; i++) {
@@ -1292,73 +1251,79 @@ const Game = () => {
         }
       }
 
-      // === PHASE 2: SLOW-MO VISUAL INDICATOR ===
+      // === SLOW-MO INDICATOR - Crisp corner markers ===
       if (state.slowMo > 0.1) {
-        // Subtle vignette effect during slow-mo
-        ctx.fillStyle = `rgba(${a2R},${a2G},${a2B},${state.slowMo * 0.08})`;
+        ctx.fillStyle = COLORS.accent2;
+        // Corner L shapes
+        ctx.fillRect(0, 0, 4, 1);
+        ctx.fillRect(0, 0, 1, 4);
+        ctx.fillRect(W - 4, 0, 4, 1);
+        ctx.fillRect(W - 1, 0, 1, 4);
+        ctx.fillRect(0, H - 1, 4, 1);
+        ctx.fillRect(0, H - 4, 1, 4);
+        ctx.fillRect(W - 4, H - 1, 4, 1);
+        ctx.fillRect(W - 1, H - 4, 1, 4);
+      }
+
+      // === SCREEN FLASH - Binary white frame ===
+      if (state.screenFlash > 0.5) {
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, W, 2);
         ctx.fillRect(0, H - 2, W, 2);
+        ctx.fillRect(0, 0, 2, H);
+        ctx.fillRect(W - 2, 0, 2, H);
       }
 
-      // === PHASE 2: SCREEN FLASH OVERLAY ===
-      if (state.screenFlash > 0.01) {
-        ctx.fillStyle = `rgba(255,255,255,${state.screenFlash * 0.8})`;
-        ctx.fillRect(0, 0, W, H);
+      // === MOBILE UX: TOUCH FEEDBACK - Crisp crosshair ===
+      if (state.touchFeedback > 0.3) {
+        ctx.fillStyle = COLORS.accent2;
+        // Center crosshair
+        ctx.fillRect(W / 2 - 3, H / 2, 7, 1);
+        ctx.fillRect(W / 2, H / 2 - 3, 1, 7);
       }
 
-      // === MOBILE UX: TOUCH FEEDBACK GLOW ===
-      if (state.touchFeedback > 0.05) {
-        // Cyan glow pulse from center
-        const gradient = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W / 2);
-        // Parse accent2 for touch feedback glow
-        const a2 = COLORS.accent2;
-        const r2 = parseInt(a2.slice(1,3), 16);
-        const g2 = parseInt(a2.slice(3,5), 16);
-        const b2 = parseInt(a2.slice(5,7), 16);
-        gradient.addColorStop(0, `rgba(${r2},${g2},${b2},${state.touchFeedback * 0.3})`);
-        gradient.addColorStop(0.5, `rgba(${r2},${g2},${b2},${state.touchFeedback * 0.15})`);
-        gradient.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, W, H);
-      }
-
-      // === MOBILE UX: TAP ZONE INDICATOR (shown when idle on mobile) ===
+      // === MOBILE UX: TAP INDICATOR - Crisp square ===
       if (state.touchActive && !state.flying && !state.sliding && !state.charging) {
-        // Pulsing ring around player to indicate touch registered
-        const ringPulse = Math.sin(performance.now() / 100) * 0.3 + 0.7;
-        ctx.strokeStyle = `rgba(${a2R},${a2G},${a2B},${ringPulse})`;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(state.px, state.py, 8, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.fillStyle = COLORS.accent2;
+        // Square around player
+        const px = Math.floor(state.px);
+        const py = Math.floor(state.py);
+        ctx.fillRect(px - 4, py - 4, 9, 1);
+        ctx.fillRect(px - 4, py + 4, 9, 1);
+        ctx.fillRect(px - 4, py - 4, 1, 9);
+        ctx.fillRect(px + 4, py - 4, 1, 9);
       }
 
-      // === PHASE 5: ACHIEVEMENT NOTIFICATION ===
+      // === ACHIEVEMENT NOTIFICATION - Crisp ===
       if (state.newAchievement) {
-        const achPulse = Math.sin(performance.now() / 100) * 0.1 + 0.9;
+        const achBlink = Math.floor(performance.now() / 250) % 2;
 
         // Achievement banner background
-        ctx.fillStyle = 'rgba(0,0,0,0.85)';
+        ctx.fillStyle = COLORS.background;
         ctx.fillRect(W / 2 - 45, 2, 90, 18);
 
         // Golden border
-        ctx.strokeStyle = `rgba(255,215,0,${achPulse})`;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(W / 2 - 45, 2, 90, 18);
+        ctx.fillStyle = COLORS.highlight;
+        ctx.fillRect(W / 2 - 45, 2, 90, 1);
+        ctx.fillRect(W / 2 - 45, 19, 90, 1);
+        ctx.fillRect(W / 2 - 45, 2, 1, 18);
+        ctx.fillRect(W / 2 + 44, 2, 1, 18);
 
-        // Achievement icon (star)
-        ctx.fillStyle = `rgba(255,215,0,${achPulse})`;
-        ctx.fillRect(W / 2 - 40, 8, 2, 2);
-        ctx.fillRect(W / 2 - 39, 7, 2, 1);
-        ctx.fillRect(W / 2 - 39, 11, 2, 1);
-        ctx.fillRect(W / 2 - 41, 9, 1, 1);
-        ctx.fillRect(W / 2 - 37, 9, 1, 1);
+        // Achievement icon (star) - blinking
+        if (achBlink) {
+          ctx.fillStyle = COLORS.highlight;
+          ctx.fillRect(W / 2 - 40, 9, 1, 1);
+          ctx.fillRect(W / 2 - 41, 10, 3, 1);
+          ctx.fillRect(W / 2 - 42, 11, 5, 1);
+          ctx.fillRect(W / 2 - 41, 12, 1, 1);
+          ctx.fillRect(W / 2 - 39, 12, 1, 1);
+        }
 
-        // "UNLOCKED" text indicator
+        // "UNLOCKED" bars indicator
         ctx.fillStyle = COLORS.accent2;
-        ctx.fillRect(W / 2 - 34, 6, 3, 1);
-        ctx.fillRect(W / 2 - 34, 9, 3, 1);
-        ctx.fillRect(W / 2 - 34, 12, 3, 1);
+        ctx.fillRect(W / 2 - 34, 7, 3, 1);
+        ctx.fillRect(W / 2 - 34, 10, 3, 1);
+        ctx.fillRect(W / 2 - 34, 13, 3, 1);
       }
 
       ctx.restore();
@@ -1427,6 +1392,10 @@ const Game = () => {
             height: 'auto',
             aspectRatio: `${W} / ${H}`,
             imageRendering: 'pixelated',
+            // @ts-ignore - vendor prefixes for cross-browser crisp rendering
+            WebkitImageRendering: 'pixelated',
+            MozImageRendering: 'crisp-edges',
+            msInterpolationMode: 'nearest-neighbor',
           }}
         />
 

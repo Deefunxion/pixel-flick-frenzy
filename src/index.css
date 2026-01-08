@@ -101,12 +101,19 @@
 .game-canvas {
   width: 640px;
   height: 320px;
+  /* Cross-browser crisp pixel rendering */
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-crisp-edges;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  -ms-interpolation-mode: nearest-neighbor;
   cursor: pointer;
   touch-action: none; /* Prevent scroll/zoom on touch */
   user-select: none;
   -webkit-user-select: none;
+  /* Prevent any browser smoothing */
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
 }
 
 /* Mobile responsive - Portrait */
