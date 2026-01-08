@@ -3,12 +3,13 @@ import Game from '@/components/Game';
 /**
  * ONE-MORE-FLICK
  * 
- * CONTROLS: SPACE or CLICK
- * GOAL: Flick the white pixel as far as possible
+ * CONTROLS: SPACE or CLICK (hold)
+ * AIM: Drag up/down while holding (or Arrow keys)
+ * GOAL: Land as close as possible to the cliff edge without falling
  * 
  * Hold to charge, release to launch.
- * Wind and gravity change every 7 tries.
- * Your best trajectory haunts you as a ghost trail.
+ * Wind changes every 5 throws.
+ * Your best run haunts you as a ghost trail.
  */
 const Index = () => {
   return (

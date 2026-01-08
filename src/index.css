@@ -2,19 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 
+/*
  * ONE-MORE-FLICK DESIGN SYSTEM
  * ════════════════════════════════════════════════════════════════
- * 1-bit aesthetic: pure black and white only
- * No gradients, no shadows, no decorations
- * The limitation IS the design
+ * Synthwave arcade aesthetic:
+ * - Dark sky backgrounds with neon accents
+ * - Gradients and glows are allowed (used sparingly)
+ * - Crisp pixel rendering remains a hard rule
  * ════════════════════════════════════════════════════════════════
  */
 
 @layer base {
   :root {
-    /* 1-bit palette */
-    --background: 0 0% 0%;
+    /* Base UI tokens (HSL). Game canvas uses its own palette per-theme. */
+    --background: 240 100% 2%;
     --foreground: 0 0% 100%;
 
     --card: 0 0% 0%;
@@ -26,23 +27,23 @@
     --primary: 0 0% 100%;
     --primary-foreground: 0 0% 0%;
 
-    --secondary: 0 0% 10%;
+    --secondary: 240 20% 10%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 60%;
+    --muted: 240 20% 10%;
+    --muted-foreground: 240 5% 70%;
 
-    --accent: 0 0% 15%;
+    --accent: 285 100% 20%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 100% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
+    --border: 285 100% 20%;
+    --input: 285 100% 20%;
     --ring: 0 0% 100%;
 
-    --radius: 0;
+    --radius: 0.25rem;
 
     --sidebar-background: 0 0% 0%;
     --sidebar-foreground: 0 0% 100%;
@@ -54,9 +55,9 @@
     --sidebar-ring: 0 0% 100%;
   }
 
-  /* Dark mode is the same - 1-bit is always dark */
+  /* Dark mode matches synthwave defaults */
   .dark {
-    --background: 0 0% 0%;
+    --background: 240 100% 2%;
     --foreground: 0 0% 100%;
     --card: 0 0% 0%;
     --card-foreground: 0 0% 100%;
@@ -64,16 +65,16 @@
     --popover-foreground: 0 0% 100%;
     --primary: 0 0% 100%;
     --primary-foreground: 0 0% 0%;
-    --secondary: 0 0% 10%;
+    --secondary: 240 20% 10%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 60%;
-    --accent: 0 0% 15%;
+    --muted: 240 20% 10%;
+    --muted-foreground: 240 5% 70%;
+    --accent: 285 100% 20%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 100% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
+    --border: 285 100% 20%;
+    --input: 285 100% 20%;
     --ring: 0 0% 100%;
     --sidebar-background: 0 0% 0%;
     --sidebar-foreground: 0 0% 100%;

@@ -1,231 +1,140 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
-
-const W = 160;
-const H = 80;
-const CLIFF_EDGE = 145;
-const BASE_GRAV = 0.15;
-const CHARGE_MS = 1800;
-const MIN_POWER = 2;
-const MAX_POWER = 6;
-const MIN_ANGLE = 20;
-const MAX_ANGLE = 70;
-const OPTIMAL_ANGLE = 45;
-const LAUNCH_PAD_X = 10;
-
-// Theme definitions
-interface Theme {
-  name: string;
-  background: string;
-  backgroundGradientEnd: string;
-  horizon: string;
-  gridPrimary: string;
-  gridSecondary: string;
-  accent1: string;      // Primary accent (was neonPink)
-  accent2: string;      // Secondary accent (was neonCyan)
-  accent3: string;      // Tertiary accent (was neonPurple)
-  accent4: string;      // Quaternary accent (was neonMagenta)
-  highlight: string;    // Highlight color (was neonYellow)
-  player: string;
-  playerGlow: string;
-  trailNormal: string;
-  trailPastTarget: string;
-  star: string;
-  danger: string;
-  uiBg: string;
-  uiText: string;
-}
-
-const THEMES: Record<string, Theme> = {
-  synthwave: {
-    name: 'Synthwave',
-    background: '#000008',           // Pure dark blue-black
-    backgroundGradientEnd: '#0a0a1a', // Deep navy
-    horizon: '#101028',              // Dark purple horizon
-    gridPrimary: '#ff0080',          // Hot pink grid
-    gridSecondary: '#4400aa',        // Deep purple lines
-    accent1: '#ff0080',              // Hot pink (primary)
-    accent2: '#00ffff',              // Cyan (secondary)
-    accent3: '#8800ff',              // Purple (tertiary)
-    accent4: '#ff4444',              // Bright red
-    highlight: '#ffff00',            // Pure yellow
-    player: '#00ffff',               // Cyan player
-    playerGlow: 'rgba(0,255,255,0.5)',
-    trailNormal: '#ff0080',
-    trailPastTarget: '#00ffff',
-    star: '#ffffff',                 // Pure white stars
-    danger: '#ff0000',               // Pure red
-    uiBg: 'rgba(0,0,8,0.9)',
-    uiText: '#ffffff',               // Pure white text
-  },
-  noir: {
-    name: 'Dark Noir',
-    background: '#000000',           // True black
-    backgroundGradientEnd: '#0a0a0a',
-    horizon: '#101010',
-    gridPrimary: '#333333',          // Gray grid
-    gridSecondary: '#1a1a1a',
-    accent1: '#ff0000',              // Pure red
-    accent2: '#888888',              // Gray
-    accent3: '#555555',              // Medium gray
-    accent4: '#aa0000',              // Dark red
-    highlight: '#ffffff',            // Pure white
-    player: '#ffffff',               // White player
-    playerGlow: 'rgba(255,255,255,0.35)',
-    trailNormal: '#555555',
-    trailPastTarget: '#ff0000',
-    star: '#333333',                 // Dim stars
-    danger: '#ff0000',               // Red
-    uiBg: 'rgba(0,0,0,0.9)',
-    uiText: '#cccccc',               // Light gray text
-  },
-  golf: {
-    name: 'Golf Classic',
-    background: '#001100',           // Deep green-black
-    backgroundGradientEnd: '#002200',
-    horizon: '#003300',              // Dark green horizon
-    gridPrimary: '#00ff00',          // Bright green grid
-    gridSecondary: '#006600',        // Medium green
-    accent1: '#00ff00',              // Bright green (primary)
-    accent2: '#ffffff',              // Pure white
-    accent3: '#88ff88',              // Light green
-    accent4: '#00cc00',              // Medium green
-    highlight: '#ffaa00',            // Orange gold
-    player: '#ffffff',               // White golf ball
-    playerGlow: 'rgba(255,255,255,0.45)',
-    trailNormal: '#88ff88',
-    trailPastTarget: '#ffaa00',
-    star: '#aaffaa',                 // Pale green stars
-    danger: '#ff0000',               // Red hazard
-    uiBg: 'rgba(0,17,0,0.9)',
-    uiText: '#88ff88',               // Green text
-  },
-};
-
-// Current theme reference (updated by state)
-let COLORS = THEMES.synthwave;
-
-interface Star {
-  x: number;
-  y: number;
-  speed: number;
-  brightness: number;
-  size: number;
-}
-
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  maxLife: number;
-  color?: string;
-}
-
-interface GameState {
-  px: number;
-  py: number;
-  vx: number;
-  vy: number;
-  flying: boolean;
-  sliding: boolean;
-  charging: boolean;
-  chargeStart: number;
-  chargePower: number;
-  angle: number;
-  dist: number;
-  best: number;
-  zenoTarget: number;
-  zenoLevel: number;
-  trail: { x: number; y: number; age: number; pastTarget?: boolean }[];
-  wind: number;
-  seed: number;
-  tryCount: number;
-  fellOff: boolean;
-  nudgeUsed: boolean;
-  initialSpeed: number;
-  particles: Particle[];
-  screenShake: number;
-  landingFrame: number;
-  stars: Star[];
-  gridOffset: number;
-  // Phase 2: Cinematic effects
-  slowMo: number;
-  screenFlash: number;
-  zoom: number;
-  zoomTargetX: number;
-  zoomTargetY: number;
-  celebrationBurst: boolean;
-  // Phase 3: Risk/Reward system
-  currentMultiplier: number;
-  lastMultiplier: number;
-  perfectLanding: boolean;
-  totalScore: number;
-  // Phase 5: Meta Progression
-  stats: {
-    totalThrows: number;
-    successfulLandings: number;
-    totalDistance: number;
-    perfectLandings: number;
-    maxMultiplier: number;
-  };
-  achievements: Set<string>;
-  newAchievement: string | null;
-  // Mobile UX enhancements
-  touchActive: boolean;
-  touchFeedback: number;
-  paused: boolean;
-}
-
-// Achievement definitions
-const ACHIEVEMENTS: Record<string, { name: string; desc: string; check: (stats: GameState['stats'], state: GameState) => boolean }> = {
-  first_zeno: { name: 'First Step', desc: 'Beat your first Zeno target', check: (_, s) => s.zenoLevel >= 1 },
-  level_5: { name: 'Halfway There', desc: 'Reach Zeno Level 5', check: (_, s) => s.zenoLevel >= 5 },
-  level_10: { name: 'Zeno Master', desc: 'Reach Zeno Level 10', check: (_, s) => s.zenoLevel >= 10 },
-  perfect_140: { name: 'Edge Walker', desc: 'Land beyond 140', check: (_, s) => s.best >= 140 },
-  perfect_landing: { name: 'Bullseye', desc: 'Get a perfect landing', check: (stats) => stats.perfectLandings >= 1 },
-  ten_perfects: { name: 'Sharpshooter', desc: 'Get 10 perfect landings', check: (stats) => stats.perfectLandings >= 10 },
-  hundred_throws: { name: 'Dedicated', desc: '100 total throws', check: (stats) => stats.totalThrows >= 100 },
-  high_roller: { name: 'High Roller', desc: 'Achieve 4x multiplier', check: (stats) => stats.maxMultiplier >= 4 },
-  thousand_score: { name: 'Scorer', desc: 'Accumulate 1000 total score', check: (_, s) => s.totalScore >= 1000 },
-};
+import { useEffect, useMemo, useRef, useCallback, useState } from 'react';
+import {
+  CLIFF_EDGE,
+  H,
+  LAUNCH_PAD_X,
+  MAX_ANGLE,
+  MIN_ANGLE,
+  OPTIMAL_ANGLE,
+  W,
+} from '@/game/constants';
+import { DEFAULT_THEME_KEY, isThemeKey, THEMES } from '@/game/themes';
+import {
+  loadDailyStats,
+  loadJson,
+  loadNumber,
+  loadString,
+  loadStringSet,
+  saveJson,
+  saveNumber,
+  saveString,
+  todayLocalISODate,
+} from '@/game/storage';
+import {
+  ensureAudioContext,
+  playImpact,
+  playTone,
+  playWhoosh,
+  resumeIfSuspended,
+  startChargeTone,
+  stopChargeTone,
+  stopEdgeWarning,
+  updateChargeTone,
+  updateEdgeWarning,
+  type AudioRefs,
+  type AudioSettings,
+} from '@/game/audio';
+import { newSessionGoals, type SessionGoal } from '@/game/goals';
+import { ACHIEVEMENTS } from '@/game/engine/achievements';
+import { renderFrame } from '@/game/engine/render';
+import { createInitialState, resetPhysics } from '@/game/engine/state';
+import { updateFrame, type GameAudio, type GameUI } from '@/game/engine/update';
+import type { GameState } from '@/game/engine/types';
 
 const Game = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const inputPadRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<GameState | null>(null);
   const pressedRef = useRef(false);
-  const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioRefs = useRef<AudioRefs>({ ctx: null, chargeOsc: null, chargeGain: null, edgeOsc: null, edgeGain: null });
   const animFrameRef = useRef<number>(0);
-  const [bestScore, setBestScore] = useState(parseFloat(localStorage.getItem('omf_best') || '0'));
-  const [zenoTarget, setZenoTarget] = useState(parseFloat(localStorage.getItem('omf_zeno_target') || String(CLIFF_EDGE / 2)));
-  const [zenoLevel, setZenoLevel] = useState(+(localStorage.getItem('omf_zeno_level') || '0'));
+  const pointerIdRef = useRef<number | null>(null);
+  const pointerStartYRef = useRef<number>(0);
+  const angleStartRef = useRef<number>(OPTIMAL_ANGLE);
+
+  const [bestScore, setBestScore] = useState(loadNumber('best', 0, 'omf_best'));
+  const [zenoTarget, setZenoTarget] = useState(loadNumber('zeno_target', CLIFF_EDGE / 2, 'omf_zeno_target'));
+  const [zenoLevel, setZenoLevel] = useState(loadNumber('zeno_level', 0, 'omf_zeno_level'));
   const [lastDist, setLastDist] = useState<number | null>(null);
   const [fellOff, setFellOff] = useState(false);
   // Phase 3: Risk/Reward states
   const [lastMultiplier, setLastMultiplier] = useState(1);
-  const [totalScore, setTotalScore] = useState(parseFloat(localStorage.getItem('omf_total_score') || '0'));
+  const [totalScore, setTotalScore] = useState(loadNumber('total_score', 0, 'omf_total_score'));
   const [perfectLanding, setPerfectLanding] = useState(false);
   // Phase 5: Meta Progression states
   const [stats, setStats] = useState(() => {
-    const saved = localStorage.getItem('omf_stats');
-    return saved ? JSON.parse(saved) : { totalThrows: 0, successfulLandings: 0, totalDistance: 0, perfectLandings: 0, maxMultiplier: 1 };
+    return loadJson('stats', { totalThrows: 0, successfulLandings: 0, totalDistance: 0, perfectLandings: 0, maxMultiplier: 1 }, 'omf_stats');
   });
   const [achievements, setAchievements] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem('omf_achievements');
-    return saved ? new Set(JSON.parse(saved)) : new Set();
+    return loadStringSet('achievements', 'omf_achievements');
   });
   const [newAchievement, setNewAchievement] = useState<string | null>(null);
   const [showMobileHint, setShowMobileHint] = useState(true);
   const [currentTheme, setCurrentTheme] = useState(() => {
-    const saved = localStorage.getItem('omf_theme');
-    return saved && THEMES[saved] ? saved : 'synthwave';
+    const saved = loadString('theme', DEFAULT_THEME_KEY, 'omf_theme');
+    return isThemeKey(saved) ? saved : DEFAULT_THEME_KEY;
   });
+  const themeRef = useRef(THEMES[currentTheme]);
 
-  // Update COLORS reference when theme changes
+  const [dailyStats, setDailyStats] = useState(() => loadDailyStats());
+  const dailyStatsRef = useRef(dailyStats);
   useEffect(() => {
-    COLORS = THEMES[currentTheme];
-    localStorage.setItem('omf_theme', currentTheme);
+    dailyStatsRef.current = dailyStats;
+  }, [dailyStats]);
+
+  const prefersReducedMotion = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
+  }, []);
+  const [reduceFx, setReduceFx] = useState(() => loadJson('reduce_fx', prefersReducedMotion, 'omf_reduce_fx'));
+
+  const [audioSettings, setAudioSettings] = useState<AudioSettings>(() => {
+    const muted = loadJson('audio_muted', false, 'omf_audio_muted');
+    const volume = loadNumber('audio_volume', 0.9, 'omf_audio_volume');
+    return { muted, volume: Math.max(0, Math.min(1, volume)) };
+  });
+  const audioSettingsRef = useRef(audioSettings);
+
+  const [sessionGoals, setSessionGoals] = useState<SessionGoal[]>(() => newSessionGoals());
+
+  const [hudPx, setHudPx] = useState(LAUNCH_PAD_X);
+  const [hudFlying, setHudFlying] = useState(false);
+
+  // Theme unlocks via achievements (minimal meta-progression)
+  const themeUnlockReason = useCallback(
+    (themeKey: string): string | null => {
+      if (themeKey === 'synthwave') return null;
+      if (themeKey === 'noir') return achievements.has('first_zeno') ? null : 'Unlock: Beat your first target';
+      if (themeKey === 'golf') return achievements.has('level_5') ? null : 'Unlock: Reach Zeno Level 5';
+      return null;
+    },
+    [achievements],
+  );
+
+  useEffect(() => {
+    themeRef.current = THEMES[currentTheme];
+    saveString('theme', currentTheme);
   }, [currentTheme]);
+
+  useEffect(() => {
+    saveJson('reduce_fx', reduceFx);
+    if (stateRef.current) stateRef.current.reduceFx = reduceFx;
+  }, [reduceFx]);
+
+  useEffect(() => {
+    saveJson('audio_muted', audioSettings.muted);
+    saveNumber('audio_volume', audioSettings.volume);
+    audioSettingsRef.current = audioSettings;
+  }, [audioSettings]);
+
+  // Keep daily stats fresh (date rollover)
+  useEffect(() => {
+    const today = todayLocalISODate();
+    if (dailyStats.date !== today) {
+      const next = loadDailyStats();
+      setDailyStats(next);
+    }
+  }, [dailyStats.date]);
 
   // Format score with small decimals
   const formatScore = (score: number) => {
@@ -235,213 +144,14 @@ const Game = () => {
   };
 
   const initState = useCallback((): GameState => {
-    const best = parseFloat(localStorage.getItem('omf_best') || '0');
-    const seed = +(localStorage.getItem('omf_seed') || '0');
-    const savedZenoTarget = parseFloat(localStorage.getItem('omf_zeno_target') || '0');
-    const savedZenoLevel = +(localStorage.getItem('omf_zeno_level') || '0');
-    const zenoTarget = savedZenoTarget || (best + CLIFF_EDGE) / 2;
-
-    // Generate parallax starfield
-    const stars: Star[] = [];
-    for (let i = 0; i < 50; i++) {
-      stars.push({
-        x: Math.random() * W,
-        y: Math.random() * (H * 0.6), // Stars only in upper portion
-        speed: 0.05 + Math.random() * 0.15,
-        brightness: 0.3 + Math.random() * 0.7,
-        size: Math.random() > 0.8 ? 2 : 1,
-      });
-    }
-
-    return {
-      px: LAUNCH_PAD_X,
-      py: H - 6,
-      vx: 0,
-      vy: 0,
-      flying: false,
-      sliding: false,
-      charging: false,
-      chargeStart: 0,
-      chargePower: 0,
-      angle: MIN_ANGLE,
-      dist: 0,
-      best,
-      zenoTarget,
-      zenoLevel: savedZenoLevel,
-      trail: [],
-      wind: (Math.sin(seed) * 0.08) - 0.02,
-      seed,
-      tryCount: 0,
-      fellOff: false,
-      nudgeUsed: false,
-      initialSpeed: 0,
-      particles: [],
-      screenShake: 0,
-      landingFrame: 0,
-      stars,
-      gridOffset: 0,
-      // Phase 2: Cinematic effects
-      slowMo: 0,
-      screenFlash: 0,
-      zoom: 1,
-      zoomTargetX: W / 2,
-      zoomTargetY: H / 2,
-      celebrationBurst: false,
-      // Phase 3: Risk/Reward system
-      currentMultiplier: 1,
-      lastMultiplier: 1,
-      perfectLanding: false,
-      totalScore: parseFloat(localStorage.getItem('omf_total_score') || '0'),
-      // Phase 5: Meta Progression
-      stats: JSON.parse(localStorage.getItem('omf_stats') || '{"totalThrows":0,"successfulLandings":0,"totalDistance":0,"perfectLandings":0,"maxMultiplier":1}'),
-      achievements: new Set(JSON.parse(localStorage.getItem('omf_achievements') || '[]')),
-      newAchievement: null,
-      // Mobile UX enhancements
-      touchActive: false,
-      touchFeedback: 0,
-      paused: false,
-    };
-  }, []);
-
-  const spawnParticles = useCallback((state: GameState, x: number, y: number, count: number, spread: number, color?: string) => {
-    for (let i = 0; i < count; i++) {
-      state.particles.push({
-        x,
-        y,
-        vx: (Math.random() - 0.5) * spread,
-        vy: -Math.random() * spread * 0.8,
-        life: 1,
-        maxLife: 15 + Math.random() * 15,
-        color: color || COLORS.accent1,
-      });
-    }
-  }, []);
-
-  // Phase 2: Celebration burst for Zeno level-up
-  const spawnCelebration = useCallback((state: GameState, x: number, y: number) => {
-    const colors = [COLORS.accent2, COLORS.accent1, COLORS.highlight, COLORS.accent4, COLORS.accent3];
-    for (let i = 0; i < 30; i++) {
-      const angle = (i / 30) * Math.PI * 2;
-      const speed = 1.5 + Math.random() * 2;
-      state.particles.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 1,
-        life: 1,
-        maxLife: 30 + Math.random() * 20,
-        color: colors[Math.floor(Math.random() * colors.length)],
-      });
-    }
-  }, []);
-
-  const nextWind = useCallback((state: GameState) => {
-    state.seed++;
-    state.wind = (Math.sin(state.seed) * 0.08) - 0.02;
-    localStorage.setItem('omf_seed', state.seed.toString());
-  }, []);
-
-  const resetPhysics = useCallback((state: GameState) => {
-    state.px = LAUNCH_PAD_X;
-    state.py = H - 6;
-    state.vx = 0;
-    state.vy = 0;
-    state.flying = false;
-    state.sliding = false;
-    state.charging = false;
-    state.chargePower = 0;
-    state.angle = MIN_ANGLE;
-    state.trail = [];
-    state.fellOff = false;
-    state.nudgeUsed = false;
-    state.initialSpeed = 0;
-    state.particles = [];
-    state.screenShake = 0;
-    state.landingFrame = 0;
-    // Keep stars persistent - don't reset them
-    // Phase 2: Reset cinematic effects
-    state.slowMo = 0;
-    state.zoom = 1;
-    state.celebrationBurst = false;
-    // Phase 3: Reset risk/reward
-    state.currentMultiplier = 1;
-    state.perfectLanding = false;
-  }, []);
-
-  const playSound = useCallback((freq: number, duration: number, type: OscillatorType = 'square', volume: number = 0.1) => {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    const ctx = audioCtxRef.current;
-    const osc = ctx.createOscillator();
-    osc.type = type;
-    osc.frequency.value = freq;
-    const gain = ctx.createGain();
-    gain.gain.value = volume;
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + duration);
-  }, []);
-
-  // Phase 4: Ascending charge tone
-  const chargeOscRef = useRef<OscillatorNode | null>(null);
-  const chargeGainRef = useRef<GainNode | null>(null);
-
-  const startChargeTone = useCallback(() => {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    const ctx = audioCtxRef.current;
-
-    // Stop any existing charge tone
-    if (chargeOscRef.current) {
-      chargeOscRef.current.stop();
-    }
-
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.value = 220; // Start at A3
-
-    const gain = ctx.createGain();
-    gain.gain.value = 0.05;
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-
-    chargeOscRef.current = osc;
-    chargeGainRef.current = gain;
-  }, []);
-
-  const updateChargeTone = useCallback((chargePower: number) => {
-    if (chargeOscRef.current) {
-      // Ascending tone from 220Hz to 880Hz (2 octaves)
-      chargeOscRef.current.frequency.value = 220 + chargePower * 660;
-    }
-    if (chargeGainRef.current) {
-      // Increase volume slightly as power increases
-      chargeGainRef.current.gain.value = 0.03 + chargePower * 0.04;
-    }
-  }, []);
-
-  const stopChargeTone = useCallback(() => {
-    if (chargeOscRef.current) {
-      chargeOscRef.current.stop();
-      chargeOscRef.current = null;
-    }
-    if (chargeGainRef.current) {
-      chargeGainRef.current = null;
-    }
-  }, []);
+    return createInitialState({ reduceFx });
+  }, [reduceFx]);
 
   // Phase 4: Zeno level-up arpeggio
   const playZenoJingle = useCallback(() => {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    const ctx = audioCtxRef.current;
+    const settings = audioSettingsRef.current;
+    if (settings.muted || settings.volume <= 0) return;
+    const ctx = ensureAudioContext(audioRefs.current);
     const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
 
     notes.forEach((freq, i) => {
@@ -461,79 +171,6 @@ const Game = () => {
       osc.stop(ctx.currentTime + i * 0.08 + 0.25);
     });
   }, []);
-
-  // Phase 4: Edge warning tone
-  const edgeWarningRef = useRef<OscillatorNode | null>(null);
-  const edgeGainRef = useRef<GainNode | null>(null);
-
-  const updateEdgeWarning = useCallback((proximity: number) => {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    const ctx = audioCtxRef.current;
-
-    if (proximity > 0.3) {
-      if (!edgeWarningRef.current) {
-        const osc = ctx.createOscillator();
-        osc.type = 'sawtooth';
-        osc.frequency.value = 100;
-
-        const gain = ctx.createGain();
-        gain.gain.value = 0;
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-
-        edgeWarningRef.current = osc;
-        edgeGainRef.current = gain;
-      }
-
-      // Increase pitch and volume as danger increases
-      edgeWarningRef.current.frequency.value = 80 + proximity * 120;
-      edgeGainRef.current!.gain.value = (proximity - 0.3) * 0.06;
-    } else {
-      if (edgeWarningRef.current) {
-        edgeWarningRef.current.stop();
-        edgeWarningRef.current = null;
-        edgeGainRef.current = null;
-      }
-    }
-  }, []);
-
-  const stopEdgeWarning = useCallback(() => {
-    if (edgeWarningRef.current) {
-      edgeWarningRef.current.stop();
-      edgeWarningRef.current = null;
-      edgeGainRef.current = null;
-    }
-  }, []);
-
-  // Phase 5: Check and award achievements
-  const checkAchievements = useCallback((state: GameState) => {
-    for (const [id, achievement] of Object.entries(ACHIEVEMENTS)) {
-      if (!state.achievements.has(id) && achievement.check(state.stats, state)) {
-        state.achievements.add(id);
-        state.newAchievement = achievement.name;
-        setAchievements(new Set(state.achievements));
-        setNewAchievement(achievement.name);
-        localStorage.setItem('omf_achievements', JSON.stringify([...state.achievements]));
-
-        // Play achievement sound
-        playSound(523, 0.1, 'sine', 0.06);
-        setTimeout(() => playSound(659, 0.1, 'sine', 0.06), 80);
-        setTimeout(() => playSound(784, 0.15, 'sine', 0.08), 160);
-
-        // Clear achievement notification after 3 seconds
-        setTimeout(() => {
-          setNewAchievement(null);
-          if (stateRef.current) stateRef.current.newAchievement = null;
-        }, 3000);
-
-        break; // Only show one achievement at a time
-      }
-    }
-  }, [playSound]);
 
   // Mobile UX: Haptic feedback helper
   const triggerHaptic = useCallback((pattern: number | number[] = 10) => {
@@ -556,16 +193,74 @@ const Game = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    const inputPad = inputPadRef.current;
+    if (!inputPad) return;
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     ctx.imageSmoothingEnabled = false;
     stateRef.current = initState();
 
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const ui: GameUI = {
+      setFellOff,
+      setLastMultiplier,
+      setPerfectLanding,
+      setTotalScore,
+      setBestScore,
+      setZenoTarget,
+      setZenoLevel,
+      setStats,
+      setAchievements,
+      setNewAchievement,
+      setLastDist,
+      setSessionGoals,
+      setDailyStats,
+    };
+
+    const audio: GameAudio = {
+      startCharge: () => startChargeTone(audioRefs.current, audioSettingsRef.current),
+      updateCharge: (p) => updateChargeTone(audioRefs.current, audioSettingsRef.current, p),
+      stopCharge: () => stopChargeTone(audioRefs.current),
+      whoosh: () => playWhoosh(audioRefs.current, audioSettingsRef.current),
+      impact: (i) => playImpact(audioRefs.current, audioSettingsRef.current, i),
+      edgeWarning: (p) => updateEdgeWarning(audioRefs.current, audioSettingsRef.current, p),
+      stopEdgeWarning: () => stopEdgeWarning(audioRefs.current),
+      tone: (freq, dur, type = 'square', vol = 0.1) => playTone(audioRefs.current, audioSettingsRef.current, freq, dur, type, vol),
+      zenoJingle: () => playZenoJingle(),
+    };
+
+    const scheduleReset = (ms: number) => {
+      setTimeout(() => {
+        if (stateRef.current) resetPhysics(stateRef.current);
+      }, ms);
+    };
+
+    const syncHud = () => {
+      const s = stateRef.current;
+      if (!s) return;
+      setHudPx(s.px);
+      setHudFlying(s.flying || s.sliding || s.charging);
+    };
+
+    const hudInterval = window.setInterval(syncHud, 120);
+
+    const handleKeyDown = async (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         e.preventDefault();
         pressedRef.current = true;
+        // Resume audio context on first gesture
+        ensureAudioContext(audioRefs.current);
+        await resumeIfSuspended(audioRefs.current);
+      }
+      if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+        const s = stateRef.current;
+        if (!s) return;
+        if (!s.flying && !s.sliding) {
+          e.preventDefault();
+          const step = e.code === 'ArrowUp' ? 2 : -2;
+          s.angle = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, s.angle + step));
+        }
       }
     };
 
@@ -576,32 +271,73 @@ const Game = () => {
       }
     };
 
-    const handleMouseDown = () => pressedRef.current = true;
-    const handleMouseUp = () => pressedRef.current = false;
-
-    // Touch controls for mobile with enhanced UX
-    const handleTouchStart = (e: TouchEvent) => {
+    const handlePointerDown = async (e: PointerEvent) => {
+      if (e.button !== 0 && e.pointerType !== 'touch') return;
       e.preventDefault();
       pressedRef.current = true;
-      if (stateRef.current) {
-        stateRef.current.touchActive = true;
-        stateRef.current.touchFeedback = 1;
+      pointerIdRef.current = e.pointerId;
+      pointerStartYRef.current = e.clientY;
+      const s = stateRef.current;
+      if (s) angleStartRef.current = s.angle;
+
+      try {
+        inputPad.setPointerCapture(e.pointerId);
+      } catch {
+        // ignore
       }
-      // Haptic feedback on touch
-      triggerHaptic(15);
-      // Hide mobile hint after first touch
+
+      ensureAudioContext(audioRefs.current);
+      await resumeIfSuspended(audioRefs.current);
+
+      // Hide mobile hint after first touch/click
       setShowMobileHint(false);
-    };
-    const handleTouchEnd = (e: TouchEvent) => {
-      e.preventDefault();
-      pressedRef.current = false;
-      if (stateRef.current) {
-        stateRef.current.touchActive = false;
+
+      // Touch UX flags + haptics
+      if (e.pointerType === 'touch') {
+        markTouchActive(true);
+        triggerHaptic(15);
       }
-      // Haptic on release (launch)
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      if (pointerIdRef.current == null || e.pointerId !== pointerIdRef.current) return;
+      const s = stateRef.current;
+      if (!s) return;
+      if (!s.charging) return;
+
+      const dy = e.clientY - pointerStartYRef.current;
+      // Drag up -> higher angle
+      const nextAngle = angleStartRef.current + (-dy * 0.18);
+      s.angle = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, nextAngle));
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+      if (pointerIdRef.current != null && e.pointerId === pointerIdRef.current) {
+        pointerIdRef.current = null;
+      }
+      pressedRef.current = false;
+
+      markTouchActive(false);
       if (stateRef.current?.charging) {
         triggerHaptic([10, 30, 20]);
       }
+    };
+
+    const handlePointerCancel = (e: PointerEvent) => {
+      if (pointerIdRef.current != null && e.pointerId === pointerIdRef.current) {
+        pointerIdRef.current = null;
+      }
+      pressedRef.current = false;
+
+      markTouchActive(false);
+    };
+
+    // Touch UX flags (still used for visual feedback)
+    const markTouchActive = (active: boolean) => {
+      const s = stateRef.current;
+      if (!s) return;
+      s.touchActive = active;
+      if (active) s.touchFeedback = 1;
     };
 
     // Mobile UX: Pause when tab/app goes to background (battery saver)
@@ -610,8 +346,8 @@ const Game = () => {
         stateRef.current.paused = document.hidden;
         // Stop any audio when going to background
         if (document.hidden) {
-          stopChargeTone();
-          stopEdgeWarning();
+          stopChargeTone(audioRefs.current);
+          stopEdgeWarning(audioRefs.current);
         }
       }
     };
@@ -619,721 +355,26 @@ const Game = () => {
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    canvas.addEventListener('mousedown', handleMouseDown);
-    canvas.addEventListener('mouseup', handleMouseUp);
-    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-    canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
-
-    const update = (state: GameState) => {
-      // Mobile UX: Skip update when paused (battery saver)
-      if (state.paused) return;
-
-      const pressed = pressedRef.current;
-
-      // Mobile UX: Decay touch feedback visual
-      if (state.touchFeedback > 0) {
-        state.touchFeedback *= 0.9;
-        if (state.touchFeedback < 0.01) state.touchFeedback = 0;
-      }
-
-      // Start charging
-      if (!state.flying && !state.sliding && pressed && !state.charging) {
-        state.charging = true;
-        state.chargeStart = performance.now();
-        setFellOff(false);
-        // Phase 4: Start ascending charge tone
-        startChargeTone();
-      }
-
-      // Update charge power AND angle while holding (both increase together!)
-      if (state.charging && pressed) {
-        const dt = Math.min(performance.now() - state.chargeStart, CHARGE_MS) / CHARGE_MS;
-        state.chargePower = dt;
-        // Angle increases from MIN to MAX as you hold longer
-        state.angle = MIN_ANGLE + (MAX_ANGLE - MIN_ANGLE) * dt;
-        // Phase 4: Update charge tone frequency
-        updateChargeTone(dt);
-      }
-
-      // Launch on release
-      if (state.charging && !pressed) {
-        state.charging = false;
-        state.flying = true;
-        const power = MIN_POWER + (MAX_POWER - MIN_POWER) * state.chargePower;
-        const angleRad = (state.angle * Math.PI) / 180;
-        state.vx = power * Math.cos(angleRad);
-        state.vy = -power * Math.sin(angleRad);
-        state.initialSpeed = power;
-        state.trail = [];
-        state.chargePower = 0;
-        state.nudgeUsed = false;
-        // Phase 4: Stop charge tone on launch
-        stopChargeTone();
-        // Launch whoosh sound
-        playSound(200, 0.15, 'sawtooth', 0.05);
-      }
-
-      // Mid-air nudge (single use) - press SPACE while flying
-      if (state.flying && pressed && !state.nudgeUsed && state.initialSpeed > 0) {
-        const nudgePower = state.initialSpeed * 0.1;
-        // Apply nudge opposite to wind direction
-        state.vx -= Math.sign(state.wind) * nudgePower;
-        state.nudgeUsed = true;
-        playSound(660, 0.03);
-      }
-
-      // Update stars (parallax movement)
-      for (const star of state.stars) {
-        star.x -= star.speed;
-        if (star.x < 0) {
-          star.x = W;
-          star.y = Math.random() * (H * 0.6);
-        }
-        // Twinkle effect
-        star.brightness = 0.3 + Math.abs(Math.sin(performance.now() / 500 + star.x)) * 0.7;
-      }
-
-      // Animate grid
-      state.gridOffset = (state.gridOffset + 0.3) % 10;
-
-      // Physics - flying
-      if (state.flying) {
-        state.vy += BASE_GRAV;
-
-        // Gentle wind effect (subtle, not game-breaking)
-        state.vx += state.wind * 0.3;
-
-        state.px += state.vx;
-        state.py += state.vy;
-
-        // Record trail with age - mark if past Zeno target for color change
-        const pastTarget = state.px >= state.zenoTarget;
-        state.trail.push({ x: state.px, y: state.py, age: 0, pastTarget });
-
-        // Touched ground - start sliding
-        if (state.py >= H - 4) {
-          state.flying = false;
-          state.sliding = true;
-          state.py = H - 4;
-          // Phase 2: Enhanced screen shake based on impact velocity
-          const impactVelocity = Math.abs(state.vy);
-          state.screenShake = Math.min(8, 2 + impactVelocity * 1.5);
-          state.landingFrame = 8;
-          // More particles for harder impacts
-          const particleCount = Math.floor(4 + impactVelocity * 2);
-          spawnParticles(state, state.px, state.py, particleCount, 1.5 + impactVelocity * 0.3, COLORS.accent4);
-          state.vx *= 0.55;
-          state.vy = 0;
-          // Phase 4: Impact sound varies with velocity
-          const impactFreq = 200 + impactVelocity * 80;
-          playSound(impactFreq, 0.08, 'triangle', 0.08);
-          // Add a bass thud for heavier impacts
-          if (impactVelocity > 2) {
-            playSound(80, 0.12, 'sine', 0.06);
-          }
-        }
-      }
-
-      // Age trail points
-      for (const t of state.trail) {
-        t.age++;
-      }
-      state.trail = state.trail.filter(t => t.age < 40);
-
-      // Update particles
-      state.particles = state.particles.filter(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.15;
-        p.life--;
-        return p.life > 0;
-      });
-
-      // Decay screen shake
-      if (state.screenShake > 0) state.screenShake *= 0.8;
-      if (state.landingFrame > 0) state.landingFrame--;
-
-      // Phase 2: Cinematic effects decay
-      if (state.slowMo > 0) state.slowMo *= 0.95;
-      if (state.screenFlash > 0) state.screenFlash *= 0.85;
-      if (state.zoom > 1) state.zoom = 1 + (state.zoom - 1) * 0.92;
-
-      // Trigger slow-mo when player is past 90 and approaching edge
-      if ((state.flying || state.sliding) && state.px > 90) {
-        const edgeProximity = (state.px - 90) / (CLIFF_EDGE - 90);
-        state.slowMo = Math.min(0.7, edgeProximity * 0.8);
-        state.zoom = 1 + edgeProximity * 0.3;
-        state.zoomTargetX = state.px;
-        state.zoomTargetY = state.py;
-        // Phase 4: Edge warning audio
-        updateEdgeWarning(edgeProximity);
-      } else {
-        // Stop edge warning when not near edge
-        stopEdgeWarning();
-      }
-
-      // Phase 3: Calculate current multiplier based on edge proximity
-      if ((state.flying || state.sliding) && state.px > 50) {
-        // Multiplier increases exponentially as you approach the edge
-        const riskFactor = (state.px - 50) / (CLIFF_EDGE - 50);
-        state.currentMultiplier = 1 + riskFactor * riskFactor * 4; // 1x to 5x
-      } else {
-        state.currentMultiplier = 1;
-      }
-
-      // Physics - sliding
-      if (state.sliding) {
-        const friction = 0.88;
-        state.vx *= friction;
-        state.px += state.vx;
-
-        // Spawn dust while sliding fast
-        if (Math.abs(state.vx) > 0.5 && Math.random() > 0.5) {
-          spawnParticles(state, state.px, state.py, 1, 0.5, COLORS.accent1);
-        }
-
-        const pastTarget = state.px >= state.zenoTarget;
-        state.trail.push({ x: state.px, y: state.py, age: 0, pastTarget });
-
-        // Stop sliding when slow enough
-        if (Math.abs(state.vx) < 0.1) {
-          state.sliding = false;
-          state.vx = 0;
-          
-          // Granular float scoring - 4 decimal precision for Zeno's infinite subdivision
-          const landedAt = Math.round(state.px * 10000) / 10000;
-
-          if (landedAt >= CLIFF_EDGE) {
-            // The edge is UNREACHABLE - Zeno's paradox!
-            state.fellOff = true;
-            state.dist = 0;
-            state.lastMultiplier = 0;
-            setFellOff(true);
-            setLastMultiplier(0);
-            setPerfectLanding(false);
-            playSound(220, 0.15);
-          } else {
-            state.dist = Math.max(0, landedAt);
-            setFellOff(false);
-
-            // Phase 3: Calculate final multiplier and check for perfect landing
-            const finalMultiplier = state.currentMultiplier;
-            state.lastMultiplier = finalMultiplier;
-            setLastMultiplier(finalMultiplier);
-
-            // Check for perfect landing (within 0.5 of Zeno target)
-            const distFromTarget = Math.abs(landedAt - state.zenoTarget);
-            const isPerfect = distFromTarget < 0.5;
-            state.perfectLanding = isPerfect;
-            setPerfectLanding(isPerfect);
-
-            // Calculate score with multiplier
-            const basePoints = state.dist;
-            const multipliedPoints = basePoints * finalMultiplier;
-            const perfectBonus = isPerfect ? 10 : 0;
-            const scoreGained = multipliedPoints + perfectBonus;
-
-            state.totalScore += scoreGained;
-            localStorage.setItem('omf_total_score', state.totalScore.toString());
-            setTotalScore(state.totalScore);
-
-            // Zeno's Paradox scoring: chase the ever-moving target
-            if (state.dist >= state.zenoTarget) {
-              // Beat the Zeno target! Level up and set new target
-              state.zenoLevel++;
-              state.best = state.dist;
-              // New target is halfway between new best and the unreachable edge
-              state.zenoTarget = (state.best + CLIFF_EDGE) / 2;
-
-              localStorage.setItem('omf_best', state.best.toString());
-              localStorage.setItem('omf_zeno_target', state.zenoTarget.toString());
-              localStorage.setItem('omf_zeno_level', state.zenoLevel.toString());
-
-              setBestScore(state.best);
-              setZenoTarget(state.zenoTarget);
-              setZenoLevel(state.zenoLevel);
-
-              // Phase 2: Cinematic celebration!
-              state.screenFlash = 1;
-              state.celebrationBurst = true;
-              spawnCelebration(state, state.px, state.py);
-
-              // Phase 4: Triumphant Zeno jingle!
-              playZenoJingle();
-              // Stop edge warning since we landed
-              stopEdgeWarning();
-            } else if (state.dist > state.best) {
-              // Beat personal best but not the Zeno target
-              state.best = state.dist;
-              localStorage.setItem('omf_best', state.best.toString());
-              setBestScore(state.best);
-              playSound(660, 0.08, 'sine', 0.08);
-            }
-
-            // Stop edge warning since we landed safely
-            stopEdgeWarning();
-
-            // Perfect landing sound - sparkly arpeggio
-            if (isPerfect) {
-              setTimeout(() => playSound(1320, 0.05, 'sine', 0.06), 50);
-              setTimeout(() => playSound(1760, 0.04, 'sine', 0.05), 100);
-            }
-
-            // Phase 5: Update stats
-            state.stats.successfulLandings++;
-            state.stats.totalDistance += state.dist;
-            if (isPerfect) state.stats.perfectLandings++;
-            if (finalMultiplier > state.stats.maxMultiplier) {
-              state.stats.maxMultiplier = finalMultiplier;
-            }
-          }
-
-          // Phase 5: Update total throws (for both success and fall)
-          state.stats.totalThrows++;
-          localStorage.setItem('omf_stats', JSON.stringify(state.stats));
-          setStats({ ...state.stats });
-
-          // Check for new achievements
-          checkAchievements(state);
-
-          setLastDist(state.fellOff ? null : state.dist);
-
-          state.tryCount++;
-          
-          if (state.tryCount % 5 === 0) {
-            nextWind(state);
-          }
-
-          setTimeout(() => {
-            if (stateRef.current) {
-              resetPhysics(stateRef.current);
-            }
-          }, 1200);
-        }
-        
-        // Fall off while sliding
-        if (state.px >= CLIFF_EDGE && state.sliding) {
-          state.sliding = false;
-          state.fellOff = true;
-          state.dist = 0;
-          setFellOff(true);
-          playSound(220, 0.15);
-          setLastDist(null);
-          
-          state.tryCount++;
-          if (state.tryCount % 5 === 0) {
-            nextWind(state);
-          }
-          
-          setTimeout(() => {
-            if (stateRef.current) {
-              resetPhysics(stateRef.current);
-            }
-          }, 1200);
-        }
-      }
-    };
-
-    const draw = (state: GameState) => {
-      // Apply screen shake
-      const shakeX = state.screenShake > 0.1 ? (Math.random() - 0.5) * state.screenShake : 0;
-      const shakeY = state.screenShake > 0.1 ? (Math.random() - 0.5) * state.screenShake : 0;
-
-      ctx.save();
-
-      // Phase 2: Apply zoom transform
-      if (state.zoom > 1.01) {
-        const zoomCenterX = state.zoomTargetX;
-        const zoomCenterY = state.zoomTargetY;
-        ctx.translate(zoomCenterX, zoomCenterY);
-        ctx.scale(state.zoom, state.zoom);
-        ctx.translate(-zoomCenterX, -zoomCenterY);
-      }
-
-      ctx.translate(shakeX, shakeY);
-
-      // === CRISP PIXEL BACKGROUND ===
-      // Solid color bands instead of gradient for sharp pixel art look
-      const horizonY = H * 0.55;
-      ctx.fillStyle = COLORS.background;
-      ctx.fillRect(0, 0, W, Math.floor(horizonY * 0.5));
-      ctx.fillStyle = COLORS.horizon;
-      ctx.fillRect(0, Math.floor(horizonY * 0.5), W, Math.floor(horizonY * 0.5));
-      ctx.fillStyle = COLORS.backgroundGradientEnd;
-      ctx.fillRect(0, Math.floor(horizonY), W, H - Math.floor(horizonY));
-
-      // === PARALLAX STARFIELD - Crisp ===
-      for (const star of state.stars) {
-        // Binary twinkle instead of alpha fade
-        const twinkle = Math.floor(performance.now() / 300 + star.x * 10) % 3;
-        if (twinkle > 0) {
-          ctx.fillStyle = COLORS.star;
-          ctx.fillRect(Math.floor(star.x), Math.floor(star.y), star.size, star.size);
-        }
-      }
-
-      // === PERSPECTIVE GRID - Crisp ===
-      ctx.fillStyle = COLORS.gridSecondary;
-
-      // Horizontal lines with perspective
-      for (let i = 0; i < 8; i++) {
-        const progress = i / 8;
-        const yPos = horizonY + (H - horizonY) * Math.pow(progress, 0.7) + Math.floor(state.gridOffset * progress);
-        if (yPos < H - 3) {
-          ctx.fillRect(0, Math.floor(yPos), W, 1);
-        }
-      }
-
-      // Vertical lines - pixel perfect
-      const vanishX = Math.floor(W / 2);
-      for (let i = -6; i <= 6; i++) {
-        const topX = vanishX + i * 4;
-        const bottomX = vanishX + i * 20;
-        // Draw as discrete pixels for crisp look
-        for (let y = Math.floor(horizonY); y < H - 3; y += 2) {
-          const t = (y - horizonY) / (H - 3 - horizonY);
-          const x = Math.floor(topX + (bottomX - topX) * t);
-          ctx.fillRect(x, y, 1, 1);
-        }
-      }
-
-      // Horizon line - crisp single pixel line
-      ctx.fillStyle = COLORS.gridPrimary;
-      ctx.fillRect(0, Math.floor(horizonY), W, 1);
-
-      // === GROUND (Platform) - Crisp pixel art style ===
-      ctx.fillStyle = COLORS.accent1;
-      ctx.fillRect(0, H - 3, CLIFF_EDGE + 1, 3);
-
-      // === LAUNCH PAD - Crisp ===
-      ctx.fillStyle = COLORS.accent2;
-      ctx.fillRect(LAUNCH_PAD_X - 4, H - 5, 9, 2);
-      // Launch pad stripes
-      ctx.fillStyle = COLORS.accent4;
-      ctx.fillRect(LAUNCH_PAD_X - 2, H - 5, 1, 2);
-      ctx.fillRect(LAUNCH_PAD_X + 2, H - 5, 1, 2);
-      // Keep a2 vars for later use
-      const a2 = COLORS.accent2;
-      const a2R = parseInt(a2.slice(1,3), 16), a2G = parseInt(a2.slice(3,5), 16), a2B = parseInt(a2.slice(5,7), 16);
-
-      // === CLIFF EDGE DANGER ZONE - Crisp ===
-      const t = performance.now() / 200;
-      const dng = COLORS.danger;
-      const dngR = parseInt(dng.slice(1,3), 16), dngG = parseInt(dng.slice(3,5), 16), dngB = parseInt(dng.slice(5,7), 16);
-      // Animated danger stripes - crisp pixel pattern
-      ctx.fillStyle = COLORS.danger;
-      for (let i = 0; i < 6; i++) {
-        if ((Math.floor(t) + i) % 2 === 0) {
-          ctx.fillRect(CLIFF_EDGE - 1, H - 6 - i, 1, 1);
-        }
-      }
-
-      // === BEST DISTANCE MARKER - Crisp ===
-      if (state.best > 0 && state.best <= CLIFF_EDGE) {
-        ctx.fillStyle = COLORS.accent3;
-        ctx.fillRect(Math.floor(state.best), H - 9, 1, 6);
-        ctx.fillRect(Math.floor(state.best) - 1, H - 9, 3, 1);
-      }
-
-      // === ZENO TARGET MARKER - Crisp ===
-      if (state.zenoTarget > 0 && state.zenoTarget <= CLIFF_EDGE) {
-        const zenoPulse = Math.floor(performance.now() / 300) % 2; // Binary blink
-        ctx.fillStyle = zenoPulse ? COLORS.accent2 : COLORS.highlight;
-        ctx.fillRect(Math.floor(state.zenoTarget), H - 12, 1, 9);
-        ctx.fillRect(Math.floor(state.zenoTarget) - 1, H - 13, 3, 1);
-        ctx.fillRect(Math.floor(state.zenoTarget), H - 14, 1, 1);
-      }
-
-      // === WIND INDICATOR (Synthwave styled) ===
-      const windDir = state.wind > 0 ? 1 : -1;
-      const windStrength = Math.abs(state.wind);
-      const windAnim = Math.sin(performance.now() / 150) * 0.5;
-
-      // Wind box background
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(W - 46, 1, 44, 14);
-      ctx.strokeStyle = COLORS.accent3;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(W - 46, 1, 44, 14);
-
-      // Arrow base
-      const arrowX = W - 24;
-      ctx.fillStyle = COLORS.accent2;
-      ctx.fillRect(arrowX - 8, 7, 16, 1);
-
-      // Arrow head
-      ctx.fillStyle = COLORS.accent2;
-      if (windDir > 0) {
-        ctx.fillRect(arrowX + 6, 6, 2, 1);
-        ctx.fillRect(arrowX + 6, 8, 2, 1);
-        ctx.fillRect(arrowX + 8, 7, 1, 1);
-      } else {
-        ctx.fillRect(arrowX - 8, 6, 2, 1);
-        ctx.fillRect(arrowX - 8, 8, 2, 1);
-        ctx.fillRect(arrowX - 9, 7, 1, 1);
-      }
-
-      // Wind strength dots
-      const numDots = Math.max(1, Math.ceil(windStrength * 60));
-      for (let i = 0; i < Math.min(numDots, 5); i++) {
-        const wobble = Math.sin(performance.now() / 80 + i * 0.5) * 0.5;
-        ctx.fillStyle = COLORS.accent1;
-        ctx.fillRect(arrowX + windDir * (10 + i * 3) + windAnim, 7 + wobble, 1, 1);
-      }
-
-      // === TRAIL - Crisp single pixels ===
-      for (const tr of state.trail) {
-        // Skip faded trail points for crisp look
-        if (tr.age > 30) continue;
-        // Pink before target, Cyan after passing target
-        ctx.fillStyle = tr.pastTarget ? COLORS.trailPastTarget : COLORS.trailNormal;
-        if (tr.x >= 0 && tr.x < W && tr.y >= 0 && tr.y < H) {
-          ctx.fillRect(Math.floor(tr.x), Math.floor(tr.y), 1, 1);
-        }
-      }
-
-      // === PARTICLES - Crisp solid pixels ===
-      for (const p of state.particles) {
-        if (p.life < 3) continue; // Skip nearly dead particles
-        ctx.fillStyle = p.color || COLORS.accent1;
-        ctx.fillRect(Math.floor(p.x), Math.floor(p.y), 1, 1);
-      }
-
-      // === PLAYER - Crisp pixel, no glow ===
-      let pxW = 1, pxH = 1;
-      if (state.flying) {
-        if (state.vy < -1 || state.vy > 1) {
-          pxW = 1; pxH = 2;
-        }
-      }
-      if (state.landingFrame > 4) {
-        pxW = 2; pxH = 1;
-      }
-
-      const drawX = Math.max(0, Math.min(W - pxW, Math.floor(state.px)));
-      const drawY = Math.max(0, Math.min(H - pxH, Math.floor(state.py) - (pxH - 1)));
-
-      // Player core - solid color, no glow
-      if (state.fellOff) {
-        ctx.fillStyle = COLORS.danger;
-      } else if (state.charging) {
-        // Binary blink when charging
-        const pulse = Math.floor(performance.now() / 100) % 2;
-        ctx.fillStyle = pulse ? COLORS.highlight : COLORS.player;
-      } else {
-        ctx.fillStyle = COLORS.player;
-      }
-      ctx.fillRect(drawX, drawY, pxW, pxH);
-
-      // === POWER/ANGLE INDICATOR - Crisp ===
-      if (state.charging) {
-        const angleRad = (state.angle * Math.PI) / 180;
-        const lineLen = Math.floor(8 + state.chargePower * 15);
-        const startX = Math.floor(state.px);
-        const startY = Math.floor(state.py);
-
-        // Arc showing angle range - crisp dots
-        ctx.fillStyle = COLORS.accent3;
-        for (let a = MIN_ANGLE; a <= MAX_ANGLE; a += 10) {
-          const rad = (a * Math.PI) / 180;
-          ctx.fillRect(
-            Math.floor(startX + Math.cos(rad) * 14),
-            Math.floor(startY - Math.sin(rad) * 14),
-            1, 1
-          );
-        }
-
-        // Power bar line - solid color
-        ctx.fillStyle = COLORS.highlight;
-        for (let i = 0; i < lineLen; i += 2) {
-          const px = startX + Math.cos(angleRad) * i;
-          const py = startY - Math.sin(angleRad) * i;
-          ctx.fillRect(Math.floor(px), Math.floor(py), 1, 1);
-        }
-        // Arrow tip
-        const endX = startX + Math.cos(angleRad) * lineLen;
-        const endY = startY - Math.sin(angleRad) * lineLen;
-        ctx.fillStyle = COLORS.accent1;
-        ctx.fillRect(Math.floor(endX), Math.floor(endY), 2, 2);
-
-        // Optimal angle marker (45°) - blinking
-        const optRad = (OPTIMAL_ANGLE * Math.PI) / 180;
-        const optBlink = Math.floor(performance.now() / 200) % 2;
-        if (optBlink) {
-          ctx.fillStyle = COLORS.highlight;
-          ctx.fillRect(
-            Math.floor(startX + Math.cos(optRad) * 18),
-            Math.floor(startY - Math.sin(optRad) * 18),
-            2, 2
-          );
-        }
-
-        // Power meter bar - crisp
-        ctx.fillStyle = COLORS.background;
-        ctx.fillRect(3, 3, 42, 8);
-        ctx.fillStyle = COLORS.accent3;
-        ctx.fillRect(3, 3, 42, 1);
-        ctx.fillRect(3, 10, 42, 1);
-        ctx.fillRect(3, 3, 1, 8);
-        ctx.fillRect(44, 3, 1, 8);
-
-        // Power fill - solid
-        const powerColor = state.chargePower > 0.8 ? COLORS.accent1
-          : state.chargePower > 0.5 ? COLORS.highlight
-          : COLORS.accent2;
-        ctx.fillStyle = powerColor;
-        ctx.fillRect(5, 5, Math.floor(state.chargePower * 38), 4);
-
-        // Angle indicator dots
-        ctx.fillStyle = COLORS.accent4;
-        const tens = Math.floor(Math.round(state.angle) / 10);
-        for (let i = 0; i < tens; i++) {
-          ctx.fillRect(5 + i * 3, 13, 2, 2);
-        }
-      }
-
-      // === NUDGE AVAILABLE INDICATOR - Crisp ===
-      if (state.flying && !state.nudgeUsed) {
-        const nudgeBlink = Math.floor(performance.now() / 150) % 2;
-        ctx.fillStyle = nudgeBlink ? COLORS.highlight : COLORS.accent2;
-        ctx.fillRect(4, H - 13, 12, 8);
-        ctx.fillStyle = COLORS.background;
-        ctx.fillRect(6, H - 11, 8, 4);
-        ctx.fillStyle = COLORS.highlight;
-        ctx.fillRect(7, H - 10, 6, 2);
-      }
-
-      // === EDGE DANGER ZONE - Crisp border ===
-      if ((state.flying || state.sliding) && state.px > 120) {
-        const dangerBlink = Math.floor(performance.now() / 200) % 2;
-        if (dangerBlink) {
-          ctx.fillStyle = COLORS.danger;
-          // Top and bottom border lines
-          ctx.fillRect(0, 0, W, 1);
-          ctx.fillRect(0, H - 1, W, 1);
-          // Side border lines
-          ctx.fillRect(0, 0, 1, H);
-          ctx.fillRect(W - 1, 0, 1, H);
-        }
-      }
-
-      // === MULTIPLIER UI - Crisp ===
-      if ((state.flying || state.sliding) && state.currentMultiplier > 1.01) {
-        const mult = state.currentMultiplier;
-
-        // Multiplier color based on value
-        let multColor = COLORS.accent2;
-        if (mult > 3) multColor = COLORS.accent1;
-        else if (mult > 2) multColor = COLORS.highlight;
-
-        // Multiplier background box
-        ctx.fillStyle = COLORS.background;
-        ctx.fillRect(2, 18, 28, 10);
-        ctx.fillStyle = multColor;
-        ctx.fillRect(2, 18, 28, 1);
-        ctx.fillRect(2, 27, 28, 1);
-        ctx.fillRect(2, 18, 1, 10);
-        ctx.fillRect(29, 18, 1, 10);
-
-        // Draw "x"
-        ctx.fillStyle = COLORS.uiText;
-        ctx.fillRect(5, 21, 1, 1);
-        ctx.fillRect(7, 21, 1, 1);
-        ctx.fillRect(6, 22, 1, 1);
-        ctx.fillRect(5, 23, 1, 1);
-        ctx.fillRect(7, 23, 1, 1);
-
-        // Multiplier bars
-        ctx.fillStyle = multColor;
-        const bars = Math.min(4, Math.floor(mult));
-        for (let i = 0; i < bars; i++) {
-          ctx.fillRect(10 + i * 5, 20, 3, 6);
-        }
-      }
-
-      // === SLOW-MO INDICATOR - Crisp corner markers ===
-      if (state.slowMo > 0.1) {
-        ctx.fillStyle = COLORS.accent2;
-        // Corner L shapes
-        ctx.fillRect(0, 0, 4, 1);
-        ctx.fillRect(0, 0, 1, 4);
-        ctx.fillRect(W - 4, 0, 4, 1);
-        ctx.fillRect(W - 1, 0, 1, 4);
-        ctx.fillRect(0, H - 1, 4, 1);
-        ctx.fillRect(0, H - 4, 1, 4);
-        ctx.fillRect(W - 4, H - 1, 4, 1);
-        ctx.fillRect(W - 1, H - 4, 1, 4);
-      }
-
-      // === SCREEN FLASH - Binary white frame ===
-      if (state.screenFlash > 0.5) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, W, 2);
-        ctx.fillRect(0, H - 2, W, 2);
-        ctx.fillRect(0, 0, 2, H);
-        ctx.fillRect(W - 2, 0, 2, H);
-      }
-
-      // === MOBILE UX: TOUCH FEEDBACK - Crisp crosshair ===
-      if (state.touchFeedback > 0.3) {
-        ctx.fillStyle = COLORS.accent2;
-        // Center crosshair
-        ctx.fillRect(W / 2 - 3, H / 2, 7, 1);
-        ctx.fillRect(W / 2, H / 2 - 3, 1, 7);
-      }
-
-      // === MOBILE UX: TAP INDICATOR - Crisp square ===
-      if (state.touchActive && !state.flying && !state.sliding && !state.charging) {
-        ctx.fillStyle = COLORS.accent2;
-        // Square around player
-        const px = Math.floor(state.px);
-        const py = Math.floor(state.py);
-        ctx.fillRect(px - 4, py - 4, 9, 1);
-        ctx.fillRect(px - 4, py + 4, 9, 1);
-        ctx.fillRect(px - 4, py - 4, 1, 9);
-        ctx.fillRect(px + 4, py - 4, 1, 9);
-      }
-
-      // === ACHIEVEMENT NOTIFICATION - Crisp ===
-      if (state.newAchievement) {
-        const achBlink = Math.floor(performance.now() / 250) % 2;
-
-        // Achievement banner background
-        ctx.fillStyle = COLORS.background;
-        ctx.fillRect(W / 2 - 45, 2, 90, 18);
-
-        // Golden border
-        ctx.fillStyle = COLORS.highlight;
-        ctx.fillRect(W / 2 - 45, 2, 90, 1);
-        ctx.fillRect(W / 2 - 45, 19, 90, 1);
-        ctx.fillRect(W / 2 - 45, 2, 1, 18);
-        ctx.fillRect(W / 2 + 44, 2, 1, 18);
-
-        // Achievement icon (star) - blinking
-        if (achBlink) {
-          ctx.fillStyle = COLORS.highlight;
-          ctx.fillRect(W / 2 - 40, 9, 1, 1);
-          ctx.fillRect(W / 2 - 41, 10, 3, 1);
-          ctx.fillRect(W / 2 - 42, 11, 5, 1);
-          ctx.fillRect(W / 2 - 41, 12, 1, 1);
-          ctx.fillRect(W / 2 - 39, 12, 1, 1);
-        }
-
-        // "UNLOCKED" bars indicator
-        ctx.fillStyle = COLORS.accent2;
-        ctx.fillRect(W / 2 - 34, 7, 3, 1);
-        ctx.fillRect(W / 2 - 34, 10, 3, 1);
-        ctx.fillRect(W / 2 - 34, 13, 3, 1);
-      }
-
-      ctx.restore();
-    };
+    inputPad.addEventListener('pointerdown', handlePointerDown);
+    inputPad.addEventListener('pointermove', handlePointerMove);
+    inputPad.addEventListener('pointerup', handlePointerUp);
+    inputPad.addEventListener('pointercancel', handlePointerCancel);
 
     const loop = () => {
       const state = stateRef.current;
       if (state) {
-        update(state);
-        draw(state);
+        const now = performance.now();
+        updateFrame(state, {
+          theme: themeRef.current,
+          nowMs: now,
+          pressed: pressedRef.current,
+          audio,
+          ui,
+          triggerHaptic,
+          scheduleReset,
+          getDailyStats: () => dailyStatsRef.current,
+        });
+        renderFrame(ctx, state, themeRef.current, now);
       }
       animFrameRef.current = requestAnimationFrame(loop);
     };
@@ -1344,15 +385,23 @@ const Game = () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keyup', handleKeyUp);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      canvas.removeEventListener('mousedown', handleMouseDown);
-      canvas.removeEventListener('mouseup', handleMouseUp);
-      canvas.removeEventListener('touchstart', handleTouchStart);
-      canvas.removeEventListener('touchend', handleTouchEnd);
+      inputPad.removeEventListener('pointerdown', handlePointerDown);
+      inputPad.removeEventListener('pointermove', handlePointerMove);
+      inputPad.removeEventListener('pointerup', handlePointerUp);
+      inputPad.removeEventListener('pointercancel', handlePointerCancel);
+      window.clearInterval(hudInterval);
       cancelAnimationFrame(animFrameRef.current);
+      stopChargeTone(audioRefs.current);
+      stopEdgeWarning(audioRefs.current);
     };
-  }, [initState, resetPhysics, nextWind, playSound, spawnParticles, spawnCelebration, startChargeTone, updateChargeTone, stopChargeTone, playZenoJingle, updateEdgeWarning, stopEdgeWarning, checkAchievements, triggerHaptic, setBestScore, setLastDist, setZenoTarget, setZenoLevel]);
+  }, [initState, playZenoJingle, triggerHaptic]);
 
   const theme = THEMES[currentTheme];
+
+  const distToTarget = Math.round((zenoTarget - hudPx) * 10000) / 10000;
+  const distToEdge = Math.round((CLIFF_EDGE - hudPx) * 10000) / 10000;
+
+  const controlsLabel = isMobileRef.current ? 'TAP & HOLD' : 'SPACE / CLICK (hold) — drag up/down to aim';
 
   return (
     <div className="flex flex-col items-center gap-2 p-2" style={{ background: `linear-gradient(180deg, ${theme.background} 0%, ${theme.horizon} 100%)`, minHeight: '100vh' }}>
@@ -1364,40 +413,65 @@ const Game = () => {
           {Object.entries(THEMES).map(([key, t]) => (
             <button
               key={key}
-              onClick={() => setCurrentTheme(key)}
-              className="w-4 h-4 rounded-full transition-all"
-              title={t.name}
+              onClick={() => {
+                const reason = themeUnlockReason(key);
+                if (!reason) setCurrentTheme(key);
+              }}
+              className="w-4 h-4 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+              title={(() => {
+                const reason = themeUnlockReason(key);
+                return reason ? `${t.name} — ${reason}` : t.name;
+              })()}
+              aria-label={`Theme: ${t.name}`}
+              disabled={!!themeUnlockReason(key)}
               style={{
                 background: t.accent1,
                 border: currentTheme === key ? '2px solid #fff' : '2px solid transparent',
                 boxShadow: currentTheme === key ? `0 0 6px ${t.accent1}` : 'none',
                 transform: currentTheme === key ? 'scale(1.2)' : 'scale(1)',
+                opacity: themeUnlockReason(key) ? 0.35 : 1,
+                cursor: themeUnlockReason(key) ? 'not-allowed' : 'pointer',
               }}
             />
           ))}
         </div>
       </div>
 
+      {/* Controls microcopy */}
+      <div className="w-full max-w-md px-2 text-[10px]" style={{ color: theme.uiText, opacity: 0.8 }}>
+        <span>{controlsLabel}</span>
+      </div>
+
       {/* Canvas - maximized */}
       <div className="relative flex-1 flex items-center">
-        <canvas
-          ref={canvasRef}
-          width={W}
-          height={H}
-          className="game-canvas cursor-pointer touch-none select-none"
+        {/* Input pad: larger touch target so finger doesn't cover the game */}
+        <div
+          ref={inputPadRef}
+          className="relative"
           style={{
-            boxShadow: `0 0 15px ${theme.accent1}60`,
-            border: `1px solid ${theme.accent1}`,
-            width: 'min(100vw - 1rem, 480px)',
-            height: 'auto',
-            aspectRatio: `${W} / ${H}`,
-            imageRendering: 'pixelated',
-            // @ts-ignore - vendor prefixes for cross-browser crisp rendering
-            WebkitImageRendering: 'pixelated',
-            MozImageRendering: 'crisp-edges',
-            msInterpolationMode: 'nearest-neighbor',
+            padding: isMobileRef.current ? '18px 18px 52px 18px' : '10px',
+            touchAction: 'none',
           }}
-        />
+        >
+          <canvas
+            ref={canvasRef}
+            width={W}
+            height={H}
+            className="game-canvas cursor-pointer touch-none select-none"
+            style={{
+              boxShadow: `0 0 15px ${theme.accent1}60`,
+              border: `1px solid ${theme.accent1}`,
+              width: 'min(100vw - 1rem, 480px)',
+              height: 'auto',
+              aspectRatio: `${W} / ${H}`,
+              imageRendering: 'pixelated',
+              // @ts-ignore - vendor prefixes for cross-browser crisp rendering
+              WebkitImageRendering: 'pixelated',
+              MozImageRendering: 'crisp-edges',
+              msInterpolationMode: 'nearest-neighbor',
+            }}
+          />
+        </div>
 
         {/* Mobile hint overlay */}
         {showMobileHint && isMobileRef.current && (
@@ -1411,6 +485,47 @@ const Game = () => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Distances line */}
+      <div className="text-[10px] font-mono" style={{ color: theme.uiText, opacity: hudFlying ? 0.95 : 0.75 }}>
+        Δtarget: <span style={{ color: theme.accent2 }}>{distToTarget.toFixed(4)}</span>
+        {'  '}|{'  '}
+        Δedge: <span style={{ color: distToEdge < 5 ? theme.danger : theme.highlight }}>{distToEdge.toFixed(4)}</span>
+      </div>
+
+      {/* Settings row */}
+      <div className="flex items-center gap-3 text-[10px]" style={{ color: theme.uiText }}>
+        <button
+          className="px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          style={{ background: theme.uiBg, border: `1px solid ${theme.accent3}` }}
+          onClick={async () => {
+            ensureAudioContext(audioRefs.current);
+            await resumeIfSuspended(audioRefs.current);
+            setAudioSettings((s) => ({ ...s, muted: !s.muted }));
+          }}
+          aria-label="Toggle mute"
+        >
+          {audioSettings.muted ? 'Muted' : 'Sound'}
+        </button>
+        <label className="flex items-center gap-2" aria-label="Volume">
+          <span>Vol</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={Math.round(audioSettings.volume * 100)}
+            onChange={(e) => setAudioSettings((s) => ({ ...s, volume: Number(e.target.value) / 100 }))}
+          />
+        </label>
+        <button
+          className="px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          style={{ background: theme.uiBg, border: `1px solid ${theme.accent3}` }}
+          onClick={() => setReduceFx((v) => !v)}
+          aria-label="Toggle reduce effects"
+        >
+          {reduceFx ? 'FX: Low' : 'FX: On'}
+        </button>
       </div>
 
       {/* Compact score row */}
@@ -1461,6 +576,16 @@ const Game = () => {
         <span>{stats.totalThrows} throws</span>
         <span>{stats.totalThrows > 0 ? Math.round((stats.successfulLandings / stats.totalThrows) * 100) : 0}% success</span>
         <span>★ {achievements.size}/{Object.keys(ACHIEVEMENTS).length}</span>
+        <span>Daily {dailyStats.bestDistance.toFixed(2)}</span>
+      </div>
+
+      {/* Session goals */}
+      <div className="text-[10px] text-center max-w-md" style={{ color: theme.uiText, opacity: 0.85 }}>
+        {sessionGoals.map((g) => (
+          <span key={g.id} style={{ marginRight: 10, color: g.done ? theme.highlight : theme.uiText }}>
+            {g.label}: {Math.min(g.target, g.progress)}/{g.target}
+          </span>
+        ))}
       </div>
 
       {/* Game info */}
