@@ -9,6 +9,8 @@ export type AudioRefs = {
   chargeGain: GainNode | null;
   edgeOsc: OscillatorNode | null;
   edgeGain: GainNode | null;
+  unlocked: boolean; // Track if audio has been unlocked by user gesture
+  stateChangeHandler: (() => void) | null; // For cleanup
 };
 
 export function ensureAudioContext(refs: AudioRefs): AudioContext {
@@ -18,16 +20,24 @@ export function ensureAudioContext(refs: AudioRefs): AudioContext {
   return refs.ctx;
 }
 
-export async function resumeIfSuspended(refs: AudioRefs) {
-  if (!refs.ctx) return;
-  if (refs.ctx.state === 'suspended') {
+// iOS Safari has 'suspended', 'running', 'closed', and 'interrupted' states
+// 'interrupted' happens when user switches apps, phone locks, or call comes in
+export async function resumeIfNeeded(refs: AudioRefs): Promise<boolean> {
+  if (!refs.ctx) return false;
+  const state = refs.ctx.state as string; // Cast to handle 'interrupted' which isn't in TS types
+  if (state === 'suspended' || state === 'interrupted') {
     try {
       await refs.ctx.resume();
+      return refs.ctx.state === 'running';
     } catch {
-      // ignore
+      return false;
     }
   }
+  return state === 'running';
 }
+
+// Legacy alias for backwards compatibility
+export const resumeIfSuspended = resumeIfNeeded;
 
 // iOS Safari requires playing a silent buffer to fully unlock audio
 // Call this on the first user gesture (touch/click)
@@ -35,8 +45,21 @@ export async function unlockAudioForIOS(refs: AudioRefs): Promise<boolean> {
   try {
     const ctx = ensureAudioContext(refs);
 
-    // Resume if suspended
-    if (ctx.state === 'suspended') {
+    // Set up statechange listener to handle interruptions (iOS switches apps, locks, calls)
+    if (!refs.stateChangeHandler) {
+      refs.stateChangeHandler = () => {
+        const state = ctx.state as string;
+        if ((state === 'suspended' || state === 'interrupted') && refs.unlocked) {
+          // Only auto-resume if we previously unlocked successfully
+          ctx.resume().catch(() => {});
+        }
+      };
+      ctx.addEventListener('statechange', refs.stateChangeHandler);
+    }
+
+    // Resume if suspended or interrupted (iOS-specific state)
+    const state = ctx.state as string;
+    if (state === 'suspended' || state === 'interrupted') {
       await ctx.resume();
     }
 
@@ -56,10 +79,28 @@ export async function unlockAudioForIOS(refs: AudioRefs): Promise<boolean> {
     osc.start(0);
     osc.stop(ctx.currentTime + 0.001);
 
-    return ctx.state === 'running';
+    const success = ctx.state === 'running';
+    if (success) {
+      refs.unlocked = true;
+    }
+    return success;
   } catch {
     return false;
   }
+}
+
+// Get current audio state for UI feedback
+export type AudioState = 'running' | 'suspended' | 'interrupted' | 'closed' | 'unavailable';
+
+export function getAudioState(refs: AudioRefs): AudioState {
+  if (!refs.ctx) return 'unavailable';
+  return refs.ctx.state as AudioState;
+}
+
+// Check if audio is likely blocked by iOS silent mode
+// Note: There's no direct API for this, but we can detect if audio is "running" but not producing sound
+export function isAudioUnlocked(refs: AudioRefs): boolean {
+  return refs.unlocked && refs.ctx?.state === 'running';
 }
 
 function env(gain: GainNode, now: number, peak: number, duration: number) {

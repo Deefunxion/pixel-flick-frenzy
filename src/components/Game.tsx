@@ -33,6 +33,7 @@ import {
   playWilhelmScream,
   resumeIfSuspended,
   unlockAudioForIOS,
+  getAudioState,
   startChargeTone,
   stopChargeTone,
   stopEdgeWarning,
@@ -40,6 +41,7 @@ import {
   updateEdgeWarning,
   type AudioRefs,
   type AudioSettings,
+  type AudioState,
 } from '@/game/audio';
 import { newSessionGoals, type SessionGoal } from '@/game/goals';
 import { ACHIEVEMENTS } from '@/game/engine/achievements';
@@ -57,9 +59,10 @@ const Game = () => {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputPadRef = useRef<HTMLDivElement>(null);
+  const extraInputPadRef = useRef<HTMLDivElement>(null); // Extra touch area below stats
   const stateRef = useRef<GameState | null>(null);
   const pressedRef = useRef(false);
-  const audioRefs = useRef<AudioRefs>({ ctx: null, chargeOsc: null, chargeGain: null, edgeOsc: null, edgeGain: null });
+  const audioRefs = useRef<AudioRefs>({ ctx: null, chargeOsc: null, chargeGain: null, edgeOsc: null, edgeGain: null, unlocked: false, stateChangeHandler: null });
   const animFrameRef = useRef<number>(0);
   const pointerIdRef = useRef<number | null>(null);
   const pointerStartYRef = useRef<number>(0);
@@ -111,6 +114,8 @@ const Game = () => {
     return { muted, volume: Math.max(0, Math.min(1, volume)) };
   });
   const audioSettingsRef = useRef(audioSettings);
+  const [audioContextState, setAudioContextState] = useState<AudioState>('unavailable');
+  const [showAudioWarning, setShowAudioWarning] = useState(false);
   const themeRef = useRef(getTheme(themeId));
 
   const [sessionGoals, setSessionGoals] = useState<SessionGoal[]>(() => newSessionGoals());
@@ -216,6 +221,8 @@ const Game = () => {
     const inputPad = inputPadRef.current;
     if (!inputPad) return;
 
+    const extraInputPad = extraInputPadRef.current; // May be null, that's ok
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -313,7 +320,16 @@ const Game = () => {
       }
 
       // iOS requires aggressive audio unlock on first touch
-      await unlockAudioForIOS(audioRefs.current);
+      const unlocked = await unlockAudioForIOS(audioRefs.current);
+      const state = getAudioState(audioRefs.current);
+      setAudioContextState(state);
+
+      // Show warning on iOS if audio isn't running after unlock attempt
+      if (!unlocked && e.pointerType === 'touch' && !audioSettingsRef.current.muted) {
+        setShowAudioWarning(true);
+        // Auto-hide warning after 5 seconds
+        setTimeout(() => setShowAudioWarning(false), 5000);
+      }
 
       // Hide mobile hint after first touch/click
       setShowMobileHint(false);
@@ -386,6 +402,14 @@ const Game = () => {
     inputPad.addEventListener('pointerup', handlePointerUp);
     inputPad.addEventListener('pointercancel', handlePointerCancel);
 
+    // Extra touch area below stats (for comfortable thumb reach on mobile)
+    if (extraInputPad) {
+      extraInputPad.addEventListener('pointerdown', handlePointerDown);
+      extraInputPad.addEventListener('pointermove', handlePointerMove);
+      extraInputPad.addEventListener('pointerup', handlePointerUp);
+      extraInputPad.addEventListener('pointercancel', handlePointerCancel);
+    }
+
     const loop = () => {
       const state = stateRef.current;
       if (state) {
@@ -416,6 +440,12 @@ const Game = () => {
       inputPad.removeEventListener('pointermove', handlePointerMove);
       inputPad.removeEventListener('pointerup', handlePointerUp);
       inputPad.removeEventListener('pointercancel', handlePointerCancel);
+      if (extraInputPad) {
+        extraInputPad.removeEventListener('pointerdown', handlePointerDown);
+        extraInputPad.removeEventListener('pointermove', handlePointerMove);
+        extraInputPad.removeEventListener('pointerup', handlePointerUp);
+        extraInputPad.removeEventListener('pointercancel', handlePointerCancel);
+      }
       window.clearInterval(hudInterval);
       cancelAnimationFrame(animFrameRef.current);
       stopChargeTone(audioRefs.current);
@@ -591,12 +621,23 @@ const Game = () => {
                   ensureAudioContext(audioRefs.current);
                   await resumeIfSuspended(audioRefs.current);
                   setAudioSettings((s) => ({ ...s, muted: !s.muted }));
+                  // Also dismiss warning if user toggles sound
+                  setShowAudioWarning(false);
                 }}
                 aria-label="Toggle sound"
               >
                 {audioSettings.muted ? '🔇' : '🔊'}
               </button>
             </div>
+            {/* iOS audio warning */}
+            {showAudioWarning && (
+              <div
+                className="mt-2 px-3 py-2 rounded text-xs text-center"
+                style={{ backgroundColor: theme.danger + '33', color: theme.danger, maxWidth: '200px' }}
+              >
+                No sound? Check your silent switch or tap 🔊 again
+              </div>
+            )}
           </div>
         );
       })()}
@@ -647,6 +688,23 @@ const Game = () => {
             {formatScore(bestScore).int}<span className="text-xs opacity-60">.{formatScore(bestScore).dec}</span>
           </p>
         </div>
+      </div>
+
+      {/* Extra touch area for comfortable thumb reach on mobile */}
+      <div
+        ref={extraInputPadRef}
+        className="flex-1 w-full min-h-[100px] flex items-center justify-center"
+        style={{
+          touchAction: 'none',
+          cursor: 'pointer',
+          // Subtle visual hint
+          background: `radial-gradient(ellipse at center, ${theme.accent1}08 0%, transparent 70%)`,
+        }}
+        aria-label="Tap area - hold to charge, release to launch"
+      >
+        <p className="text-xs opacity-30 pointer-events-none select-none" style={{ color: theme.uiText }}>
+          TAP HERE
+        </p>
       </div>
 
       {/* Achievement popup */}
