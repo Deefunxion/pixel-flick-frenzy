@@ -35,6 +35,7 @@ export interface GameState {
   flying: boolean;
   sliding: boolean;
   charging: boolean;
+  landed: boolean;  // Prevents input until reset
   chargeStart: number;
   chargePower: number;
   angle: number;

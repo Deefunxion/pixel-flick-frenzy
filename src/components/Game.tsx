@@ -441,10 +441,13 @@ const Game = () => {
 
   return (
     <div
-      className={`flex flex-col items-center gap-2 ${isMobileRef.current ? 'p-1' : 'p-2'}`}
-      style={{ background: `linear-gradient(180deg, ${theme.background} 0%, ${theme.horizon} 100%)`, minHeight: '100vh' }}
+      className="w-full min-h-[100svh] flex justify-center"
+      style={{ background: `linear-gradient(180deg, ${theme.background} 0%, ${theme.horizon} 100%)` }}
     >
-      {/* Header */}
+      <div
+        className={`w-full max-w-md flex flex-col items-center ${isMobileRef.current ? 'gap-1 p-1' : 'gap-2 p-2'}`}
+      >
+      {/* Header - compact */}
       <div className="flex items-center justify-between w-full max-w-md px-2">
         <h1 className="text-sm font-bold" style={{ color: theme.accent1 }}>One-More-Flick</h1>
         {profile && (
@@ -454,15 +457,15 @@ const Game = () => {
         )}
       </div>
 
-      {/* Controls microcopy */}
-      <div className="w-full max-w-md px-2 text-[10px]" style={{ color: theme.uiText, opacity: 0.8 }}>
+      {/* Controls microcopy - hidden in landscape to save space */}
+      <div className="w-full max-w-md px-2 text-xs landscape:hidden" style={{ color: theme.uiText, opacity: 0.8 }}>
         <span>{controlsLabel}</span>
       </div>
 
-      {/* Canvas - maximized */}
-      <div className="relative flex-1 w-full flex items-stretch justify-center">
-        {/* Visual canvas centered within the available space */}
-        <div className="relative flex items-center justify-center" style={{ padding: isMobileRef.current ? '6px 6px 10px 6px' : '10px' }}>
+      {/* Canvas - no flex-1, just natural size */}
+      <div className="relative w-full flex justify-center">
+        {/* Visual canvas - minimal padding */}
+        <div className="relative flex items-center justify-center" style={{ padding: isMobileRef.current ? '2px' : '6px' }}>
           <canvas
             ref={canvasRef}
             width={W}
@@ -524,7 +527,7 @@ const Game = () => {
               border: `1px solid ${theme.accent3}`,
               color: theme.uiText,
               padding: '4px 8px',
-              minHeight: '28px', // Touch-friendly minimum
+              minHeight: '32px', // Touch-friendly minimum
             }
           : {
               // Flipbook: sticker label feel - rounded, paper-like
@@ -533,14 +536,14 @@ const Game = () => {
               color: theme.uiText,
               padding: '4px 10px',
               boxShadow: '1px 1px 0 rgba(0,0,0,0.1)',
-              minHeight: '28px', // Touch-friendly minimum
+              minHeight: '32px', // Touch-friendly minimum
             };
         const buttonClass = isNoir
-          ? 'rounded-sm focus-visible:outline-none focus-visible:ring-1'
-          : 'rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1';
+          ? 'rounded-sm focus-visible:outline-none focus-visible:ring-1 hover:opacity-80 active:opacity-70 transition-opacity'
+          : 'rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 hover:opacity-90 active:translate-y-px transition-all';
 
         return (
-          <div className="flex flex-wrap items-center justify-center gap-2 text-[10px]" style={{ color: theme.uiText }}>
+          <div className="w-full max-w-md flex flex-wrap items-center justify-center gap-2 text-xs" style={{ color: theme.uiText }}>
             <button
               className={buttonClass}
               style={buttonStyle}
@@ -561,7 +564,10 @@ const Game = () => {
                 max={100}
                 value={Math.round(audioSettings.volume * 100)}
                 onChange={(e) => setAudioSettings((s) => ({ ...s, volume: Number(e.target.value) / 100 }))}
-                style={{ width: isNoir ? '50px' : '60px' }}
+                style={{
+                  width: isNoir ? '50px' : '60px',
+                  accentColor: isNoir ? theme.accent2 : theme.accent1
+                }}
               />
             </label>
             <button
@@ -611,17 +617,17 @@ const Game = () => {
       })()}
 
       {/* Hero row: SCORE, LV, TARGET - primary focus */}
-      <div className="flex justify-center items-end gap-6 text-center">
+      <div className="w-full max-w-md flex justify-center items-end gap-6 text-center">
         <div>
-          <p className="text-[9px] uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Score</p>
+          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Score</p>
           <p className="text-2xl font-bold font-mono" style={{ color: theme.accent4 }}>{Math.floor(totalScore).toLocaleString()}</p>
         </div>
         <div>
-          <p className="text-[9px] uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Lv</p>
+          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Lv</p>
           <p className="text-2xl font-bold font-mono" style={{ color: theme.highlight }}>{zenoLevel}</p>
         </div>
         <div>
-          <p className="text-[9px] uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Target</p>
+          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Target</p>
           <p className="text-xl font-bold font-mono" style={{ color: theme.accent2 }}>
             {formatScore(zenoTarget).int}<span className="text-sm opacity-60">.{formatScore(zenoTarget).dec}</span>
           </p>
@@ -629,9 +635,9 @@ const Game = () => {
       </div>
 
       {/* Secondary row: LAST, BEST */}
-      <div className="flex justify-center gap-6 text-center">
+      <div className="w-full max-w-md flex justify-center gap-6 text-center">
         <div>
-          <p className="text-[9px] uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Last</p>
+          <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Last</p>
           <p className="text-base font-bold font-mono">
             {fellOff ? (
               <span style={{ color: theme.danger }}>FELL</span>
@@ -645,21 +651,21 @@ const Game = () => {
             )}
           </p>
           {lastDist !== null && !fellOff && (
-            <p className="text-[9px] font-mono" style={{ color: theme.accent2, opacity: 0.8 }}>
+            <p className="text-xs font-mono" style={{ color: theme.accent2, opacity: 0.8 }}>
               x{lastMultiplier.toFixed(1)}
             </p>
           )}
         </div>
         <div>
-          <p className="text-[9px] uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Best</p>
+          <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Best</p>
           <p className="text-base font-bold font-mono" style={{ color: theme.accent2 }}>
             {formatScore(bestScore).int}<span className="text-xs opacity-60">.{formatScore(bestScore).dec}</span>
           </p>
         </div>
       </div>
 
-      {/* Minimal stats row */}
-      <div className="flex gap-3 text-[10px]" style={{ color: theme.uiText }}>
+      {/* Minimal stats row - hidden in landscape */}
+      <div className="w-full max-w-md flex justify-center gap-3 text-xs landscape:hidden" style={{ color: theme.uiText }}>
         <span>{stats.totalThrows} throws</span>
         <span>{stats.totalThrows > 0 ? Math.round((stats.successfulLandings / stats.totalThrows) * 100) : 0}% success</span>
         <span>★ {achievements.size}/{Object.keys(ACHIEVEMENTS).length}</span>
@@ -671,8 +677,8 @@ const Game = () => {
         )}
       </div>
 
-      {/* Session goals */}
-      <div className="text-[10px] text-center max-w-md" style={{ color: theme.uiText, opacity: 0.85 }}>
+      {/* Session goals - hidden in landscape */}
+      <div className="text-xs text-center max-w-md landscape:hidden" style={{ color: theme.uiText, opacity: 0.85 }}>
         {sessionGoals.map((g) => (
           <span key={g.id} style={{ marginRight: 10, color: g.done ? theme.highlight : theme.uiText }}>
             {g.label}: {Math.min(g.target, g.progress)}/{g.target}
@@ -680,12 +686,12 @@ const Game = () => {
         ))}
       </div>
 
-      {/* Daily Challenge */}
+      {/* Daily Challenge - hidden in landscape */}
       <div
-        className="text-[10px] text-center max-w-md p-2 rounded"
+        className="text-xs text-center max-w-md py-1.5 px-2 rounded landscape:hidden"
         style={{
-          background: dailyChallenge.completed ? `${theme.highlight}20` : `${theme.accent3}10`,
-          border: `1px solid ${dailyChallenge.completed ? theme.highlight : theme.accent3}`,
+          background: dailyChallenge.completed ? `${theme.highlight}15` : `${theme.accent3}08`,
+          border: `1px solid ${dailyChallenge.completed ? theme.highlight : theme.accent3}40`,
           color: theme.uiText,
         }}
       >
@@ -703,8 +709,8 @@ const Game = () => {
         )}
       </div>
 
-      {/* Game info */}
-      <p className="text-[9px] text-center max-w-xs opacity-60" style={{ color: theme.uiText }}>
+      {/* Game info - hidden in landscape */}
+      <p className="text-xs text-center max-w-xs opacity-60 landscape:hidden" style={{ color: theme.uiText }}>
         Hold SPACE to charge, release to flick. Get as close to 145 as possible without falling off. Beat the target to level up!
       </p>
 
@@ -736,6 +742,7 @@ const Game = () => {
       {needsOnboarding && (
         <NicknameModal theme={theme} onComplete={completeOnboarding} />
       )}
+      </div>
     </div>
   );
 };

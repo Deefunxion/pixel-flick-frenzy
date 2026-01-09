@@ -43,6 +43,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     flying: false,
     sliding: false,
     charging: false,
+    landed: false,
     chargeStart: 0,
     chargePower: 0,
     angle: OPTIMAL_ANGLE,
@@ -101,6 +102,7 @@ export function resetPhysics(state: GameState) {
   state.flying = false;
   state.sliding = false;
   state.charging = false;
+  state.landed = false;
   state.chargePower = 0;
   state.trail = [];
   state.fellOff = false;
