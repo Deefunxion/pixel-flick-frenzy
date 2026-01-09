@@ -104,8 +104,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
     if (state.touchFeedback < 0.01) state.touchFeedback = 0;
   }
 
-  // Charging start
-  if (!state.flying && !state.sliding && pressed && !state.charging) {
+  // Charging start - blocked if already landed (waiting for reset)
+  if (!state.flying && !state.sliding && !state.landed && pressed && !state.charging) {
     state.charging = true;
     state.chargeStart = nowMs;
     ui.setFellOff(false);
@@ -136,13 +136,13 @@ export function updateFrame(state: GameState, svc: GameServices) {
     audio.whoosh();
   }
 
-  // Nudge
-  if (state.flying && pressed && !state.nudgeUsed && state.initialSpeed > 0) {
-    const nudgePower = state.initialSpeed * 0.1;
-    state.vx -= Math.sign(state.wind) * nudgePower;
-    state.nudgeUsed = true;
-    audio.tone(660, 0.03);
-  }
+  // Nudge feature disabled - one input per throw only
+  // if (state.flying && pressed && !state.nudgeUsed && state.initialSpeed > 0) {
+  //   const nudgePower = state.initialSpeed * 0.1;
+  //   state.vx -= Math.sign(state.wind) * nudgePower;
+  //   state.nudgeUsed = true;
+  //   audio.tone(660, 0.03);
+  // }
 
   // Stars
   for (const star of state.stars) {
@@ -483,7 +483,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.tryCount++;
       if (state.tryCount % 5 === 0) nextWind(state);
 
-      svc.scheduleReset(1200);
+      // Mark as landed to prevent new inputs, then quick reset
+      state.landed = true;
+      svc.scheduleReset(400);
     }
 
     if (state.px >= CLIFF_EDGE && state.sliding) {
@@ -507,7 +509,10 @@ export function updateFrame(state: GameState, svc: GameServices) {
       ui.setLastDist(null);
       state.tryCount++;
       if (state.tryCount % 5 === 0) nextWind(state);
-      svc.scheduleReset(2000); // Longer delay for animation
+
+      // Mark as landed to prevent new inputs
+      state.landed = true;
+      svc.scheduleReset(1200); // Slightly longer for failure animation
     }
   }
 }

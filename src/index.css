@@ -175,3 +175,16 @@ input, textarea {
   user-select: text;
   -webkit-user-select: text;
 }
+
+/* Landscape mode utilities */
+@media (orientation: landscape) and (max-height: 500px) {
+  .landscape\:hidden {
+    display: none !important;
+  }
+  .landscape\:text-xs {
+    font-size: 0.75rem !important;
+  }
+  .landscape\:gap-1 {
+    gap: 0.25rem !important;
+  }
+}

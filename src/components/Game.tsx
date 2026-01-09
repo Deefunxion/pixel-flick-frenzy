@@ -441,10 +441,10 @@ const Game = () => {
 
   return (
     <div
-      className={`flex flex-col items-center gap-2 ${isMobileRef.current ? 'p-1' : 'p-2'}`}
+      className={`flex flex-col items-center ${isMobileRef.current ? 'gap-1 p-1' : 'gap-2 p-2'}`}
       style={{ background: `linear-gradient(180deg, ${theme.background} 0%, ${theme.horizon} 100%)`, minHeight: '100vh' }}
     >
-      {/* Header */}
+      {/* Header - compact */}
       <div className="flex items-center justify-between w-full max-w-md px-2">
         <h1 className="text-sm font-bold" style={{ color: theme.accent1 }}>One-More-Flick</h1>
         {profile && (
@@ -454,15 +454,15 @@ const Game = () => {
         )}
       </div>
 
-      {/* Controls microcopy */}
-      <div className="w-full max-w-md px-2 text-[10px]" style={{ color: theme.uiText, opacity: 0.8 }}>
+      {/* Controls microcopy - hidden in landscape to save space */}
+      <div className="w-full max-w-md px-2 text-[10px] landscape:hidden" style={{ color: theme.uiText, opacity: 0.8 }}>
         <span>{controlsLabel}</span>
       </div>
 
-      {/* Canvas - maximized */}
-      <div className="relative flex-1 w-full flex items-stretch justify-center">
-        {/* Visual canvas centered within the available space */}
-        <div className="relative flex items-center justify-center" style={{ padding: isMobileRef.current ? '6px 6px 10px 6px' : '10px' }}>
+      {/* Canvas - no flex-1, just natural size */}
+      <div className="relative w-full flex justify-center">
+        {/* Visual canvas - minimal padding */}
+        <div className="relative flex items-center justify-center" style={{ padding: isMobileRef.current ? '2px' : '6px' }}>
           <canvas
             ref={canvasRef}
             width={W}
@@ -658,8 +658,8 @@ const Game = () => {
         </div>
       </div>
 
-      {/* Minimal stats row */}
-      <div className="flex gap-3 text-[10px]" style={{ color: theme.uiText }}>
+      {/* Minimal stats row - hidden in landscape */}
+      <div className="flex gap-3 text-[10px] landscape:hidden" style={{ color: theme.uiText }}>
         <span>{stats.totalThrows} throws</span>
         <span>{stats.totalThrows > 0 ? Math.round((stats.successfulLandings / stats.totalThrows) * 100) : 0}% success</span>
         <span>★ {achievements.size}/{Object.keys(ACHIEVEMENTS).length}</span>
@@ -671,8 +671,8 @@ const Game = () => {
         )}
       </div>
 
-      {/* Session goals */}
-      <div className="text-[10px] text-center max-w-md" style={{ color: theme.uiText, opacity: 0.85 }}>
+      {/* Session goals - hidden in landscape */}
+      <div className="text-[10px] text-center max-w-md landscape:hidden" style={{ color: theme.uiText, opacity: 0.85 }}>
         {sessionGoals.map((g) => (
           <span key={g.id} style={{ marginRight: 10, color: g.done ? theme.highlight : theme.uiText }}>
             {g.label}: {Math.min(g.target, g.progress)}/{g.target}
@@ -680,9 +680,9 @@ const Game = () => {
         ))}
       </div>
 
-      {/* Daily Challenge */}
+      {/* Daily Challenge - hidden in landscape */}
       <div
-        className="text-[10px] text-center max-w-md p-2 rounded"
+        className="text-[10px] text-center max-w-md p-2 rounded landscape:hidden"
         style={{
           background: dailyChallenge.completed ? `${theme.highlight}20` : `${theme.accent3}10`,
           border: `1px solid ${dailyChallenge.completed ? theme.highlight : theme.accent3}`,
@@ -703,8 +703,8 @@ const Game = () => {
         )}
       </div>
 
-      {/* Game info */}
-      <p className="text-[9px] text-center max-w-xs opacity-60" style={{ color: theme.uiText }}>
+      {/* Game info - hidden in landscape */}
+      <p className="text-[9px] text-center max-w-xs opacity-60 landscape:hidden" style={{ color: theme.uiText }}>
         Hold SPACE to charge, release to flick. Get as close to 145 as possible without falling off. Beat the target to level up!
       </p>
 
