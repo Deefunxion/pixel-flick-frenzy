@@ -22,6 +22,7 @@ import {
   drawGhostFigure,
   drawScribbleEnergy,
   drawLaunchBurst,
+  drawSpeedLines,
   LINE_WEIGHTS,
 } from './sketchy';
 
@@ -375,6 +376,11 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   // Launch burst effect
   if (state.flying && state.launchFrame < 12) {
     drawLaunchBurst(ctx, state.px - 20, state.py, state.launchFrame, COLORS.accent3, 'flipbook');
+  }
+
+  // Speed lines during high-velocity flight
+  if (state.flying && !state.reduceFx) {
+    drawSpeedLines(ctx, state.px, state.py, { vx: state.vx, vy: state.vy }, COLORS.accent3, nowMs, 'flipbook');
   }
 
   // Impact burst on landing (flipbook style)
@@ -878,6 +884,11 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   // Launch burst (more subtle for noir)
   if (state.flying && state.launchFrame < 8) {
     drawLaunchBurst(ctx, state.px - 15, state.py, state.launchFrame, COLORS.accent3, 'noir');
+  }
+
+  // Speed lines (sharper for noir)
+  if (state.flying && !state.reduceFx) {
+    drawSpeedLines(ctx, state.px, state.py, { vx: state.vx, vy: state.vy }, COLORS.accent3, nowMs, 'noir');
   }
 
   // Impact burst on landing (noir style)

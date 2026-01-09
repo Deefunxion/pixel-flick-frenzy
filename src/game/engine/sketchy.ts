@@ -1199,6 +1199,42 @@ export function drawScribbleEnergy(
   ctx.globalAlpha = 1;
 }
 
+// Draw horizontal speed lines during high-velocity flight
+export function drawSpeedLines(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  velocity: { vx: number; vy: number },
+  color: string,
+  nowMs: number,
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  const speed = Math.sqrt(velocity.vx ** 2 + velocity.vy ** 2);
+  if (speed < 4) return;
+
+  const lineCount = Math.min(6, Math.floor(speed / 2));
+  const lineLen = 10 + speed * 2;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = themeKind === 'flipbook' ? 1.5 : 1;
+  ctx.lineCap = 'round';
+
+  for (let i = 0; i < lineCount; i++) {
+    const seed = i * 47 + nowMs * 0.02;
+    const offsetY = (seededRandom(seed) - 0.5) * 30;
+    const alpha = 0.3 + seededRandom(seed + 1) * 0.3;
+    const len = lineLen * (0.6 + seededRandom(seed + 2) * 0.4);
+
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.moveTo(x - len, y + offsetY);
+    ctx.lineTo(x - len * 0.3, y + offsetY + (seededRandom(seed + 3) - 0.5) * 3);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+}
+
 // Draw explosion of scribbles at launch
 export function drawLaunchBurst(
   ctx: CanvasRenderingContext2D,
