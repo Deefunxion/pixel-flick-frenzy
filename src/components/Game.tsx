@@ -617,7 +617,7 @@ const Game = () => {
       })()}
 
       {/* Hero row: SCORE, LV, TARGET - primary focus */}
-      <div className="flex justify-center items-end gap-6 text-center">
+      <div className="w-full max-w-md flex justify-center items-end gap-6 text-center">
         <div>
           <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Score</p>
           <p className="text-2xl font-bold font-mono" style={{ color: theme.accent4 }}>{Math.floor(totalScore).toLocaleString()}</p>
@@ -635,7 +635,7 @@ const Game = () => {
       </div>
 
       {/* Secondary row: LAST, BEST */}
-      <div className="flex justify-center gap-6 text-center">
+      <div className="w-full max-w-md flex justify-center gap-6 text-center">
         <div>
           <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Last</p>
           <p className="text-base font-bold font-mono">
@@ -665,7 +665,7 @@ const Game = () => {
       </div>
 
       {/* Minimal stats row - hidden in landscape */}
-      <div className="flex gap-3 text-xs landscape:hidden" style={{ color: theme.uiText }}>
+      <div className="w-full max-w-md flex justify-center gap-3 text-xs landscape:hidden" style={{ color: theme.uiText }}>
         <span>{stats.totalThrows} throws</span>
         <span>{stats.totalThrows > 0 ? Math.round((stats.successfulLandings / stats.totalThrows) * 100) : 0}% success</span>
         <span>★ {achievements.size}/{Object.keys(ACHIEVEMENTS).length}</span>
@@ -688,10 +688,10 @@ const Game = () => {
 
       {/* Daily Challenge - hidden in landscape */}
       <div
-        className="text-xs text-center max-w-md p-2 rounded landscape:hidden"
+        className="text-xs text-center max-w-md py-1.5 px-2 rounded landscape:hidden"
         style={{
-          background: dailyChallenge.completed ? `${theme.highlight}20` : `${theme.accent3}10`,
-          border: `1px solid ${dailyChallenge.completed ? theme.highlight : theme.accent3}`,
+          background: dailyChallenge.completed ? `${theme.highlight}15` : `${theme.accent3}08`,
+          border: `1px solid ${dailyChallenge.completed ? theme.highlight : theme.accent3}40`,
           color: theme.uiText,
         }}
       >
