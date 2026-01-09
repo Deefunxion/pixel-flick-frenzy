@@ -103,4 +103,6 @@ export interface GameState {
   // Hot streak (consecutive 419+ throws)
   hotStreak: number;
   bestHotStreak: number;
+  // Launch effects
+  launchFrame: number;  // Frames since last launch (for burst effect)
 }

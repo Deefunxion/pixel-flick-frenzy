@@ -20,6 +20,8 @@ import {
   drawImpactBurst,
   drawInkSplatter,
   drawGhostFigure,
+  drawScribbleEnergy,
+  drawLaunchBurst,
   LINE_WEIGHTS,
 } from './sketchy';
 
@@ -355,6 +357,24 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       { vx: state.vx, vy: state.vy },
       state.chargePower,
     );
+  }
+
+  // Scribble energy during charging
+  if (state.charging && state.chargePower > 0.1) {
+    drawScribbleEnergy(
+      ctx,
+      state.px,
+      state.py,
+      state.chargePower,
+      COLORS.accent1,
+      nowMs,
+      'flipbook',
+    );
+  }
+
+  // Launch burst effect
+  if (state.flying && state.launchFrame < 12) {
+    drawLaunchBurst(ctx, state.px - 20, state.py, state.launchFrame, COLORS.accent3, 'flipbook');
   }
 
   // Impact burst on landing (flipbook style)
@@ -848,6 +868,16 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     drawFailingStickFigure(ctx, state.px, state.py, playerColor, nowMs, state.failureType, state.failureFrame);
   } else {
     drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
+  }
+
+  // Scribble energy during charging
+  if (state.charging && state.chargePower > 0.2) {
+    drawScribbleEnergy(ctx, state.px, state.py, state.chargePower * 0.7, COLORS.accent1, nowMs, 'noir');
+  }
+
+  // Launch burst (more subtle for noir)
+  if (state.flying && state.launchFrame < 8) {
+    drawLaunchBurst(ctx, state.px - 15, state.py, state.launchFrame, COLORS.accent3, 'noir');
   }
 
   // Impact burst on landing (noir style)

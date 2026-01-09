@@ -132,6 +132,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.ghostTrail = []; // Clear ghost trail for new throw
     state.chargePower = 0;
     state.nudgeUsed = false;
+    state.launchFrame = 0; // Reset launch frame for burst effect
 
     audio.stopCharge();
     audio.whoosh();
@@ -160,6 +161,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
   // Flying physics
   if (state.flying) {
+    state.launchFrame++; // Increment for launch burst effect
+
     state.vy += BASE_GRAV;
     state.vx += state.wind * 0.3;
 

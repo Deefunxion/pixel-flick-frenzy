@@ -92,6 +92,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     failureType: null,
     hotStreak: 0,
     bestHotStreak: loadNumber('best_hot_streak', 0, 'omf_best_hot_streak'),
+    launchFrame: 0,
   };
 }
 
@@ -125,6 +126,7 @@ export function resetPhysics(state: GameState) {
   state.failureAnimating = false;
   state.failureFrame = 0;
   state.failureType = null;
+  state.launchFrame = 0;
 }
 
 export function nextWind(state: GameState) {
