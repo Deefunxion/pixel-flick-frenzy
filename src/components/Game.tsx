@@ -425,9 +425,6 @@ const Game = () => {
 
   const theme = getTheme(themeId);
 
-  const distToTarget = Math.round((zenoTarget - hudPx) * 10000) / 10000;
-  const distToEdge = Math.round((CLIFF_EDGE - hudPx) * 10000) / 10000;
-
   const controlsLabel = isMobileRef.current ? 'TAP & HOLD' : 'SPACE / CLICK (hold) — drag up/down to aim';
 
   // Loading state while checking auth
@@ -448,8 +445,13 @@ const Game = () => {
       style={{ background: `linear-gradient(180deg, ${theme.background} 0%, ${theme.horizon} 100%)`, minHeight: '100vh' }}
     >
       {/* Header */}
-      <div className="flex items-center justify-center w-full max-w-md px-2">
+      <div className="flex items-center justify-between w-full max-w-md px-2">
         <h1 className="text-sm font-bold" style={{ color: theme.accent1 }}>One-More-Flick</h1>
+        {profile && (
+          <span className="text-xs font-mono" style={{ color: theme.highlight }}>
+            {profile.nickname}
+          </span>
+        )}
       </div>
 
       {/* Controls microcopy */}
@@ -510,12 +512,6 @@ const Game = () => {
         )}
       </div>
 
-      {/* Distances line */}
-      <div className="text-[10px] font-mono" style={{ color: theme.uiText, opacity: hudFlying ? 0.95 : 0.75 }}>
-        Δtarget: <span style={{ color: theme.accent2 }}>{distToTarget.toFixed(4)}</span>
-        {'  '}|{'  '}
-        Δedge: <span style={{ color: distToEdge < 5 ? theme.danger : theme.highlight }}>{distToEdge.toFixed(4)}</span>
-      </div>
 
       {/* Settings row - theme-aware styling */}
       {(() => {
