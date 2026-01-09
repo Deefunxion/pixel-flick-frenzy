@@ -441,9 +441,12 @@ const Game = () => {
 
   return (
     <div
-      className={`flex flex-col items-center ${isMobileRef.current ? 'gap-1 p-1' : 'gap-2 p-2'}`}
-      style={{ background: `linear-gradient(180deg, ${theme.background} 0%, ${theme.horizon} 100%)`, minHeight: '100vh' }}
+      className="w-full min-h-[100svh] flex justify-center"
+      style={{ background: `linear-gradient(180deg, ${theme.background} 0%, ${theme.horizon} 100%)` }}
     >
+      <div
+        className={`w-full max-w-md flex flex-col items-center ${isMobileRef.current ? 'gap-1 p-1' : 'gap-2 p-2'}`}
+      >
       {/* Header - compact */}
       <div className="flex items-center justify-between w-full max-w-md px-2">
         <h1 className="text-sm font-bold" style={{ color: theme.accent1 }}>One-More-Flick</h1>
@@ -739,6 +742,7 @@ const Game = () => {
       {needsOnboarding && (
         <NicknameModal theme={theme} onComplete={completeOnboarding} />
       )}
+      </div>
     </div>
   );
 };
