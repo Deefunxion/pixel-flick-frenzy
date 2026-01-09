@@ -107,6 +107,8 @@ git commit -m "feat: add Firebase configuration with env variables"
 
 **Step 1: Create authentication service**
 
+> **IMPORTANT:** Nickname reservation uses a Firestore transaction to prevent race conditions where two users could claim the same nickname simultaneously.
+
 ```typescript
 // src/firebase/auth.ts
 import {
@@ -116,13 +118,21 @@ import {
   onAuthStateChanged,
   type User,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  runTransaction,
+  serverTimestamp,
+  type Timestamp,
+} from 'firebase/firestore';
 import { auth, db } from './config';
 
 export type UserProfile = {
-  odea: string;
+  uid: string;
   nickname: string;
-  createdAt: string;
+  createdAt: Timestamp;
   googleLinked: boolean;
   // Scores
   totalScore: number;
@@ -143,69 +153,83 @@ export type UserProfile = {
     audioVolume: number;
     audioMuted: boolean;
   };
+  settingsUpdatedAt: Timestamp; // For cross-device sync recency
 };
 
-// Check if nickname is available
+// Check if nickname is available (read-only check, actual reservation is transactional)
 export async function isNicknameAvailable(nickname: string): Promise<boolean> {
   const normalizedNickname = nickname.toLowerCase();
   const nicknameDoc = await getDoc(doc(db, 'nicknames', normalizedNickname));
   return !nicknameDoc.exists();
 }
 
-// Create anonymous user with nickname
+// Create anonymous user with nickname using transaction (prevents race conditions)
 export async function createAnonymousUser(nickname: string): Promise<UserProfile | null> {
+  // Validate nickname: 3-12 letters only
+  if (!/^[a-zA-Z]{3,12}$/.test(nickname)) {
+    throw new Error('Nickname must be 3-12 letters only');
+  }
+
+  // Sign in anonymously first to get uid
+  const userCredential = await signInAnonymously(auth);
+  const user = userCredential.user;
+  const normalizedNickname = nickname.toLowerCase();
+
   try {
-    // Validate nickname: 3-12 letters only
-    if (!/^[a-zA-Z]{3,12}$/.test(nickname)) {
-      throw new Error('Nickname must be 3-12 letters only');
-    }
+    // Use transaction to atomically check and reserve nickname
+    const profile = await runTransaction(db, async (transaction) => {
+      // Check nickname availability within transaction
+      const nicknameRef = doc(db, 'nicknames', normalizedNickname);
+      const nicknameDoc = await transaction.get(nicknameRef);
 
-    // Check availability
-    const available = await isNicknameAvailable(nickname);
-    if (!available) {
-      throw new Error('Nickname is already taken');
-    }
+      if (nicknameDoc.exists()) {
+        throw new Error('Nickname is already taken');
+      }
 
-    // Sign in anonymously
-    const userCredential = await signInAnonymously(auth);
-    const user = userCredential.user;
+      // Create user profile
+      const newProfile: Omit<UserProfile, 'createdAt' | 'settingsUpdatedAt'> & {
+        createdAt: ReturnType<typeof serverTimestamp>;
+        settingsUpdatedAt: ReturnType<typeof serverTimestamp>;
+      } = {
+        uid: user.uid,
+        nickname,
+        createdAt: serverTimestamp(),
+        googleLinked: false,
+        totalScore: 0,
+        bestThrow: 0,
+        achievements: [],
+        unlockedThemes: ['flipbook'],
+        stats: {
+          totalThrows: 0,
+          successfulLandings: 0,
+          totalDistance: 0,
+          perfectLandings: 0,
+          maxMultiplier: 1,
+        },
+        settings: {
+          reduceFx: false,
+          themeId: 'flipbook',
+          audioVolume: 0.7,
+          audioMuted: false,
+        },
+        settingsUpdatedAt: serverTimestamp(),
+      };
 
-    // Create user profile
-    const profile: UserProfile = {
-      odea: user.uid,
-      nickname,
-      createdAt: new Date().toISOString(),
-      googleLinked: false,
-      totalScore: 0,
-      bestThrow: 0,
-      achievements: [],
-      unlockedThemes: ['flipbook'],
-      stats: {
-        totalThrows: 0,
-        successfulLandings: 0,
-        totalDistance: 0,
-        perfectLandings: 0,
-        maxMultiplier: 1,
-      },
-      settings: {
-        reduceFx: false,
-        themeId: 'flipbook',
-        audioVolume: 0.7,
-        audioMuted: false,
-      },
-    };
+      // Write both docs in transaction
+      const userRef = doc(db, 'users', user.uid);
+      transaction.set(userRef, newProfile);
+      transaction.set(nicknameRef, {
+        uid: user.uid,
+        originalCase: nickname,
+      });
 
-    // Save profile to Firestore
-    await setDoc(doc(db, 'users', user.uid), profile);
-
-    // Reserve nickname
-    await setDoc(doc(db, 'nicknames', nickname.toLowerCase()), {
-      odea: user.uid,
-      originalCase: nickname,
+      return newProfile as unknown as UserProfile;
     });
 
     return profile;
   } catch (error) {
+    // If transaction fails, sign out the anonymous user
+    await auth.signOut();
     console.error('Error creating anonymous user:', error);
     throw error;
   }
@@ -262,7 +286,7 @@ export async function hasUserProfile(userId: string): Promise<boolean> {
 
 ```bash
 git add src/firebase/auth.ts
-git commit -m "feat: create Firebase auth service with anonymous + Google support"
+git commit -m "feat: create Firebase auth service with transactional nickname reservation"
 ```
 
 ---
@@ -317,7 +341,7 @@ export function NicknameModal({ theme, onComplete }: NicknameModalProps) {
     setError(null);
 
     try {
-      // Check availability
+      // Quick availability check (non-authoritative, just for UX)
       const available = await isNicknameAvailable(nickname);
       if (!available) {
         setError('Nickname is already taken');
@@ -328,7 +352,7 @@ export function NicknameModal({ theme, onComplete }: NicknameModalProps) {
       setIsChecking(false);
       setIsSubmitting(true);
 
-      // Create user
+      // Create user (uses transaction for race-safe reservation)
       const profile = await createAnonymousUser(nickname);
       if (profile) {
         onComplete(profile);
@@ -590,6 +614,8 @@ git commit -m "feat: integrate user auth and onboarding into game"
 
 **Step 1: Create leaderboard service**
 
+> **IMPORTANT:** Uses `getCountFromServer` for efficient rank calculation instead of downloading all docs. Includes tie-breaker ordering by `updatedAt`.
+
 ```typescript
 // src/firebase/leaderboard.ts
 import {
@@ -602,25 +628,29 @@ import {
   orderBy,
   limit,
   where,
+  getCountFromServer,
+  serverTimestamp,
+  type Timestamp,
 } from 'firebase/firestore';
 import { db } from './config';
 
 export type LeaderboardEntry = {
-  odea: string;
+  uid: string;
   nickname: string;
   score: number;
-  updatedAt: string;
+  updatedAt: Timestamp;
 };
 
 export type LeaderboardType = 'totalScore' | 'bestThrow';
 
-// Get top 100 for a leaderboard
+// Get top 100 for a leaderboard (with tie-breaker ordering)
 export async function getLeaderboard(type: LeaderboardType): Promise<LeaderboardEntry[]> {
   try {
     const collectionName = type === 'totalScore' ? 'leaderboard_total' : 'leaderboard_throw';
     const q = query(
       collection(db, collectionName),
       orderBy('score', 'desc'),
+      orderBy('updatedAt', 'asc'), // Tie-breaker: earlier timestamp wins
       limit(100)
     );
 
@@ -632,7 +662,7 @@ export async function getLeaderboard(type: LeaderboardType): Promise<Leaderboard
   }
 }
 
-// Get user's rank in a leaderboard
+// Get user's rank in a leaderboard (efficient count query)
 export async function getUserRank(type: LeaderboardType, userId: string): Promise<number | null> {
   try {
     const collectionName = type === 'totalScore' ? 'leaderboard_total' : 'leaderboard_throw';
@@ -642,14 +672,14 @@ export async function getUserRank(type: LeaderboardType, userId: string): Promis
 
     const userScore = userDoc.data().score;
 
-    // Count users with higher scores
+    // Use getCountFromServer for efficient counting (doesn't download docs)
     const q = query(
       collection(db, collectionName),
       where('score', '>', userScore)
     );
 
-    const snapshot = await getDocs(q);
-    return snapshot.size + 1; // Rank is count of higher scores + 1
+    const countSnapshot = await getCountFromServer(q);
+    return countSnapshot.data().count + 1; // Rank is count of higher scores + 1
   } catch (error) {
     console.error('Error fetching user rank:', error);
     return null;
@@ -676,11 +706,11 @@ export async function updateLeaderboardScore(
       }
     }
 
-    const entry: LeaderboardEntry = {
-      odea: odea,
+    const entry: Omit<LeaderboardEntry, 'updatedAt'> & { updatedAt: ReturnType<typeof serverTimestamp> } = {
+      uid: userId,
       nickname,
       score: newScore,
-      updatedAt: new Date().toISOString(),
+      updatedAt: serverTimestamp(),
     };
 
     await setDoc(docRef, entry);
@@ -716,7 +746,7 @@ export async function getUserLeaderboardEntry(
 
 ```bash
 git add src/firebase/leaderboard.ts
-git commit -m "feat: create leaderboard service for Firebase"
+git commit -m "feat: create leaderboard service with efficient rank counting"
 ```
 
 ---
@@ -852,12 +882,12 @@ export function LeaderboardScreen({ theme, onClose }: LeaderboardScreenProps) {
           ) : (
             <div className="space-y-1">
               {entries.map((entry, index) => {
-                const isCurrentUser = firebaseUser?.uid === entry.odea;
+                const isCurrentUser = firebaseUser?.uid === entry.uid;
                 const rank = index + 1;
 
                 return (
                   <div
-                    key={entry.odea}
+                    key={entry.uid}
                     className="flex items-center gap-3 px-3 py-2 rounded"
                     style={{
                       background: isCurrentUser ? `${theme.highlight}30` :
@@ -984,7 +1014,7 @@ git commit -m "feat: add leaderboard button and screen integration"
 
 ```typescript
 // src/firebase/scoreSync.ts
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './config';
 import { updateLeaderboardScore } from './leaderboard';
 
@@ -1006,7 +1036,7 @@ export async function syncScoreToFirebase(
 
     if (userDoc.exists()) {
       const currentData = userDoc.data();
-      const updates: Record<string, number> = {};
+      const updates: Record<string, unknown> = {};
 
       if (totalScore > (currentData.totalScore || 0)) {
         updates.totalScore = totalScore;
@@ -1113,9 +1143,11 @@ git commit -m "feat: integrate score submission on personal bests"
 
 **Step 1: Create sync service with merge logic**
 
+> **IMPORTANT:** Uses `settingsUpdatedAt` timestamp to determine which settings are newer during cross-device sync.
+
 ```typescript
 // src/firebase/sync.ts
-import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, type Timestamp } from 'firebase/firestore';
 import { db } from './config';
 import { type UserProfile } from './auth';
 import {
@@ -1136,6 +1168,7 @@ export type LocalData = {
   unlockedThemes: string[];
   stats: UserProfile['stats'];
   settings: UserProfile['settings'];
+  settingsUpdatedAt?: number; // Unix timestamp for local comparison
 };
 
 // Load all local data
@@ -1158,6 +1191,7 @@ export function getLocalData(): LocalData {
       audioVolume: loadNumber('audio_volume', 0.7, 'omf_audio_volume'),
       audioMuted: loadJson('audio_muted', false, 'omf_audio_muted'),
     },
+    settingsUpdatedAt: loadNumber('settings_updated_at', 0),
   };
 }
 
@@ -1172,10 +1206,28 @@ export function saveLocalData(data: LocalData) {
   saveString('theme_id', data.settings.themeId);
   saveNumber('audio_volume', data.settings.audioVolume);
   saveJson('audio_muted', data.settings.audioMuted);
+  if (data.settingsUpdatedAt) {
+    saveNumber('settings_updated_at', data.settingsUpdatedAt);
+  }
 }
 
-// Merge local and cloud data (keep highest/best)
-export function mergeData(local: LocalData, cloud: Partial<LocalData>): LocalData {
+// Convert Firestore Timestamp to Unix ms
+function timestampToMs(ts: Timestamp | undefined): number {
+  return ts ? ts.toMillis() : 0;
+}
+
+// Merge local and cloud data (keep highest/best, most recent settings)
+export function mergeData(
+  local: LocalData,
+  cloud: Partial<UserProfile>,
+  cloudSettingsUpdatedAt?: Timestamp
+): LocalData {
+  const cloudSettingsMs = timestampToMs(cloudSettingsUpdatedAt);
+  const localSettingsMs = local.settingsUpdatedAt || 0;
+
+  // Settings: use whichever is more recent
+  const useCloudSettings = cloudSettingsMs > localSettingsMs;
+
   return {
     // Keep highest scores
     totalScore: Math.max(local.totalScore, cloud.totalScore || 0),
@@ -1194,8 +1246,9 @@ export function mergeData(local: LocalData, cloud: Partial<LocalData>): LocalDat
       maxMultiplier: Math.max(local.stats.maxMultiplier, cloud.stats?.maxMultiplier || 1),
     },
 
-    // Use local settings (most recent device wins)
-    settings: local.settings,
+    // Settings: use most recent
+    settings: useCloudSettings && cloud.settings ? cloud.settings : local.settings,
+    settingsUpdatedAt: Math.max(localSettingsMs, cloudSettingsMs),
   };
 }
 
@@ -1207,8 +1260,8 @@ export async function syncAfterGoogleLink(userId: string): Promise<LocalData> {
   const localData = getLocalData();
 
   if (userDoc.exists()) {
-    const cloudData = userDoc.data() as Partial<LocalData>;
-    const mergedData = mergeData(localData, cloudData);
+    const cloudData = userDoc.data() as UserProfile;
+    const mergedData = mergeData(localData, cloudData, cloudData.settingsUpdatedAt);
 
     // Save merged data locally
     saveLocalData(mergedData);
@@ -1221,6 +1274,7 @@ export async function syncAfterGoogleLink(userId: string): Promise<LocalData> {
       unlockedThemes: mergedData.unlockedThemes,
       stats: mergedData.stats,
       settings: mergedData.settings,
+      settingsUpdatedAt: serverTimestamp(),
     });
 
     return mergedData;
@@ -1235,9 +1289,9 @@ export async function pullCloudData(userId: string): Promise<LocalData | null> {
   const userDoc = await getDoc(userRef);
 
   if (userDoc.exists()) {
-    const cloudData = userDoc.data() as LocalData;
+    const cloudData = userDoc.data() as UserProfile;
     const localData = getLocalData();
-    const mergedData = mergeData(localData, cloudData);
+    const mergedData = mergeData(localData, cloudData, cloudData.settingsUpdatedAt);
 
     // Save merged data locally
     saveLocalData(mergedData);
@@ -1253,7 +1307,7 @@ export async function pullCloudData(userId: string): Promise<LocalData | null> {
 
 ```bash
 git add src/firebase/sync.ts
-git commit -m "feat: create sync service with merge logic for cross-device sync"
+git commit -m "feat: create sync service with timestamp-based settings merge"
 ```
 
 ---
@@ -1320,6 +1374,8 @@ git commit -m "feat: add Google account linking UI for cross-device sync"
 
 **Step 1: Create security rules**
 
+> **Note:** Nickname collection has restricted read to specific doc (not list queries) for privacy.
+
 ```javascript
 rules_version = '2';
 
@@ -1327,35 +1383,52 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Users can only read/write their own profile
-    match /users/{odea} {
-      allow read: if request.auth != null && request.auth.uid == odea;
-      allow create: if request.auth != null && request.auth.uid == odea;
-      allow update: if request.auth != null && request.auth.uid == odea
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null && request.auth.uid == uid
         // Validate score updates are reasonable
         && request.resource.data.totalScore <= 10000000
-        && request.resource.data.bestThrow <= 420;
+        && request.resource.data.bestThrow <= 420
+        // Scores can only increase (anti-cheat)
+        && request.resource.data.totalScore >= resource.data.totalScore
+        && request.resource.data.bestThrow >= resource.data.bestThrow;
     }
 
-    // Nicknames - only createable, not deleteable
+    // Nicknames - get specific doc only (not list), only createable
     match /nicknames/{nickname} {
-      allow read: if true;
+      allow get: if true; // Allow checking if nickname exists
+      // No list permission (prevents enumeration)
       allow create: if request.auth != null
-        && request.resource.data.odea == request.auth.uid;
+        && request.resource.data.uid == request.auth.uid
+        && nickname.size() >= 3
+        && nickname.size() <= 12;
+      // No update or delete
     }
 
-    // Leaderboards - readable by all, writable by owner
-    match /leaderboard_total/{odea} {
+    // Leaderboards - readable by all, writable by owner with monotonic scores
+    match /leaderboard_total/{uid} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == odea
+      allow create: if request.auth != null && request.auth.uid == uid
         && request.resource.data.score <= 10000000
         && request.resource.data.score >= 0;
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.score <= 10000000
+        && request.resource.data.score >= 0
+        // Score can only increase
+        && request.resource.data.score > resource.data.score;
     }
 
-    match /leaderboard_throw/{odea} {
+    match /leaderboard_throw/{uid} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == odea
+      allow create: if request.auth != null && request.auth.uid == uid
         && request.resource.data.score <= 420
         && request.resource.data.score >= 0;
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.score <= 420
+        && request.resource.data.score >= 0
+        // Score can only increase
+        && request.resource.data.score > resource.data.score;
     }
   }
 }
@@ -1365,7 +1438,7 @@ service cloud.firestore {
 
 ```bash
 git add firestore.rules
-git commit -m "feat: add Firestore security rules with basic validation"
+git commit -m "feat: add Firestore security rules with monotonic score validation"
 ```
 
 ---
@@ -1377,6 +1450,8 @@ git commit -m "feat: add Firestore security rules with basic validation"
 
 **Step 1: Create index configuration**
 
+> **Note:** Composite indexes for leaderboard queries with tie-breaker ordering.
+
 ```json
 {
   "indexes": [
@@ -1384,17 +1459,20 @@ git commit -m "feat: add Firestore security rules with basic validation"
       "collectionGroup": "leaderboard_total",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "score", "order": "DESCENDING" }
+        { "fieldPath": "score", "order": "DESCENDING" },
+        { "fieldPath": "updatedAt", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "leaderboard_throw",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "score", "order": "DESCENDING" }
+        { "fieldPath": "score", "order": "DESCENDING" },
+        { "fieldPath": "updatedAt", "order": "ASCENDING" }
       ]
     }
-  ]
+  ],
+  "fieldOverrides": []
 }
 ```
 
@@ -1402,7 +1480,7 @@ git commit -m "feat: add Firestore security rules with basic validation"
 
 ```bash
 git add firestore.indexes.json
-git commit -m "feat: add Firestore index configuration for leaderboards"
+git commit -m "feat: add Firestore indexes for leaderboard queries with tie-breaker"
 ```
 
 ---
@@ -1419,3 +1497,18 @@ git commit -m "feat: add Firestore index configuration for leaderboards"
 | 6 | Security Rules | firestore.rules, firestore.indexes.json |
 
 **Total:** 6 phases, ~12 tasks, ~10 new files, modifications to ~5 existing files
+
+---
+
+## Review Fixes Applied
+
+Based on GPT 5.2 code review, the following issues were addressed:
+
+1. **Nickname race condition** - Now uses Firestore transaction for atomic check-and-reserve
+2. **User rank query cost** - Now uses `getCountFromServer()` instead of downloading all docs
+3. **`odea: odea` bug** - Fixed to use `uid: userId`
+4. **Client timestamps** - Now uses `serverTimestamp()` for all timestamps
+5. **Tie-breaker ordering** - Leaderboard queries now include `updatedAt` as secondary sort
+6. **Settings recency** - Added `settingsUpdatedAt` field for cross-device sync decisions
+7. **Security rules** - Added monotonic score validation (scores can only increase)
+8. **Nickname enumeration** - Restricted nickname collection to `get` only (no `list`)
