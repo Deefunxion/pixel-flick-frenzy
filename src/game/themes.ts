@@ -77,7 +77,7 @@ const FLIPBOOK_THEME: Theme = {
 const NOIR_THEME: Theme = {
   id: 'noir',
   name: 'Noir Ink',
-  background: '#1a1a1e',           // Near-black background
+  background: '#121216',           // Deep black (noir spec)
   backgroundGradientEnd: '#0d0d0f', // Darker gradient end
   horizon: '#252528',              // Dark horizon line
   gridPrimary: '#2a2a30',          // Subtle grid lines
@@ -95,8 +95,8 @@ const NOIR_THEME: Theme = {
   danger: '#dc3545',               // Bright red danger
   uiBg: 'rgba(26, 26, 30, 0.95)',
   uiText: '#e8e4e0',               // Off-white text
-  pencilGray: '#4a4648',           // Ghost trails, sketchy shadows (noir variant)
-  erasedPink: '#2a2628',           // Subtle erased areas (noir variant)
+  pencilGray: '#6a6660',           // Ghost trails (darker for noir)
+  erasedPink: '#2a2a2e',           // Not prominent in noir
   inkBleed: '#3a3a40',             // Ink spread effects
   warmWhite: '#fff8f0',            // Key moments emphasis
   renderStyle: {
