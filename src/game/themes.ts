@@ -31,6 +31,10 @@ export interface Theme {
   danger: string;
   uiBg: string;
   uiText: string;
+  pencilGray: string;     // Ghost trails, sketchy shadows
+  erasedPink: string;     // Subtle erased areas
+  inkBleed: string;       // Ink spread effects (noir)
+  warmWhite: string;      // Key moments emphasis (noir)
   renderStyle: RenderStyle;
 }
 
@@ -56,6 +60,10 @@ const FLIPBOOK_THEME: Theme = {
   danger: '#c94040',               // Red pen
   uiBg: 'rgba(245, 241, 232, 0.95)',
   uiText: '#2a4060',               // Dark blue-gray text
+  pencilGray: '#9a9590',           // Ghost trails, sketchy shadows
+  erasedPink: '#f0e8e6',           // Subtle erased areas
+  inkBleed: '#3a3a40',             // Not used in flipbook, placeholder
+  warmWhite: '#fff8f0',            // Not used in flipbook, placeholder
   renderStyle: {
     kind: 'flipbook',
     wobble: 0.6,        // Medium wobble for hand-drawn feel
@@ -87,6 +95,10 @@ const NOIR_THEME: Theme = {
   danger: '#dc3545',               // Bright red danger
   uiBg: 'rgba(26, 26, 30, 0.95)',
   uiText: '#e8e4e0',               // Off-white text
+  pencilGray: '#4a4648',           // Ghost trails, sketchy shadows (noir variant)
+  erasedPink: '#2a2628',           // Subtle erased areas (noir variant)
+  inkBleed: '#3a3a40',             // Ink spread effects
+  warmWhite: '#fff8f0',            // Key moments emphasis
   renderStyle: {
     kind: 'noir',
     wobble: 0.3,        // Lower wobble, sharper intent
