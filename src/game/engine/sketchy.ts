@@ -1152,3 +1152,85 @@ export function drawGhostFigure(
 
   ctx.restore();
 }
+
+// Draw scribble energy lines radiating from a point
+export function drawScribbleEnergy(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  intensity: number, // 0-1
+  color: string,
+  nowMs: number,
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  if (intensity < 0.1) return;
+
+  const lineCount = Math.floor(4 + intensity * 8);
+  const maxLen = 8 + intensity * 15;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = themeKind === 'flipbook' ? 1.5 : 1;
+  ctx.lineCap = 'round';
+
+  for (let i = 0; i < lineCount; i++) {
+    // Deterministic but animated positions
+    const seed = i * 137.5 + nowMs * 0.01;
+    const angle = (i / lineCount) * Math.PI * 2 + Math.sin(seed) * 0.5;
+    const len = maxLen * (0.5 + seededRandom(seed) * 0.5);
+    const startDist = 8 + seededRandom(seed + 1) * 5;
+
+    const startX = x + Math.cos(angle) * startDist;
+    const startY = y + Math.sin(angle) * startDist;
+    const endX = x + Math.cos(angle) * (startDist + len);
+    const endY = y + Math.sin(angle) * (startDist + len);
+
+    // Wobbly line
+    ctx.globalAlpha = 0.4 + intensity * 0.4;
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+
+    // Add mid-point wobble
+    const midX = (startX + endX) / 2 + (seededRandom(seed + 2) - 0.5) * 4;
+    const midY = (startY + endY) / 2 + (seededRandom(seed + 3) - 0.5) * 4;
+    ctx.quadraticCurveTo(midX, midY, endX, endY);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+// Draw explosion of scribbles at launch
+export function drawLaunchBurst(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  frame: number, // frames since launch
+  color: string,
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  if (frame > 12) return;
+
+  const progress = frame / 12;
+  const alpha = 1 - progress;
+  const spread = 10 + progress * 25;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = themeKind === 'flipbook' ? 2 : 1.5;
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = alpha * 0.7;
+
+  // Radiating star pattern
+  const rays = 8;
+  for (let i = 0; i < rays; i++) {
+    const angle = (i / rays) * Math.PI * 2 - Math.PI / 2;
+    const innerR = 5 + progress * 8;
+    const outerR = innerR + spread * (0.5 + seededRandom(i * 7) * 0.5);
+
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(angle) * innerR, y + Math.sin(angle) * innerR);
+    ctx.lineTo(x + Math.cos(angle) * outerR, y + Math.sin(angle) * outerR);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+}
