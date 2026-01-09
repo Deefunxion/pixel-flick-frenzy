@@ -29,6 +29,39 @@ export async function resumeIfSuspended(refs: AudioRefs) {
   }
 }
 
+// iOS Safari requires playing a silent buffer to fully unlock audio
+// Call this on the first user gesture (touch/click)
+export async function unlockAudioForIOS(refs: AudioRefs): Promise<boolean> {
+  try {
+    const ctx = ensureAudioContext(refs);
+
+    // Resume if suspended
+    if (ctx.state === 'suspended') {
+      await ctx.resume();
+    }
+
+    // Play a silent buffer to fully unlock iOS audio
+    const buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
+
+    // Also create and immediately stop an oscillator (belt and suspenders)
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(0);
+    osc.stop(ctx.currentTime + 0.001);
+
+    return ctx.state === 'running';
+  } catch {
+    return false;
+  }
+}
+
 function env(gain: GainNode, now: number, peak: number, duration: number) {
   gain.gain.cancelScheduledValues(now);
   gain.gain.setValueAtTime(0.0001, now);

@@ -32,6 +32,7 @@ import {
   playFailureSound,
   playWilhelmScream,
   resumeIfSuspended,
+  unlockAudioForIOS,
   startChargeTone,
   stopChargeTone,
   stopEdgeWarning,
@@ -52,7 +53,7 @@ import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 import { syncScoreToFirebase } from '@/firebase/scoreSync';
 
 const Game = () => {
-  const { firebaseUser, profile, isLoading, needsOnboarding, setProfile } = useUser();
+  const { firebaseUser, profile, isLoading, needsOnboarding, completeOnboarding } = useUser();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputPadRef = useRef<HTMLDivElement>(null);
@@ -275,9 +276,8 @@ const Game = () => {
       if (e.code === 'Space') {
         e.preventDefault();
         pressedRef.current = true;
-        // Resume audio context on first gesture
-        ensureAudioContext(audioRefs.current);
-        await resumeIfSuspended(audioRefs.current);
+        // Unlock audio on first gesture (iOS compatible)
+        await unlockAudioForIOS(audioRefs.current);
       }
       if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
         const s = stateRef.current;
@@ -312,8 +312,8 @@ const Game = () => {
         // ignore
       }
 
-      ensureAudioContext(audioRefs.current);
-      await resumeIfSuspended(audioRefs.current);
+      // iOS requires aggressive audio unlock on first touch
+      await unlockAudioForIOS(audioRefs.current);
 
       // Hide mobile hint after first touch/click
       setShowMobileHint(false);
@@ -734,7 +734,7 @@ const Game = () => {
 
       {/* Onboarding modal for first-time users */}
       {needsOnboarding && (
-        <NicknameModal theme={theme} onComplete={setProfile} />
+        <NicknameModal theme={theme} onComplete={completeOnboarding} />
       )}
     </div>
   );

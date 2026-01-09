@@ -16,6 +16,7 @@ type UserContextType = {
   isLoading: boolean;
   needsOnboarding: boolean;
   setProfile: (profile: UserProfile) => void;
+  completeOnboarding: (profile: UserProfile) => void;
   refreshProfile: () => Promise<void>;
 };
 
@@ -74,6 +75,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Complete onboarding - sets profile AND closes the modal
+  // This fixes the race condition where auth state fires before profile creation completes
+  const completeOnboarding = (profile: UserProfile) => {
+    setProfile(profile);
+    setNeedsOnboarding(false);
+  };
+
   return (
     <UserContext.Provider
       value={{
@@ -82,6 +90,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         isLoading,
         needsOnboarding,
         setProfile,
+        completeOnboarding,
         refreshProfile,
       }}
     >
