@@ -57,6 +57,7 @@ export type GameUI = {
   setDailyStats: (v: DailyStats) => void;
   setDailyChallenge: (v: DailyChallenge) => void;
   setHotStreak: (current: number, best: number) => void;
+  onNewPersonalBest?: (totalScore: number, bestThrow: number) => void;
 };
 
 export type GameServices = {
@@ -409,6 +410,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
           }
 
           ui.setSessionGoals((prev) => updateGoals(prev, { beat_target_once: 1 }));
+
+          // Sync new personal best to Firebase
+          ui.onNewPersonalBest?.(state.totalScore, state.best);
         } else if (state.dist > state.best) {
           state.best = state.dist;
           saveNumber('best', state.best);
@@ -419,6 +423,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
             state.bestTrail = state.runTrail.slice(0, 240);
             saveJson('best_trail', state.bestTrail);
           }
+
+          // Sync new personal best to Firebase
+          ui.onNewPersonalBest?.(state.totalScore, state.best);
         }
 
         audio.stopEdgeWarning();

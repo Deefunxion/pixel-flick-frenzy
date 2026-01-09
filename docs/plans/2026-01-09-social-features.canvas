@@ -1,0 +1,24 @@
+{
+	"nodes":[
+		{"id":"title","type":"text","text":"# Social Features - Real Multiplayer Leaderboards\n\n**Goal:** Firebase backend, user identity via nickname + optional Google sign-in, cross-device sync\n\n**Backend:** Firebase Auth + Firestore\n**Categories:** Total Score | Best Throw","x":0,"y":-350,"width":600,"height":130,"color":"6"},
+		{"id":"phase1","type":"text","text":"## Phase 1: Firebase Setup [DONE]\n\n- [x] Task 1.1: Install Firebase dependencies\n- [x] Task 1.2: Create Firebase configuration\n\n**Files:**\n- package.json\n- src/firebase/config.ts\n- src/firebase/index.ts\n- .env.example","x":-650,"y":-180,"width":350,"height":280,"color":"4"},
+		{"id":"phase2","type":"text","text":"## Phase 2: User Identity & Auth [DONE]\n\n- [x] Task 2.1: Create auth service (transactional)\n- [x] Task 2.2: Create NicknameModal\n- [x] Task 2.3: Create UserContext\n- [x] Task 2.4: Integrate into App\n\n**Flow:**\n1. First visit -> Nickname modal\n2. Transaction: check + reserve nickname atomically\n3. Anonymous auth created\n4. Optional Google link later\n\n**Files:**\n- src/firebase/auth.ts\n- src/components/NicknameModal.tsx\n- src/contexts/UserContext.tsx","x":-250,"y":-180,"width":380,"height":400,"color":"4"},
+		{"id":"phase3","type":"text","text":"## Phase 3: Leaderboard Service [DONE]\n\n- [x] Task 3.1: Create leaderboard service\n- [x] Task 3.2: Create LeaderboardScreen UI\n- [x] Task 3.3: Integrate button in Game\n\n**Features:**\n- Top 100 + Your Rank (getCountFromServer)\n- Tie-breaker ordering by updatedAt\n- Two tabs: Total Score / Best Throw\n\n**Files:**\n- src/firebase/leaderboard.ts\n- src/components/LeaderboardScreen.tsx","x":180,"y":-180,"width":380,"height":340,"color":"4"},
+		{"id":"phase4","type":"text","text":"## Phase 4: Score Submission [DONE]\n\n- [x] Task 4.1: Create score sync service\n- [x] Task 4.2: Integrate into game loop\n\n**Trigger:** On new personal best only\n(Minimizes Firebase writes)\n\n**Files:**\n- src/firebase/scoreSync.ts\n- src/game/engine/update.ts","x":-650,"y":180,"width":350,"height":280,"color":"4"},
+		{"id":"phase5","type":"text","text":"## Phase 5: Cross-Device Sync [DONE]\n\n- [x] Task 5.1: Create sync merge logic\n- [x] Task 5.2: Add Google link UI\n\n**Merge Strategy:**\n- Scores: Keep highest\n- Achievements: Union (merge all)\n- Settings: Most recent (settingsUpdatedAt)\n\n**Files:**\n- src/firebase/sync.ts\n- src/components/StatsOverlay.tsx","x":-250,"y":280,"width":380,"height":320,"color":"4"},
+		{"id":"phase6","type":"text","text":"## Phase 6: Security Rules [DONE]\n\n- [x] Task 6.1: Firestore security rules\n- [x] Task 6.2: Create indexes (composite)\n\n**Validation:**\n- Score limits (max 420 throw, 10M total)\n- Monotonic scores (can only increase)\n- Owner-only writes\n- Nickname: get only (no list)\n\n**Files:**\n- firestore.rules\n- firestore.indexes.json","x":180,"y":280,"width":380,"height":300,"color":"4"},
+		{"id":"decisions","type":"text","text":"### Design Decisions\n\n**Auth:** Anonymous + Optional Google\n**Nicknames:** Unique, 3-12 letters only\n**Leaderboard:** Top 100 + Your Rank\n**Submission:** On personal best only\n**Sync:** Keep highest scores, merge achievements\n**Anti-cheat:** Manual moderation","x":-650,"y":560,"width":350,"height":280,"color":"4"},
+		{"id":"dataflow","type":"text","text":"### Data Flow\n\n```\n[Game] -> new personal best?\n  |\n  v\n[scoreSync] -> Firebase\n  |\n  v\n[leaderboard_total] + [leaderboard_throw]\n  |\n  v\n[LeaderboardScreen] <- reads top 100\n```","x":-250,"y":680,"width":380,"height":240,"color":"3"},
+		{"id":"future","type":"text","text":"### Future Considerations\n\n- Report/ban suspicious scores\n- Ghost trails of top players\n- Friends system\n- Weekly/monthly resets\n- Seasonal leaderboards","x":180,"y":640,"width":380,"height":200,"color":"2"},
+		{"id":"deps","type":"text","text":"**Dependencies:**\nPhase 1 -> Phase 2 -> Phase 3\nPhase 3 -> Phase 4\nPhase 2 -> Phase 5\nPhase 6 = independent","x":620,"y":180,"width":200,"height":160,"color":"1"}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"phase1","fromSide":"right","toNode":"phase2","toSide":"left"},
+		{"id":"e2","fromNode":"phase2","fromSide":"right","toNode":"phase3","toSide":"left"},
+		{"id":"e3","fromNode":"phase3","fromSide":"bottom","toNode":"phase4","toSide":"top"},
+		{"id":"e4","fromNode":"phase2","fromSide":"bottom","toNode":"phase5","toSide":"top"},
+		{"id":"e5","fromNode":"phase1","fromSide":"bottom","toNode":"decisions","toSide":"top"},
+		{"id":"e6","fromNode":"phase4","fromSide":"bottom","toNode":"dataflow","toSide":"top"},
+		{"id":"e7","fromNode":"phase5","fromSide":"bottom","toNode":"dataflow","toSide":"top"}
+	]
+}

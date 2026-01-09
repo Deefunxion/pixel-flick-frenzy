@@ -8,7 +8,9 @@ import {
   OPTIMAL_ANGLE,
   W,
 } from '@/game/constants';
-import { THEME, getTheme, DEFAULT_THEME_ID, THEME_IDS, type ThemeId } from '@/game/themes';
+import { getTheme, DEFAULT_THEME_ID, THEME_IDS, type ThemeId } from '@/game/themes';
+import { useUser } from '@/contexts/UserContext';
+import { NicknameModal } from './NicknameModal';
 import {
   loadDailyStats,
   loadJson,
@@ -45,9 +47,13 @@ import { createInitialState, resetPhysics } from '@/game/engine/state';
 import { updateFrame, type GameAudio, type GameUI } from '@/game/engine/update';
 import type { GameState } from '@/game/engine/types';
 import { StatsOverlay } from './StatsOverlay';
+import { LeaderboardScreen } from './LeaderboardScreen';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
+import { syncScoreToFirebase } from '@/firebase/scoreSync';
 
 const Game = () => {
+  const { firebaseUser, profile, isLoading, needsOnboarding, setProfile } = useUser();
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputPadRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<GameState | null>(null);
@@ -77,6 +83,7 @@ const Game = () => {
   const [newAchievement, setNewAchievement] = useState<string | null>(null);
   const [showMobileHint, setShowMobileHint] = useState(true);
   const [showStats, setShowStats] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [themeId, setThemeId] = useState<ThemeId>(() => {
     const stored = loadString('theme_id', DEFAULT_THEME_ID, 'omf_theme_id');
     // Validate stored value is a valid ThemeId
@@ -183,6 +190,18 @@ const Game = () => {
     }
   }, []);
 
+  // Sync new personal best to Firebase
+  const handleNewPersonalBest = useCallback(async (totalScore: number, bestThrow: number) => {
+    if (firebaseUser && profile) {
+      await syncScoreToFirebase(
+        firebaseUser.uid,
+        profile.nickname,
+        totalScore,
+        bestThrow
+      );
+    }
+  }, [firebaseUser, profile]);
+
   // Mobile UX: Detect if user is on mobile
   const isMobileRef = useRef(
     typeof window !== 'undefined' &&
@@ -218,6 +237,7 @@ const Game = () => {
       setDailyStats,
       setDailyChallenge,
       setHotStreak: (current, best) => setHotStreakState({ current, best }),
+      onNewPersonalBest: handleNewPersonalBest,
     };
 
     const audio: GameAudio = {
@@ -401,7 +421,7 @@ const Game = () => {
       stopChargeTone(audioRefs.current);
       stopEdgeWarning(audioRefs.current);
     };
-  }, [initState, playZenoJingle, triggerHaptic]);
+  }, [initState, playZenoJingle, triggerHaptic, handleNewPersonalBest]);
 
   const theme = getTheme(themeId);
 
@@ -409,6 +429,18 @@ const Game = () => {
   const distToEdge = Math.round((CLIFF_EDGE - hudPx) * 10000) / 10000;
 
   const controlsLabel = isMobileRef.current ? 'TAP & HOLD' : 'SPACE / CLICK (hold) — drag up/down to aim';
+
+  // Loading state while checking auth
+  if (isLoading) {
+    return (
+      <div
+        className="flex items-center justify-center h-screen"
+        style={{ background: theme.background }}
+      >
+        <p style={{ color: theme.uiText }}>Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -567,6 +599,17 @@ const Game = () => {
             >
               Stats
             </button>
+            <button
+              className={buttonClass}
+              style={{
+                ...buttonStyle,
+                borderColor: theme.highlight,
+              }}
+              onClick={() => setShowLeaderboard(true)}
+              aria-label="View leaderboard"
+            >
+              Leaderboard
+            </button>
           </div>
         );
       })()}
@@ -686,6 +729,16 @@ const Game = () => {
       {/* Stats overlay */}
       {showStats && (
         <StatsOverlay theme={theme} onClose={() => setShowStats(false)} />
+      )}
+
+      {/* Leaderboard screen */}
+      {showLeaderboard && (
+        <LeaderboardScreen theme={theme} onClose={() => setShowLeaderboard(false)} />
+      )}
+
+      {/* Onboarding modal for first-time users */}
+      {needsOnboarding && (
+        <NicknameModal theme={theme} onComplete={setProfile} />
       )}
     </div>
   );
