@@ -80,7 +80,7 @@ export function NicknameModal({ theme, onComplete }: NicknameModalProps) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.9)' }}
+      style={{ background: 'rgba(0,0,0,0.85)' }}
     >
       <div
         className="max-w-sm w-full rounded-lg p-6 text-center"

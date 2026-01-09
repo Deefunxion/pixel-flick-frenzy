@@ -67,11 +67,11 @@ export function StatsOverlay({ theme, onClose }: StatsOverlayProps) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.8)' }}
+      style={{ background: 'rgba(0,0,0,0.85)' }}
       onClick={onClose}
     >
       <div
-        className="max-w-md w-full max-h-[80vh] overflow-y-auto rounded-lg p-4"
+        className="max-w-md w-full max-h-[85vh] overflow-y-auto rounded-lg p-4"
         style={{ background: theme.uiBg, border: `2px solid ${theme.accent1}` }}
         onClick={(e) => e.stopPropagation()}
       >
