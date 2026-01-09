@@ -49,9 +49,10 @@ import type { GameState } from '@/game/engine/types';
 import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
+import { syncScoreToFirebase } from '@/firebase/scoreSync';
 
 const Game = () => {
-  const { profile, isLoading, needsOnboarding, setProfile } = useUser();
+  const { firebaseUser, profile, isLoading, needsOnboarding, setProfile } = useUser();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputPadRef = useRef<HTMLDivElement>(null);
@@ -189,6 +190,18 @@ const Game = () => {
     }
   }, []);
 
+  // Sync new personal best to Firebase
+  const handleNewPersonalBest = useCallback(async (totalScore: number, bestThrow: number) => {
+    if (firebaseUser && profile) {
+      await syncScoreToFirebase(
+        firebaseUser.uid,
+        profile.nickname,
+        totalScore,
+        bestThrow
+      );
+    }
+  }, [firebaseUser, profile]);
+
   // Mobile UX: Detect if user is on mobile
   const isMobileRef = useRef(
     typeof window !== 'undefined' &&
@@ -224,6 +237,7 @@ const Game = () => {
       setDailyStats,
       setDailyChallenge,
       setHotStreak: (current, best) => setHotStreakState({ current, best }),
+      onNewPersonalBest: handleNewPersonalBest,
     };
 
     const audio: GameAudio = {
@@ -407,7 +421,7 @@ const Game = () => {
       stopChargeTone(audioRefs.current);
       stopEdgeWarning(audioRefs.current);
     };
-  }, [initState, playZenoJingle, triggerHaptic]);
+  }, [initState, playZenoJingle, triggerHaptic, handleNewPersonalBest]);
 
   const theme = getTheme(themeId);
 
