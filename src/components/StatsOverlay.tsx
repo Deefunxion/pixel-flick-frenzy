@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { loadJson, loadStringSet } from '@/game/storage';
 import { ACHIEVEMENTS } from '@/game/engine/achievements';
 import { getPersonalLeaderboard, getCurrentPrecision, getMaxAtPrecision } from '@/game/leaderboard';
+import { linkGoogleAccount } from '@/firebase/auth';
+import { syncAfterGoogleLink } from '@/firebase/sync';
+import { useUser } from '@/contexts/UserContext';
 import type { Stats } from '@/game/engine/types';
 import type { Theme } from '@/game/themes';
 
@@ -18,6 +21,7 @@ type HistoryEntry = {
 };
 
 export function StatsOverlay({ theme, onClose }: StatsOverlayProps) {
+  const { profile, firebaseUser, refreshProfile } = useUser();
   const [stats] = useState<Stats>(() =>
     loadJson('stats', { totalThrows: 0, successfulLandings: 0, totalDistance: 0, perfectLandings: 0, maxMultiplier: 1 }, 'omf_stats')
   );
@@ -26,8 +30,31 @@ export function StatsOverlay({ theme, onClose }: StatsOverlayProps) {
   );
   const [achievements] = useState<Set<string>>(() => loadStringSet('achievements', 'omf_achievements'));
   const [leaderboard] = useState(() => getPersonalLeaderboard());
+  const [isLinking, setIsLinking] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
   const precision = getCurrentPrecision();
   const maxDistance = getMaxAtPrecision(precision);
+
+  const handleLinkGoogle = async () => {
+    if (!firebaseUser) return;
+
+    setIsLinking(true);
+    setLinkError(null);
+
+    try {
+      const success = await linkGoogleAccount();
+      if (success) {
+        await syncAfterGoogleLink(firebaseUser.uid);
+        await refreshProfile();
+      } else {
+        setLinkError('Failed to link account');
+      }
+    } catch (error) {
+      setLinkError(error instanceof Error ? error.message : 'Failed to link account');
+    } finally {
+      setIsLinking(false);
+    }
+  };
 
   const successRate = stats.totalThrows > 0
     ? Math.round((stats.successfulLandings / stats.totalThrows) * 100)
@@ -59,6 +86,50 @@ export function StatsOverlay({ theme, onClose }: StatsOverlayProps) {
           >
             ×
           </button>
+        </div>
+
+        {/* Google Account Link Section */}
+        <div
+          className="mb-4 p-3 rounded"
+          style={{ background: `${theme.accent3}10`, border: `1px solid ${theme.accent3}` }}
+        >
+          {profile && !profile.googleLinked ? (
+            <>
+              <button
+                onClick={handleLinkGoogle}
+                disabled={isLinking}
+                className="w-full py-2 rounded text-sm font-bold transition-opacity"
+                style={{
+                  background: theme.accent2,
+                  color: theme.background,
+                  opacity: isLinking ? 0.6 : 1,
+                }}
+              >
+                {isLinking ? 'Linking...' : 'Link Google Account for Cloud Sync'}
+              </button>
+              <p className="text-xs mt-2 text-center opacity-70" style={{ color: theme.uiText }}>
+                Sync your progress across devices
+              </p>
+              {linkError && (
+                <p className="text-xs mt-1 text-center" style={{ color: theme.danger }}>
+                  {linkError}
+                </p>
+              )}
+            </>
+          ) : profile?.googleLinked ? (
+            <div className="text-center">
+              <p className="text-sm font-bold" style={{ color: theme.highlight }}>
+                Google Account Linked
+              </p>
+              <p className="text-xs opacity-70" style={{ color: theme.uiText }}>
+                Your progress syncs across devices
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-center opacity-70" style={{ color: theme.uiText }}>
+              Sign in to enable cloud sync
+            </p>
+          )}
         </div>
 
         {/* Main stats grid */}
