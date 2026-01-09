@@ -161,3 +161,17 @@ html, body {
 * {
   touch-action: manipulation;
 }
+
+/* Prevent text selection on all game UI (fixes iOS tap selection) */
+#root {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Allow text selection only in input fields */
+input, textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
