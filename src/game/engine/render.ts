@@ -19,6 +19,7 @@ import {
   drawLayeredHandCircle,
   drawImpactBurst,
   drawInkSplatter,
+  drawGhostFigure,
   LINE_WEIGHTS,
 } from './sketchy';
 
@@ -259,6 +260,28 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   if (state.bestTrail.length > 4) {
     const ghostPoints = state.bestTrail.filter((_, i) => i % 3 === 0);
     drawDashedCurve(ctx, ghostPoints, COLORS.accent3, 1.5, 6, 8);
+  }
+
+  // Ghost trail - fading echo figures during flight
+  if (state.flying && state.ghostTrail.length > 0) {
+    const trailLen = state.ghostTrail.length;
+    for (let i = 0; i < trailLen; i++) {
+      const ghost = state.ghostTrail[i];
+      // Progressive fade: older = fainter
+      const opacity = (0.6 - (trailLen - i - 1) * 0.15) * (1 - i / trailLen);
+      if (opacity > 0.05) {
+        drawGhostFigure(
+          ctx,
+          ghost.x,
+          ghost.y,
+          COLORS.pencilGray,
+          opacity,
+          nowMs,
+          ghost.angle,
+          'flipbook',
+        );
+      }
+    }
   }
 
   // Current trail - graphite/chalk dots with variation
@@ -739,6 +762,27 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     }
     ctx.stroke();
     ctx.setLineDash([]);
+  }
+
+  // Ghost trail - sharper, fewer figures
+  if (state.flying && state.ghostTrail.length > 0) {
+    const trailLen = state.ghostTrail.length;
+    for (let i = Math.max(0, trailLen - 6); i < trailLen; i++) {
+      const ghost = state.ghostTrail[i];
+      const opacity = 0.5 - (trailLen - i - 1) * 0.15;
+      if (opacity > 0.1) {
+        drawGhostFigure(
+          ctx,
+          ghost.x,
+          ghost.y,
+          COLORS.accent3,
+          opacity,
+          nowMs,
+          ghost.angle,
+          'noir',
+        );
+      }
+    }
   }
 
   // Current trail - ink droplets with occasional splatter

@@ -1041,3 +1041,57 @@ export function drawInkSplatter(
     ctx.fill();
   }
 }
+
+// Draw a ghost/echo stick figure (faded, thinner strokes)
+export function drawGhostFigure(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string,
+  opacity: number,
+  nowMs: number,
+  angle: number,
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  ctx.save();
+  ctx.globalAlpha = opacity;
+
+  // Thinner strokes for ghosts
+  ctx.strokeStyle = color;
+  ctx.lineWidth = themeKind === 'flipbook' ? 1.5 : 1;
+  ctx.lineCap = 'round';
+
+  const scale = 0.4; // Slightly smaller than main figure
+  const headRadius = 6 * scale;
+
+  // Simple tumbling pose based on angle
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+
+  // Head
+  ctx.beginPath();
+  ctx.arc(0, -10, headRadius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Body
+  ctx.beginPath();
+  ctx.moveTo(0, -7);
+  ctx.lineTo(0, 5);
+  ctx.stroke();
+
+  // Arms (spread out)
+  ctx.beginPath();
+  ctx.moveTo(-8, -2);
+  ctx.lineTo(0, -3);
+  ctx.lineTo(8, -2);
+  ctx.stroke();
+
+  // Legs
+  ctx.beginPath();
+  ctx.moveTo(-5, 12);
+  ctx.lineTo(0, 5);
+  ctx.lineTo(5, 12);
+  ctx.stroke();
+
+  ctx.restore();
+}
