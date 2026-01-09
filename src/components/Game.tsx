@@ -8,7 +8,9 @@ import {
   OPTIMAL_ANGLE,
   W,
 } from '@/game/constants';
-import { THEME, getTheme, DEFAULT_THEME_ID, THEME_IDS, type ThemeId } from '@/game/themes';
+import { getTheme, DEFAULT_THEME_ID, THEME_IDS, type ThemeId } from '@/game/themes';
+import { useUser } from '@/contexts/UserContext';
+import { NicknameModal } from './NicknameModal';
 import {
   loadDailyStats,
   loadJson,
@@ -48,6 +50,8 @@ import { StatsOverlay } from './StatsOverlay';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 
 const Game = () => {
+  const { profile, isLoading, needsOnboarding, setProfile } = useUser();
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputPadRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<GameState | null>(null);
@@ -410,6 +414,18 @@ const Game = () => {
 
   const controlsLabel = isMobileRef.current ? 'TAP & HOLD' : 'SPACE / CLICK (hold) — drag up/down to aim';
 
+  // Loading state while checking auth
+  if (isLoading) {
+    return (
+      <div
+        className="flex items-center justify-center h-screen"
+        style={{ background: theme.background }}
+      >
+        <p style={{ color: theme.uiText }}>Loading...</p>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`flex flex-col items-center gap-2 ${isMobileRef.current ? 'p-1' : 'p-2'}`}
@@ -686,6 +702,11 @@ const Game = () => {
       {/* Stats overlay */}
       {showStats && (
         <StatsOverlay theme={theme} onClose={() => setShowStats(false)} />
+      )}
+
+      {/* Onboarding modal for first-time users */}
+      {needsOnboarding && (
+        <NicknameModal theme={theme} onComplete={setProfile} />
       )}
     </div>
   );
