@@ -649,56 +649,6 @@ const Game = () => {
         </div>
       </div>
 
-      {/* Minimal stats row - hidden in landscape */}
-      <div className="w-full max-w-md flex justify-center gap-3 text-xs landscape:hidden" style={{ color: theme.uiText }}>
-        <span>{stats.totalThrows} throws</span>
-        <span>{stats.totalThrows > 0 ? Math.round((stats.successfulLandings / stats.totalThrows) * 100) : 0}% success</span>
-        <span>★ {achievements.size}/{Object.keys(ACHIEVEMENTS).length}</span>
-        <span>Daily {dailyStats.bestDistance.toFixed(2)}</span>
-        {(hotStreak.current > 0 || hotStreak.best > 0) && (
-          <span style={{ color: hotStreak.current > 0 ? theme.highlight : theme.uiText }}>
-            {hotStreak.current > 0 ? '🔥' : ''} {hotStreak.current > 0 ? hotStreak.current : hotStreak.best} streak
-          </span>
-        )}
-      </div>
-
-      {/* Session goals - hidden in landscape */}
-      <div className="text-xs text-center max-w-md landscape:hidden" style={{ color: theme.uiText, opacity: 0.85 }}>
-        {sessionGoals.map((g) => (
-          <span key={g.id} style={{ marginRight: 10, color: g.done ? theme.highlight : theme.uiText }}>
-            {g.label}: {Math.min(g.target, g.progress)}/{g.target}
-          </span>
-        ))}
-      </div>
-
-      {/* Daily Challenge - hidden in landscape */}
-      <div
-        className="text-xs text-center max-w-md py-1.5 px-2 rounded landscape:hidden"
-        style={{
-          background: dailyChallenge.completed ? `${theme.highlight}15` : `${theme.accent3}08`,
-          border: `1px solid ${dailyChallenge.completed ? theme.highlight : theme.accent3}40`,
-          color: theme.uiText,
-        }}
-      >
-        <span className="font-bold" style={{ color: theme.accent1 }}>
-          Daily Challenge:{' '}
-        </span>
-        <span className={dailyChallenge.completed ? 'line-through opacity-50' : ''}>
-          {dailyChallenge.description}
-        </span>
-        {dailyChallenge.completed && (
-          <span style={{ color: theme.highlight }}> Complete!</span>
-        )}
-        {!dailyChallenge.completed && dailyChallenge.progress > 0 && (
-          <span style={{ color: theme.accent2 }}> ({Math.floor(dailyChallenge.progress)}/{dailyChallenge.target})</span>
-        )}
-      </div>
-
-      {/* Game info - hidden in landscape */}
-      <p className="text-xs text-center max-w-xs opacity-60 landscape:hidden" style={{ color: theme.uiText }}>
-        Hold SPACE to charge, release to flick. Get as close to 145 as possible without falling off. Beat the target to level up!
-      </p>
-
       {/* Achievement popup */}
       {newAchievement && (
         <div
