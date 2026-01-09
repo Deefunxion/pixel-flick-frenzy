@@ -7,6 +7,8 @@ import {
   hasUserProfile,
   type UserProfile,
 } from '@/firebase/auth';
+import { syncScoreToFirebase } from '@/firebase/scoreSync';
+import { loadNumber } from '@/game/storage';
 
 type UserContextType = {
   firebaseUser: User | null;
@@ -36,6 +38,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
           const userProfile = await getUserProfile(user.uid);
           setProfile(userProfile);
           setNeedsOnboarding(false);
+
+          // One-time sync: upload existing local scores to Firebase
+          if (userProfile) {
+            const localTotalScore = loadNumber('total_score', 0, 'omf_total_score');
+            const localBestThrow = loadNumber('best', 0, 'omf_best');
+            if (localTotalScore > 0 || localBestThrow > 0) {
+              syncScoreToFirebase(
+                user.uid,
+                userProfile.nickname,
+                localTotalScore,
+                localBestThrow
+              );
+            }
+          }
         } else {
           setNeedsOnboarding(true);
         }
