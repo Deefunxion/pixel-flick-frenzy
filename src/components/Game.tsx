@@ -52,7 +52,7 @@ import type { GameState } from '@/game/engine/types';
 import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
-import { syncScoreToFirebase } from '@/firebase/scoreSync';
+import { syncScoreToFirebase, syncFallsToFirebase } from '@/firebase/scoreSync';
 
 const Game = () => {
   const { firebaseUser, profile, isLoading, needsOnboarding, completeOnboarding } = useUser();
@@ -208,6 +208,17 @@ const Game = () => {
     }
   }, [firebaseUser, profile]);
 
+  // Sync falls to Firebase
+  const handleFall = useCallback(async (totalFalls: number) => {
+    if (firebaseUser && profile) {
+      await syncFallsToFirebase(
+        firebaseUser.uid,
+        profile.nickname,
+        totalFalls
+      );
+    }
+  }, [firebaseUser, profile]);
+
   // Mobile UX: Detect if user is on mobile
   const isMobileRef = useRef(
     typeof window !== 'undefined' &&
@@ -246,6 +257,7 @@ const Game = () => {
       setDailyChallenge,
       setHotStreak: (current, best) => setHotStreakState({ current, best }),
       onNewPersonalBest: handleNewPersonalBest,
+      onFall: handleFall,
     };
 
     const audio: GameAudio = {
