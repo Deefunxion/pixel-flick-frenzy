@@ -455,7 +455,7 @@ const Game = () => {
       </div>
 
       {/* Controls microcopy - hidden in landscape to save space */}
-      <div className="w-full max-w-md px-2 text-[10px] landscape:hidden" style={{ color: theme.uiText, opacity: 0.8 }}>
+      <div className="w-full max-w-md px-2 text-xs landscape:hidden" style={{ color: theme.uiText, opacity: 0.8 }}>
         <span>{controlsLabel}</span>
       </div>
 
@@ -540,7 +540,7 @@ const Game = () => {
           : 'rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1';
 
         return (
-          <div className="flex flex-wrap items-center justify-center gap-2 text-[10px]" style={{ color: theme.uiText }}>
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs" style={{ color: theme.uiText }}>
             <button
               className={buttonClass}
               style={buttonStyle}
@@ -616,15 +616,15 @@ const Game = () => {
       {/* Hero row: SCORE, LV, TARGET - primary focus */}
       <div className="flex justify-center items-end gap-6 text-center">
         <div>
-          <p className="text-[9px] uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Score</p>
+          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Score</p>
           <p className="text-2xl font-bold font-mono" style={{ color: theme.accent4 }}>{Math.floor(totalScore).toLocaleString()}</p>
         </div>
         <div>
-          <p className="text-[9px] uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Lv</p>
+          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Lv</p>
           <p className="text-2xl font-bold font-mono" style={{ color: theme.highlight }}>{zenoLevel}</p>
         </div>
         <div>
-          <p className="text-[9px] uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Target</p>
+          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Target</p>
           <p className="text-xl font-bold font-mono" style={{ color: theme.accent2 }}>
             {formatScore(zenoTarget).int}<span className="text-sm opacity-60">.{formatScore(zenoTarget).dec}</span>
           </p>
@@ -634,7 +634,7 @@ const Game = () => {
       {/* Secondary row: LAST, BEST */}
       <div className="flex justify-center gap-6 text-center">
         <div>
-          <p className="text-[9px] uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Last</p>
+          <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Last</p>
           <p className="text-base font-bold font-mono">
             {fellOff ? (
               <span style={{ color: theme.danger }}>FELL</span>
@@ -648,13 +648,13 @@ const Game = () => {
             )}
           </p>
           {lastDist !== null && !fellOff && (
-            <p className="text-[9px] font-mono" style={{ color: theme.accent2, opacity: 0.8 }}>
+            <p className="text-xs font-mono" style={{ color: theme.accent2, opacity: 0.8 }}>
               x{lastMultiplier.toFixed(1)}
             </p>
           )}
         </div>
         <div>
-          <p className="text-[9px] uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Best</p>
+          <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Best</p>
           <p className="text-base font-bold font-mono" style={{ color: theme.accent2 }}>
             {formatScore(bestScore).int}<span className="text-xs opacity-60">.{formatScore(bestScore).dec}</span>
           </p>
@@ -662,7 +662,7 @@ const Game = () => {
       </div>
 
       {/* Minimal stats row - hidden in landscape */}
-      <div className="flex gap-3 text-[10px] landscape:hidden" style={{ color: theme.uiText }}>
+      <div className="flex gap-3 text-xs landscape:hidden" style={{ color: theme.uiText }}>
         <span>{stats.totalThrows} throws</span>
         <span>{stats.totalThrows > 0 ? Math.round((stats.successfulLandings / stats.totalThrows) * 100) : 0}% success</span>
         <span>★ {achievements.size}/{Object.keys(ACHIEVEMENTS).length}</span>
@@ -675,7 +675,7 @@ const Game = () => {
       </div>
 
       {/* Session goals - hidden in landscape */}
-      <div className="text-[10px] text-center max-w-md landscape:hidden" style={{ color: theme.uiText, opacity: 0.85 }}>
+      <div className="text-xs text-center max-w-md landscape:hidden" style={{ color: theme.uiText, opacity: 0.85 }}>
         {sessionGoals.map((g) => (
           <span key={g.id} style={{ marginRight: 10, color: g.done ? theme.highlight : theme.uiText }}>
             {g.label}: {Math.min(g.target, g.progress)}/{g.target}
@@ -685,7 +685,7 @@ const Game = () => {
 
       {/* Daily Challenge - hidden in landscape */}
       <div
-        className="text-[10px] text-center max-w-md p-2 rounded landscape:hidden"
+        className="text-xs text-center max-w-md p-2 rounded landscape:hidden"
         style={{
           background: dailyChallenge.completed ? `${theme.highlight}20` : `${theme.accent3}10`,
           border: `1px solid ${dailyChallenge.completed ? theme.highlight : theme.accent3}`,
@@ -707,7 +707,7 @@ const Game = () => {
       </div>
 
       {/* Game info - hidden in landscape */}
-      <p className="text-[9px] text-center max-w-xs opacity-60 landscape:hidden" style={{ color: theme.uiText }}>
+      <p className="text-xs text-center max-w-xs opacity-60 landscape:hidden" style={{ color: theme.uiText }}>
         Hold SPACE to charge, release to flick. Get as close to 145 as possible without falling off. Beat the target to level up!
       </p>
 
