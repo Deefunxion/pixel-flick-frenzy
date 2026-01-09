@@ -8,14 +8,16 @@ import {
   OPTIMAL_ANGLE,
   W,
 } from '@/game/constants';
-import { THEME } from '@/game/themes';
+import { THEME, getTheme, DEFAULT_THEME_ID, THEME_IDS, type ThemeId } from '@/game/themes';
 import {
   loadDailyStats,
   loadJson,
   loadNumber,
+  loadString,
   loadStringSet,
   saveJson,
   saveNumber,
+  saveString,
   todayLocalISODate,
 } from '@/game/storage';
 import {
@@ -75,6 +77,11 @@ const Game = () => {
   const [newAchievement, setNewAchievement] = useState<string | null>(null);
   const [showMobileHint, setShowMobileHint] = useState(true);
   const [showStats, setShowStats] = useState(false);
+  const [themeId, setThemeId] = useState<ThemeId>(() => {
+    const stored = loadString('theme_id', DEFAULT_THEME_ID, 'omf_theme_id');
+    // Validate stored value is a valid ThemeId
+    return (stored === 'flipbook' || stored === 'noir') ? stored : DEFAULT_THEME_ID;
+  });
   const [dailyChallenge, setDailyChallenge] = useState<DailyChallenge>(() => loadDailyChallenge());
   const [hotStreak, setHotStreakState] = useState({ current: 0, best: loadNumber('best_hot_streak', 0, 'omf_best_hot_streak') });
 
@@ -96,6 +103,7 @@ const Game = () => {
     return { muted, volume: Math.max(0, Math.min(1, volume)) };
   });
   const audioSettingsRef = useRef(audioSettings);
+  const themeRef = useRef(getTheme(themeId));
 
   const [sessionGoals, setSessionGoals] = useState<SessionGoal[]>(() => newSessionGoals());
 
@@ -112,6 +120,12 @@ const Game = () => {
     saveNumber('audio_volume', audioSettings.volume);
     audioSettingsRef.current = audioSettings;
   }, [audioSettings]);
+
+  // Persist theme selection and update ref
+  useEffect(() => {
+    saveString('theme_id', themeId);
+    themeRef.current = getTheme(themeId);
+  }, [themeId]);
 
   // Keep daily stats fresh (date rollover)
   useEffect(() => {
@@ -356,8 +370,9 @@ const Game = () => {
       const state = stateRef.current;
       if (state) {
         const now = performance.now();
+        const currentTheme = themeRef.current;
         updateFrame(state, {
-          theme: THEME,
+          theme: currentTheme,
           nowMs: now,
           pressed: pressedRef.current,
           audio,
@@ -366,7 +381,7 @@ const Game = () => {
           scheduleReset,
           getDailyStats: () => dailyStatsRef.current,
         });
-        renderFrame(ctx, state, THEME, now);
+        renderFrame(ctx, state, currentTheme, now);
       }
       animFrameRef.current = requestAnimationFrame(loop);
     };
@@ -388,7 +403,7 @@ const Game = () => {
     };
   }, [initState, playZenoJingle, triggerHaptic]);
 
-  const theme = THEME;
+  const theme = getTheme(themeId);
 
   const distToTarget = Math.round((zenoTarget - hudPx) * 10000) / 10000;
   const distToEdge = Math.round((CLIFF_EDGE - hudPx) * 10000) / 10000;
@@ -466,88 +481,137 @@ const Game = () => {
         Δedge: <span style={{ color: distToEdge < 5 ? theme.danger : theme.highlight }}>{distToEdge.toFixed(4)}</span>
       </div>
 
-      {/* Settings row */}
-      <div className="flex items-center gap-3 text-[10px]" style={{ color: theme.uiText }}>
-        <button
-          className="px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-          style={{ background: theme.uiBg, border: `1px solid ${theme.accent3}` }}
-          onClick={async () => {
-            ensureAudioContext(audioRefs.current);
-            await resumeIfSuspended(audioRefs.current);
-            setAudioSettings((s) => ({ ...s, muted: !s.muted }));
-          }}
-          aria-label="Toggle mute"
-        >
-          {audioSettings.muted ? 'Muted' : 'Sound'}
-        </button>
-        <label className="flex items-center gap-2" aria-label="Volume">
-          <span>Vol</span>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={Math.round(audioSettings.volume * 100)}
-            onChange={(e) => setAudioSettings((s) => ({ ...s, volume: Number(e.target.value) / 100 }))}
-          />
-        </label>
-        <button
-          className="px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-          style={{ background: theme.uiBg, border: `1px solid ${theme.accent3}` }}
-          onClick={() => setReduceFx((v) => !v)}
-          aria-label="Toggle reduce effects"
-        >
-          {reduceFx ? 'FX: Low' : 'FX: On'}
-        </button>
-        <button
-          className="px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-          style={{ background: theme.uiBg, border: `1px solid ${theme.accent3}` }}
-          onClick={() => setShowStats(true)}
-          aria-label="View stats"
-        >
-          Stats
-        </button>
+      {/* Settings row - theme-aware styling */}
+      {(() => {
+        // Theme-specific button styles
+        const isNoir = themeId === 'noir';
+        const buttonStyle: React.CSSProperties = isNoir
+          ? {
+              // Noir: minimal ink UI - thin borders, stark contrast
+              background: 'transparent',
+              border: `1px solid ${theme.accent3}`,
+              color: theme.uiText,
+              padding: '4px 8px',
+              minHeight: '28px', // Touch-friendly minimum
+            }
+          : {
+              // Flipbook: sticker label feel - rounded, paper-like
+              background: theme.uiBg,
+              border: `1.5px solid ${theme.accent3}`,
+              color: theme.uiText,
+              padding: '4px 10px',
+              boxShadow: '1px 1px 0 rgba(0,0,0,0.1)',
+              minHeight: '28px', // Touch-friendly minimum
+            };
+        const buttonClass = isNoir
+          ? 'rounded-sm focus-visible:outline-none focus-visible:ring-1'
+          : 'rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1';
+
+        return (
+          <div className="flex flex-wrap items-center justify-center gap-2 text-[10px]" style={{ color: theme.uiText }}>
+            <button
+              className={buttonClass}
+              style={buttonStyle}
+              onClick={async () => {
+                ensureAudioContext(audioRefs.current);
+                await resumeIfSuspended(audioRefs.current);
+                setAudioSettings((s) => ({ ...s, muted: !s.muted }));
+              }}
+              aria-label="Toggle mute"
+            >
+              {audioSettings.muted ? 'Muted' : 'Sound'}
+            </button>
+            <label className="flex items-center gap-1" aria-label="Volume">
+              <span style={{ opacity: 0.7 }}>Vol</span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(audioSettings.volume * 100)}
+                onChange={(e) => setAudioSettings((s) => ({ ...s, volume: Number(e.target.value) / 100 }))}
+                style={{ width: isNoir ? '50px' : '60px' }}
+              />
+            </label>
+            <button
+              className={buttonClass}
+              style={buttonStyle}
+              onClick={() => setReduceFx((v) => !v)}
+              aria-label="Toggle reduce effects"
+            >
+              {reduceFx ? 'FX: Low' : 'FX: On'}
+            </button>
+            <button
+              className={buttonClass}
+              style={{
+                ...buttonStyle,
+                borderColor: theme.accent1,
+              }}
+              onClick={() => {
+                const currentIndex = THEME_IDS.indexOf(themeId);
+                const nextIndex = (currentIndex + 1) % THEME_IDS.length;
+                setThemeId(THEME_IDS[nextIndex]);
+              }}
+              aria-label="Switch theme"
+            >
+              {isNoir ? 'Noir' : 'Flipbook'}
+            </button>
+            <button
+              className={buttonClass}
+              style={buttonStyle}
+              onClick={() => setShowStats(true)}
+              aria-label="View stats"
+            >
+              Stats
+            </button>
+          </div>
+        );
+      })()}
+
+      {/* Hero row: SCORE, LV, TARGET - primary focus */}
+      <div className="flex justify-center items-end gap-6 text-center">
+        <div>
+          <p className="text-[9px] uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Score</p>
+          <p className="text-2xl font-bold font-mono" style={{ color: theme.accent4 }}>{Math.floor(totalScore).toLocaleString()}</p>
+        </div>
+        <div>
+          <p className="text-[9px] uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Lv</p>
+          <p className="text-2xl font-bold font-mono" style={{ color: theme.highlight }}>{zenoLevel}</p>
+        </div>
+        <div>
+          <p className="text-[9px] uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Target</p>
+          <p className="text-xl font-bold font-mono" style={{ color: theme.accent2 }}>
+            {formatScore(zenoTarget).int}<span className="text-sm opacity-60">.{formatScore(zenoTarget).dec}</span>
+          </p>
+        </div>
       </div>
 
-      {/* Compact score row */}
-      <div className="flex justify-center gap-4 text-center">
+      {/* Secondary row: LAST, BEST */}
+      <div className="flex justify-center gap-6 text-center">
         <div>
-          <p className="text-[10px] uppercase" style={{ color: theme.uiText }}>Last</p>
-          <p className="text-lg font-bold font-mono">
+          <p className="text-[9px] uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Last</p>
+          <p className="text-base font-bold font-mono">
             {fellOff ? (
               <span style={{ color: theme.danger }}>FELL</span>
             ) : lastDist !== null ? (
               <span style={{ color: theme.accent1 }}>
-                {formatScore(lastDist).int}<span className="text-sm opacity-70">.{formatScore(lastDist).dec}</span>
+                {formatScore(lastDist).int}<span className="text-xs opacity-60">.{formatScore(lastDist).dec}</span>
+                {perfectLanding && <span style={{ color: theme.highlight }}> ★</span>}
               </span>
             ) : (
-              <span style={{ color: theme.uiText }}>-</span>
+              <span style={{ color: theme.uiText, opacity: 0.4 }}>-</span>
             )}
           </p>
           {lastDist !== null && !fellOff && (
-            <p className="text-[10px] font-mono" style={{ color: theme.accent2 }}>
-              x{lastMultiplier.toFixed(1)}{perfectLanding && <span style={{ color: theme.highlight }}> ★</span>}
+            <p className="text-[9px] font-mono" style={{ color: theme.accent2, opacity: 0.8 }}>
+              x{lastMultiplier.toFixed(1)}
             </p>
           )}
         </div>
         <div>
-          <p className="text-[10px] uppercase" style={{ color: theme.uiText }}>Best</p>
-          <p className="text-lg font-bold font-mono" style={{ color: theme.accent2 }}>
-            {formatScore(bestScore).int}<span className="text-sm opacity-70">.{formatScore(bestScore).dec}</span>
+          <p className="text-[9px] uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Best</p>
+          <p className="text-base font-bold font-mono" style={{ color: theme.accent2 }}>
+            {formatScore(bestScore).int}<span className="text-xs opacity-60">.{formatScore(bestScore).dec}</span>
           </p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase" style={{ color: theme.uiText }}>Target</p>
-          <p className="text-lg font-bold font-mono" style={{ color: theme.accent2 }}>
-            {formatScore(zenoTarget).int}<span className="text-sm opacity-70">.{formatScore(zenoTarget).dec}</span>
-          </p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase" style={{ color: theme.uiText }}>Lv</p>
-          <p className="text-lg font-bold font-mono" style={{ color: theme.highlight }}>{zenoLevel}</p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase" style={{ color: theme.uiText }}>Score</p>
-          <p className="text-lg font-bold font-mono" style={{ color: theme.accent4 }}>{Math.floor(totalScore).toLocaleString()}</p>
         </div>
       </div>
 

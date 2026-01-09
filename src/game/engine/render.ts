@@ -13,6 +13,12 @@ import {
   drawCloud,
   drawBird,
   drawDashedCurve,
+  drawFilmGrain,
+  drawVignette,
+  drawLayeredHandLine,
+  drawLayeredHandCircle,
+  drawImpactBurst,
+  LINE_WEIGHTS,
 } from './sketchy';
 
 export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, theme: Theme, nowMs: number) {
@@ -33,7 +39,12 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
 
   ctx.translate(shakeX, shakeY);
 
-  renderFlipbookFrame(ctx, state, COLORS, nowMs);
+  // Switch renderer based on theme style
+  if (theme.renderStyle.kind === 'noir') {
+    renderNoirFrame(ctx, state, COLORS, nowMs);
+  } else {
+    renderFlipbookFrame(ctx, state, COLORS, nowMs);
+  }
 
   ctx.restore();
 }
@@ -43,10 +54,8 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   ctx.fillStyle = COLORS.background;
   ctx.fillRect(0, 0, W, H);
 
-  // Paper texture
-  if (!state.reduceFx) {
-    drawPaperTexture(ctx, W, H, nowMs);
-  }
+  // Paper texture with smudge/eraser marks
+  drawPaperTexture(ctx, W, H, nowMs, state.reduceFx);
 
   // Ruled lines (notebook paper)
   drawRuledLines(ctx, W, H, COLORS.gridSecondary, COLORS.accent4, nowMs);
@@ -54,9 +63,9 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   // Spiral holes on left margin
   drawSpiralHoles(ctx, H, COLORS.accent3, nowMs);
 
-  // Ground line - hand-drawn style
+  // Ground line - hand-drawn style with layered pencil effect
   const groundY = H - 20;
-  drawHandLine(ctx, 40, groundY, CLIFF_EDGE + 5, groundY, COLORS.player, 2.5, nowMs);
+  drawLayeredHandLine(ctx, 40, groundY, CLIFF_EDGE + 5, groundY, COLORS.player, nowMs, 2);
 
   // Hatching under the ground for depth
   ctx.strokeStyle = COLORS.accent3;
@@ -225,16 +234,32 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     drawDashedCurve(ctx, ghostPoints, COLORS.accent3, 1.5, 6, 8);
   }
 
-  // Current trail - small dots
-  ctx.fillStyle = COLORS.trailNormal;
-  for (const tr of state.trail) {
+  // Current trail - graphite/chalk dots with variation
+  for (let i = 0; i < state.trail.length; i++) {
+    const tr = state.trail[i];
     if (tr.age > 30) continue;
-    const alpha = Math.max(0.2, 1 - tr.age / 30);
-    ctx.globalAlpha = alpha;
+
+    // Varied alpha - older dots fade more
+    const baseAlpha = Math.max(0.15, 1 - tr.age / 30);
+    // Add slight variation based on position
+    const alphaJitter = (Math.sin(tr.x * 0.5 + tr.y * 0.3) * 0.1);
+    ctx.globalAlpha = Math.max(0.1, baseAlpha + alphaJitter);
+
     ctx.fillStyle = tr.pastTarget ? COLORS.trailPastTarget : COLORS.trailNormal;
+
     if (tr.x >= 0 && tr.x < W && tr.y >= 0 && tr.y < H) {
+      // Varied radius - slight irregularity like chalk/graphite
+      const baseRadius = 2;
+      const radiusJitter = Math.sin(i * 1.7 + tr.x * 0.2) * 0.6;
+      const radius = baseRadius + radiusJitter;
+
+      // Slight position jitter for hand-drawn feel
+      const posJitter = 0.5;
+      const jitterX = Math.sin(i * 2.3) * posJitter;
+      const jitterY = Math.cos(i * 3.1) * posJitter;
+
       ctx.beginPath();
-      ctx.arc(tr.x, tr.y, 2, 0, Math.PI * 2);
+      ctx.arc(tr.x + jitterX, tr.y + jitterY, Math.max(1, radius), 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -279,6 +304,11 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       state.angle,
       { vx: state.vx, vy: state.vy },
     );
+  }
+
+  // Impact burst on landing (flipbook style)
+  if (state.landingFrame > 0 && state.landingFrame < 10 && !state.reduceFx) {
+    drawImpactBurst(ctx, state.px, state.py, COLORS.accent3, state.landingFrame, 'flipbook');
   }
 
   // Funny failure text
@@ -540,4 +570,391 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.textAlign = 'left';
     ctx.fillText('NEW!', achX + 32, achY + 18);
   }
+}
+
+// Noir Ink theme renderer - high contrast, minimal, film noir aesthetic
+function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS: Theme, nowMs: number) {
+  // Dark background with subtle gradient
+  const bgGradient = ctx.createLinearGradient(0, 0, 0, H);
+  bgGradient.addColorStop(0, COLORS.background);
+  bgGradient.addColorStop(1, COLORS.backgroundGradientEnd);
+  ctx.fillStyle = bgGradient;
+  ctx.fillRect(0, 0, W, H);
+
+  // Minimal horizon line
+  ctx.strokeStyle = COLORS.gridPrimary;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, H - 60);
+  ctx.lineTo(W, H - 60);
+  ctx.stroke();
+
+  // Ground line - clean, sharp
+  const groundY = H - 20;
+  ctx.strokeStyle = COLORS.player;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(40, groundY);
+  ctx.lineTo(CLIFF_EDGE + 5, groundY);
+  ctx.stroke();
+
+  // Subtle ground shadow
+  ctx.strokeStyle = COLORS.gridPrimary;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(40, groundY + 3);
+  ctx.lineTo(CLIFF_EDGE - 20, groundY + 3);
+  ctx.stroke();
+
+  // Cliff edge - sharp vertical drop
+  const edgeX = CLIFF_EDGE;
+  ctx.strokeStyle = COLORS.player;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(edgeX, groundY);
+  ctx.lineTo(edgeX, H);
+  ctx.stroke();
+
+  // Danger zone - subtle pulsing glow
+  const dangerPulse = Math.sin(nowMs / 300) * 0.3 + 0.7;
+  ctx.strokeStyle = `rgba(220, 53, 69, ${dangerPulse * 0.6})`;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(edgeX - 15, groundY - 5);
+  ctx.lineTo(edgeX - 15, groundY - 25);
+  ctx.stroke();
+
+  // Best marker - simple vertical line with dot
+  if (state.best > 0 && state.best <= CLIFF_EDGE) {
+    const flagX = Math.floor(state.best);
+    ctx.strokeStyle = COLORS.accent2;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(flagX, groundY);
+    ctx.lineTo(flagX, groundY - 25);
+    ctx.stroke();
+
+    // Small diamond at top
+    ctx.fillStyle = COLORS.accent2;
+    ctx.beginPath();
+    ctx.moveTo(flagX, groundY - 30);
+    ctx.lineTo(flagX + 4, groundY - 25);
+    ctx.lineTo(flagX, groundY - 20);
+    ctx.lineTo(flagX - 4, groundY - 25);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Zeno target marker - glowing line
+  if (state.zenoTarget > 0 && state.zenoTarget <= CLIFF_EDGE) {
+    const targetX = Math.floor(state.zenoTarget);
+    const pulse = Math.sin(nowMs / 200) * 0.3 + 0.7;
+
+    ctx.strokeStyle = COLORS.highlight;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = pulse;
+    ctx.beginPath();
+    ctx.moveTo(targetX, groundY);
+    ctx.lineTo(targetX, groundY - 35);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Target circle
+    ctx.strokeStyle = COLORS.highlight;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(targetX, groundY - 40, 6, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Wind indicator - minimal box
+  const windDir = state.wind > 0 ? 1 : -1;
+  const windStrength = Math.abs(state.wind);
+
+  const windBoxX = W - 70;
+  const windBoxY = 10;
+  const windBoxW = 60;
+  const windBoxH = 24;
+
+  ctx.strokeStyle = COLORS.accent3;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(windBoxX, windBoxY, windBoxW, windBoxH);
+
+  // Arrow
+  const arrowY = windBoxY + 14;
+  const arrowLen = 10 + windStrength * 100;
+  ctx.strokeStyle = COLORS.accent1;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(windBoxX + windBoxW/2 - arrowLen/2 * windDir, arrowY);
+  ctx.lineTo(windBoxX + windBoxW/2 + arrowLen/2 * windDir, arrowY);
+  ctx.stroke();
+
+  // Arrowhead
+  ctx.fillStyle = COLORS.accent1;
+  ctx.beginPath();
+  ctx.moveTo(windBoxX + windBoxW/2 + arrowLen/2 * windDir, arrowY);
+  ctx.lineTo(windBoxX + windBoxW/2 + (arrowLen/2 - 6) * windDir, arrowY - 4);
+  ctx.lineTo(windBoxX + windBoxW/2 + (arrowLen/2 - 6) * windDir, arrowY + 4);
+  ctx.closePath();
+  ctx.fill();
+
+  // Ghost trail (best attempt) - faint dashes
+  if (state.bestTrail.length > 4) {
+    ctx.strokeStyle = COLORS.star;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 6]);
+    ctx.beginPath();
+    const ghostPoints = state.bestTrail.filter((_, i) => i % 4 === 0);
+    for (let i = 0; i < ghostPoints.length; i++) {
+      if (i === 0) ctx.moveTo(ghostPoints[i].x, ghostPoints[i].y);
+      else ctx.lineTo(ghostPoints[i].x, ghostPoints[i].y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Current trail - ink droplets with occasional splatter
+  for (let i = 0; i < state.trail.length; i++) {
+    const tr = state.trail[i];
+    if (tr.age > 25) continue;
+
+    const alpha = Math.max(0.35, 1 - tr.age / 25);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = tr.pastTarget ? COLORS.trailPastTarget : COLORS.trailNormal;
+
+    if (tr.x >= 0 && tr.x < W && tr.y >= 0 && tr.y < H) {
+      // Main droplet
+      ctx.beginPath();
+      ctx.arc(tr.x, tr.y, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Occasional ink splatter (every ~5th point, when fresh)
+      if (i % 5 === 0 && tr.age < 10) {
+        const splatCount = 2 + Math.floor(Math.sin(i * 0.7) * 1.5);
+        for (let s = 0; s < splatCount; s++) {
+          const splatAngle = (s / splatCount) * Math.PI * 2 + i * 0.3;
+          const splatDist = 2 + Math.sin(s * 2.1) * 1.5;
+          const splatSize = 0.5 + Math.cos(s * 1.3) * 0.3;
+
+          ctx.beginPath();
+          ctx.arc(
+            tr.x + Math.cos(splatAngle) * splatDist,
+            tr.y + Math.sin(splatAngle) * splatDist,
+            Math.max(0.3, splatSize),
+            0, Math.PI * 2
+          );
+          ctx.fill();
+        }
+      }
+
+      // Elongated smear in velocity direction (for faster points)
+      if (i > 0 && i < state.trail.length - 1 && tr.age < 5) {
+        const prev = state.trail[i - 1];
+        const dx = tr.x - prev.x;
+        const dy = tr.y - prev.y;
+        const speed = Math.sqrt(dx * dx + dy * dy);
+
+        if (speed > 3) {
+          ctx.globalAlpha = alpha * 0.4;
+          ctx.beginPath();
+          ctx.moveTo(tr.x, tr.y);
+          ctx.lineTo(tr.x - dx * 0.3, tr.y - dy * 0.3);
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = ctx.fillStyle as string;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // Particles
+  for (const p of state.particles) {
+    if (p.life < 3) continue;
+    ctx.fillStyle = p.color || COLORS.accent1;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Player stick figure
+  let playerState: 'idle' | 'charging' | 'flying' | 'landing' = 'idle';
+  if (state.charging) playerState = 'charging';
+  else if (state.flying || state.sliding) playerState = 'flying';
+  else if (state.landingFrame > 0) playerState = 'landing';
+
+  const playerColor = state.fellOff ? COLORS.danger : COLORS.player;
+
+  if (state.failureAnimating && state.failureType && (state.failureType === 'tumble' || state.failureType === 'dive')) {
+    drawFailingStickFigure(ctx, state.px, state.py, playerColor, nowMs, state.failureType, state.failureFrame);
+  } else {
+    drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy });
+  }
+
+  // Impact burst on landing (noir style)
+  if (state.landingFrame > 0 && state.landingFrame < 10 && !state.reduceFx) {
+    drawImpactBurst(ctx, state.px, state.py, COLORS.accent3, state.landingFrame, 'noir');
+  }
+
+  // Failure text
+  if (state.failureAnimating && state.failureFrame < 30) {
+    ctx.fillStyle = COLORS.danger;
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('!', state.px, state.py - 25);
+  }
+
+  // Charging UI - minimal power bar
+  if (state.charging) {
+    const barX = 50;
+    const barY = 15;
+    const barW = 70;
+    const barH = 8;
+
+    ctx.strokeStyle = COLORS.accent3;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barW, barH);
+
+    const fillW = state.chargePower * (barW - 2);
+    const powerColor = state.chargePower > 0.8 ? COLORS.danger : COLORS.accent1;
+    ctx.fillStyle = powerColor;
+    ctx.fillRect(barX + 1, barY + 1, fillW, barH - 2);
+
+    // Angle line
+    const arcX = state.px;
+    const arcY = state.py;
+    const angleRad = (state.angle * Math.PI) / 180;
+    const lineLen = 15 + state.chargePower * 20;
+
+    ctx.strokeStyle = COLORS.accent1;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(arcX, arcY);
+    ctx.lineTo(arcX + Math.cos(angleRad) * lineLen, arcY - Math.sin(angleRad) * lineLen);
+    ctx.stroke();
+
+    // Endpoint dot
+    ctx.fillStyle = COLORS.accent1;
+    ctx.beginPath();
+    ctx.arc(arcX + Math.cos(angleRad) * lineLen, arcY - Math.sin(angleRad) * lineLen, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Nudge indicator
+  if (state.flying && !state.nudgeUsed) {
+    const nudgeX = 50;
+    const nudgeY = H - 30;
+    const blink = Math.floor(nowMs / 300) % 2;
+
+    ctx.strokeStyle = blink ? COLORS.highlight : COLORS.accent3;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(nudgeX, nudgeY, 35, 16);
+
+    ctx.fillStyle = COLORS.highlight;
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('TAP', nudgeX + 17, nudgeY + 12);
+  }
+
+  // Danger border
+  if ((state.flying || state.sliding) && state.px > 300) {
+    const blink = Math.floor(nowMs / 250) % 2;
+    if (blink) {
+      ctx.strokeStyle = COLORS.danger;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(1, 1, W - 2, H - 2);
+    }
+  }
+
+  // Multiplier display
+  if ((state.flying || state.sliding) && state.currentMultiplier > 1.01) {
+    const mult = state.currentMultiplier;
+    const multX = 50;
+    const multY = 28;
+
+    let multColor = COLORS.accent1;
+    if (mult > 3) multColor = COLORS.danger;
+    else if (mult > 2) multColor = COLORS.highlight;
+
+    ctx.fillStyle = multColor;
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`x${mult.toFixed(1)}`, multX, multY);
+  }
+
+  // Slow-mo indicator
+  if (state.slowMo > 0.1) {
+    ctx.strokeStyle = COLORS.accent1;
+    ctx.lineWidth = 1;
+
+    // Corner brackets
+    const cs = 10;
+    ctx.beginPath();
+    ctx.moveTo(0, cs); ctx.lineTo(0, 0); ctx.lineTo(cs, 0);
+    ctx.moveTo(W - cs, 0); ctx.lineTo(W, 0); ctx.lineTo(W, cs);
+    ctx.moveTo(0, H - cs); ctx.lineTo(0, H); ctx.lineTo(cs, H);
+    ctx.moveTo(W - cs, H); ctx.lineTo(W, H); ctx.lineTo(W, H - cs);
+    ctx.stroke();
+  }
+
+  // Record zone effects
+  if ((state.recordZoneActive || state.epicMomentTriggered) && !state.reduceFx) {
+    const intensity = state.recordZoneIntensity || 1;
+    const isFailing = state.fellOff || state.failureAnimating;
+
+    // Subtle golden/red border glow
+    const pulse = Math.sin(nowMs / 100) * 0.3 + 0.7;
+    if (isFailing) {
+      ctx.strokeStyle = `rgba(220, 20, 60, ${pulse * 0.7})`;
+    } else {
+      ctx.strokeStyle = `rgba(240, 230, 140, ${intensity * pulse * 0.6})`;
+    }
+    ctx.lineWidth = 3;
+    ctx.strokeRect(1, 1, W - 2, H - 2);
+
+    // Text
+    if (intensity > 0.5 || isFailing) {
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = isFailing ? COLORS.danger : COLORS.highlight;
+      ctx.fillText(isFailing ? '!' : 'RECORD', W / 2, 20);
+    }
+  }
+
+  // Touch feedback
+  if (state.touchFeedback > 0.3) {
+    const cx = W / 2;
+    const cy = H / 2;
+    ctx.strokeStyle = COLORS.accent1;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, cy); ctx.lineTo(cx + 8, cy);
+    ctx.moveTo(cx, cy - 8); ctx.lineTo(cx, cy + 8);
+    ctx.stroke();
+  }
+
+  // Achievement popup
+  if (state.newAchievement) {
+    const achX = W / 2 - 50;
+    const achY = 8;
+
+    ctx.fillStyle = COLORS.background;
+    ctx.fillRect(achX, achY, 100, 22);
+    ctx.strokeStyle = COLORS.highlight;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(achX, achY, 100, 22);
+
+    ctx.fillStyle = COLORS.highlight;
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('★ NEW', achX + 50, achY + 15);
+  }
+
+  // Apply film grain and vignette (always on for Noir, intensity varies with reduceFx)
+  const grainIntensity = state.reduceFx ? 0.3 : 0.6;
+  const vignetteIntensity = state.reduceFx ? 0.4 : 0.7;
+
+  drawFilmGrain(ctx, W, H, nowMs, grainIntensity);
+  drawVignette(ctx, W, H, vignetteIntensity);
 }

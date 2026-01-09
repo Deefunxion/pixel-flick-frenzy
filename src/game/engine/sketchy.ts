@@ -20,6 +20,82 @@ function getWobble(x: number, y: number, nowMs: number, intensity: number = 1): 
   return { dx, dy };
 }
 
+// Flipbook theme line weight constants
+export const LINE_WEIGHTS = {
+  primary: 2.5,      // Hero outlines, player, ground edge
+  secondary: 1.5,    // Grid/labels/less important markers
+  shadow: 1.0,       // Faint pencil shadow offset
+};
+
+// Draw a layered hand-drawn line with primary ink + faint graphite + shadow offset
+export function drawLayeredHandLine(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  color: string,
+  nowMs: number = 0,
+  layers: number = 2, // 1 = ink only, 2 = ink + graphite, 3 = ink + graphite + shadow
+) {
+  // Layer 3: Shadow offset (faint, offset down-right)
+  if (layers >= 3) {
+    const shadowColor = adjustAlpha(color, 0.15);
+    drawHandLine(ctx, x1 + 1.5, y1 + 1.5, x2 + 1.5, y2 + 1.5, shadowColor, LINE_WEIGHTS.shadow, nowMs);
+  }
+
+  // Layer 2: Graphite underlay (slightly offset, faint)
+  if (layers >= 2) {
+    const graphiteColor = adjustAlpha(color, 0.25);
+    drawHandLine(ctx, x1 + 0.5, y1 + 0.5, x2 + 0.5, y2 + 0.5, graphiteColor, LINE_WEIGHTS.secondary, nowMs);
+  }
+
+  // Layer 1: Primary ink
+  drawHandLine(ctx, x1, y1, x2, y2, color, LINE_WEIGHTS.primary, nowMs);
+}
+
+// Draw a layered hand-drawn circle with primary ink + faint graphite
+export function drawLayeredHandCircle(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  radius: number,
+  color: string,
+  nowMs: number = 0,
+  layers: number = 2,
+  filled: boolean = false,
+) {
+  // Layer 2: Graphite underlay
+  if (layers >= 2) {
+    const graphiteColor = adjustAlpha(color, 0.2);
+    drawHandCircle(ctx, cx + 0.5, cy + 0.5, radius, graphiteColor, LINE_WEIGHTS.secondary, nowMs, false);
+  }
+
+  // Layer 1: Primary ink
+  drawHandCircle(ctx, cx, cy, radius, color, LINE_WEIGHTS.primary, nowMs, filled);
+}
+
+// Helper to adjust alpha of a color
+function adjustAlpha(color: string, alpha: number): string {
+  // Handle hex colors
+  if (color.startsWith('#')) {
+    const hex = color.slice(1);
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  // Handle rgba colors
+  if (color.startsWith('rgba')) {
+    return color.replace(/[\d.]+\)$/, `${alpha})`);
+  }
+  // Handle rgb colors
+  if (color.startsWith('rgb')) {
+    return color.replace('rgb', 'rgba').replace(')', `, ${alpha})`);
+  }
+  return color;
+}
+
 // Draw a hand-drawn line with slight wobble
 export function drawHandLine(
   ctx: CanvasRenderingContext2D,
@@ -200,19 +276,28 @@ export function drawStickFigure(
     }
     bodyLean = velocity.vx * 2;
   } else if (state === 'landing') {
-    // Impact squash
+    // Impact squash - enhanced
     y += 8;
     armAngleL = 0.8;
     armAngleR = 0.8;
     legSpread = 16 * scale;
   }
 
+  // Enhanced line width for landing emphasis (1-2 frame squash effect)
+  const isLanding = state === 'landing';
+  const landingEmphasis = isLanding ? 1.3 : 1.0;
+  ctx.lineWidth = 2.5 * landingEmphasis;
+
+  // Micro-offset for landing impact feel
+  const impactOffset = isLanding ? Math.sin(nowMs * 0.5) * 0.5 : 0;
+  x += impactOffset;
+
   // Head position
   const headX = x + bodyLean * 0.5;
   const headY = y - 35 * scale;
 
-  // Draw head (circle)
-  drawHandCircle(ctx, headX, headY, headRadius, color, 2.5, nowMs, false);
+  // Draw head (circle) with landing emphasis
+  drawHandCircle(ctx, headX, headY, headRadius, color, 2.5 * landingEmphasis, nowMs, false);
 
   // Draw smile
   ctx.beginPath();
@@ -648,21 +733,63 @@ export function drawRuledLines(
   ctx.stroke();
 }
 
-// Draw paper texture (subtle)
+// Draw paper texture with smudge and eraser marks (subtle)
 export function drawPaperTexture(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   nowMs: number,
+  reduceFx: boolean = false,
 ) {
-  // Very subtle noise for paper feel
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.015)';
   const frame = Math.floor(nowMs / 1000);
 
-  for (let i = 0; i < 50; i++) {
+  // Very subtle noise for paper feel
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.015)';
+  const noiseCount = reduceFx ? 25 : 50;
+  for (let i = 0; i < noiseCount; i++) {
     const x = seededRandom(i + frame * 0.01) * width;
     const y = seededRandom(i * 2 + frame * 0.01) * height;
     ctx.fillRect(Math.floor(x), Math.floor(y), 1, 1);
+  }
+
+  // Skip smudge/eraser marks in reduceFx mode
+  if (reduceFx) return;
+
+  // Smudge marks - soft gray strokes (graphite smears)
+  const smudgeCount = 3;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < smudgeCount; i++) {
+    const smudgeX = seededRandom(i * 7 + 100) * width * 0.8 + width * 0.1;
+    const smudgeY = seededRandom(i * 11 + 200) * height * 0.6 + height * 0.2;
+    const smudgeLen = 15 + seededRandom(i * 13) * 25;
+    const smudgeAngle = seededRandom(i * 17) * Math.PI;
+
+    ctx.strokeStyle = 'rgba(100, 100, 100, 0.04)';
+    ctx.lineWidth = 6 + seededRandom(i * 19) * 8;
+    ctx.beginPath();
+    ctx.moveTo(smudgeX, smudgeY);
+    ctx.lineTo(
+      smudgeX + Math.cos(smudgeAngle) * smudgeLen,
+      smudgeY + Math.sin(smudgeAngle) * smudgeLen
+    );
+    ctx.stroke();
+  }
+
+  // Eraser marks - lighter streaks (where graphite was rubbed away)
+  const eraserCount = 2;
+  for (let i = 0; i < eraserCount; i++) {
+    const eraseX = seededRandom(i * 23 + 300) * width * 0.7 + width * 0.15;
+    const eraseY = seededRandom(i * 29 + 400) * height * 0.5 + height * 0.25;
+    const eraseW = 12 + seededRandom(i * 31) * 20;
+    const eraseH = 4 + seededRandom(i * 37) * 6;
+    const eraseAngle = (seededRandom(i * 41) - 0.5) * 0.3;
+
+    ctx.save();
+    ctx.translate(eraseX, eraseY);
+    ctx.rotate(eraseAngle);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.fillRect(-eraseW / 2, -eraseH / 2, eraseW, eraseH);
+    ctx.restore();
   }
 }
 
@@ -772,4 +899,145 @@ export function drawHandwrittenNumber(
   ctx.font = `${fontSize}px "Comic Sans MS", cursive, sans-serif`;
   ctx.textAlign = 'left';
   ctx.fillText(number.toFixed(4), x, y);
+}
+
+// Draw film grain effect (Noir theme)
+export function drawFilmGrain(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  nowMs: number,
+  intensity: number = 0.6,
+) {
+  const frame = Math.floor(nowMs / 50); // Change grain pattern every 50ms
+  const grainAlpha = intensity * 0.08;
+
+  // Use a pattern of random dots for grain effect
+  const dotCount = Math.floor(width * height * 0.015 * intensity);
+
+  for (let i = 0; i < dotCount; i++) {
+    const x = seededRandom(i + frame * 1.3) * width;
+    const y = seededRandom(i * 2.7 + frame * 0.9) * height;
+    const brightness = seededRandom(i * 3.1 + frame) > 0.5 ? 255 : 0;
+
+    ctx.fillStyle = `rgba(${brightness}, ${brightness}, ${brightness}, ${grainAlpha})`;
+    ctx.fillRect(Math.floor(x), Math.floor(y), 1, 1);
+  }
+}
+
+// Draw vignette effect (Noir theme - canvas edges darkening)
+export function drawVignette(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  intensity: number = 0.7,
+) {
+  const gradient = ctx.createRadialGradient(
+    width / 2, height / 2, 0,
+    width / 2, height / 2, Math.max(width, height) * 0.7
+  );
+
+  gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  gradient.addColorStop(0.5, `rgba(0, 0, 0, ${intensity * 0.1})`);
+  gradient.addColorStop(0.8, `rgba(0, 0, 0, ${intensity * 0.3})`);
+  gradient.addColorStop(1, `rgba(0, 0, 0, ${intensity * 0.6})`);
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+}
+
+// Draw impact burst for landing (styled per theme)
+export function drawImpactBurst(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string,
+  frame: number,
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  // Only draw for first few frames of landing
+  if (frame > 8) return;
+
+  const progress = frame / 8; // 0 to 1
+  const baseAlpha = 1 - progress;
+
+  if (themeKind === 'flipbook') {
+    // Flipbook: graphite dust puffs - small circular bursts
+    const puffCount = 5;
+    for (let i = 0; i < puffCount; i++) {
+      const angle = (i / puffCount) * Math.PI + Math.PI; // Bottom half arc
+      const dist = 8 + progress * 15;
+      const puffX = x + Math.cos(angle) * dist;
+      const puffY = y + Math.sin(angle) * dist * 0.5; // Flattened
+
+      ctx.globalAlpha = baseAlpha * 0.4;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(puffX, puffY, 2 + progress * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Small radial lines
+    ctx.globalAlpha = baseAlpha * 0.5;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 4; i++) {
+      const angle = (i / 4) * Math.PI + Math.PI * 0.1;
+      const innerR = 5;
+      const outerR = 10 + progress * 8;
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(angle) * innerR, y + Math.sin(angle) * innerR * 0.5);
+      ctx.lineTo(x + Math.cos(angle) * outerR, y + Math.sin(angle) * outerR * 0.5);
+      ctx.stroke();
+    }
+  } else {
+    // Noir: ink blot burst - higher contrast, fewer drops
+    const dropCount = 4;
+    for (let i = 0; i < dropCount; i++) {
+      const angle = (i / dropCount) * Math.PI + Math.PI;
+      const dist = 6 + progress * 12;
+      const dropX = x + Math.cos(angle) * dist;
+      const dropY = y + Math.sin(angle) * dist * 0.4;
+
+      ctx.globalAlpha = baseAlpha * 0.7;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(dropX, dropY, 1.5 + (1 - progress) * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Single sharp line
+    ctx.globalAlpha = baseAlpha * 0.6;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x - 8 - progress * 5, y);
+    ctx.lineTo(x + 8 + progress * 5, y);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+// Draw ink splatter for Noir trajectory
+export function drawInkSplatter(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string,
+  size: number = 3,
+  nowMs: number = 0,
+) {
+  const splatCount = 3 + Math.floor(seededRandom(x + y + nowMs * 0.001) * 3);
+
+  for (let i = 0; i < splatCount; i++) {
+    const offsetX = (seededRandom(i + x * 10) - 0.5) * size * 2;
+    const offsetY = (seededRandom(i + y * 10) - 0.5) * size * 2;
+    const splatSize = size * (0.3 + seededRandom(i * 3) * 0.7);
+
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x + offsetX, y + offsetY, splatSize, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
