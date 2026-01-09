@@ -543,41 +543,8 @@ const Game = () => {
           : 'rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 hover:opacity-90 active:translate-y-px transition-all';
 
         return (
-          <div className="w-full max-w-md flex flex-wrap items-center justify-center gap-2 text-xs" style={{ color: theme.uiText }}>
-            <button
-              className={buttonClass}
-              style={buttonStyle}
-              onClick={async () => {
-                ensureAudioContext(audioRefs.current);
-                await resumeIfSuspended(audioRefs.current);
-                setAudioSettings((s) => ({ ...s, muted: !s.muted }));
-              }}
-              aria-label="Toggle mute"
-            >
-              {audioSettings.muted ? 'Muted' : 'Sound'}
-            </button>
-            <label className="flex items-center gap-1" aria-label="Volume">
-              <span style={{ opacity: 0.7 }}>Vol</span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={Math.round(audioSettings.volume * 100)}
-                onChange={(e) => setAudioSettings((s) => ({ ...s, volume: Number(e.target.value) / 100 }))}
-                style={{
-                  width: isNoir ? '50px' : '60px',
-                  accentColor: isNoir ? theme.accent2 : theme.accent1
-                }}
-              />
-            </label>
-            <button
-              className={buttonClass}
-              style={buttonStyle}
-              onClick={() => setReduceFx((v) => !v)}
-              aria-label="Toggle reduce effects"
-            >
-              {reduceFx ? 'FX: Low' : 'FX: On'}
-            </button>
+          <div className="w-full max-w-md flex items-center justify-between gap-2 text-xs px-2" style={{ color: theme.uiText }}>
+            {/* Left: Theme picker */}
             <button
               className={buttonClass}
               style={{
@@ -593,14 +560,8 @@ const Game = () => {
             >
               {isNoir ? 'Noir' : 'Flipbook'}
             </button>
-            <button
-              className={buttonClass}
-              style={buttonStyle}
-              onClick={() => setShowStats(true)}
-              aria-label="View stats"
-            >
-              Stats
-            </button>
+
+            {/* Center: Leaderboard */}
             <button
               className={buttonClass}
               style={{
@@ -612,38 +573,44 @@ const Game = () => {
             >
               Leaderboard
             </button>
+
+            {/* Right: Stats + Sound */}
+            <div className="flex items-center gap-2">
+              <button
+                className={buttonClass}
+                style={buttonStyle}
+                onClick={() => setShowStats(true)}
+                aria-label="View stats"
+              >
+                Stats
+              </button>
+              <button
+                className={buttonClass}
+                style={buttonStyle}
+                onClick={async () => {
+                  ensureAudioContext(audioRefs.current);
+                  await resumeIfSuspended(audioRefs.current);
+                  setAudioSettings((s) => ({ ...s, muted: !s.muted }));
+                }}
+                aria-label="Toggle sound"
+              >
+                {audioSettings.muted ? '🔇' : '🔊'}
+              </button>
+            </div>
           </div>
         );
       })()}
 
-      {/* Hero row: SCORE, LV, TARGET - primary focus */}
+      {/* Hero row: LAST, LV, TARGET - primary focus */}
       <div className="w-full max-w-md flex justify-center items-end gap-6 text-center">
         <div>
-          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Score</p>
-          <p className="text-2xl font-bold font-mono" style={{ color: theme.accent4 }}>{Math.floor(totalScore).toLocaleString()}</p>
-        </div>
-        <div>
-          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Lv</p>
-          <p className="text-2xl font-bold font-mono" style={{ color: theme.highlight }}>{zenoLevel}</p>
-        </div>
-        <div>
-          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Target</p>
-          <p className="text-xl font-bold font-mono" style={{ color: theme.accent2 }}>
-            {formatScore(zenoTarget).int}<span className="text-sm opacity-60">.{formatScore(zenoTarget).dec}</span>
-          </p>
-        </div>
-      </div>
-
-      {/* Secondary row: LAST, BEST */}
-      <div className="w-full max-w-md flex justify-center gap-6 text-center">
-        <div>
-          <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Last</p>
-          <p className="text-base font-bold font-mono">
+          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Last</p>
+          <p className="text-2xl font-bold font-mono">
             {fellOff ? (
               <span style={{ color: theme.danger }}>FELL</span>
             ) : lastDist !== null ? (
               <span style={{ color: theme.accent1 }}>
-                {formatScore(lastDist).int}<span className="text-xs opacity-60">.{formatScore(lastDist).dec}</span>
+                {formatScore(lastDist).int}<span className="text-sm opacity-60">.{formatScore(lastDist).dec}</span>
                 {perfectLanding && <span style={{ color: theme.highlight }}> ★</span>}
               </span>
             ) : (
@@ -657,62 +624,30 @@ const Game = () => {
           )}
         </div>
         <div>
+          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Lv</p>
+          <p className="text-2xl font-bold font-mono" style={{ color: theme.highlight }}>{zenoLevel}</p>
+        </div>
+        <div>
+          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Target</p>
+          <p className="text-xl font-bold font-mono" style={{ color: theme.accent2 }}>
+            {formatScore(zenoTarget).int}<span className="text-sm opacity-60">.{formatScore(zenoTarget).dec}</span>
+          </p>
+        </div>
+      </div>
+
+      {/* Secondary row: SCORE, BEST */}
+      <div className="w-full max-w-md flex justify-center gap-6 text-center">
+        <div>
+          <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Score</p>
+          <p className="text-base font-bold font-mono" style={{ color: theme.accent4 }}>{Math.floor(totalScore).toLocaleString()}</p>
+        </div>
+        <div>
           <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Best</p>
           <p className="text-base font-bold font-mono" style={{ color: theme.accent2 }}>
             {formatScore(bestScore).int}<span className="text-xs opacity-60">.{formatScore(bestScore).dec}</span>
           </p>
         </div>
       </div>
-
-      {/* Minimal stats row - hidden in landscape */}
-      <div className="w-full max-w-md flex justify-center gap-3 text-xs landscape:hidden" style={{ color: theme.uiText }}>
-        <span>{stats.totalThrows} throws</span>
-        <span>{stats.totalThrows > 0 ? Math.round((stats.successfulLandings / stats.totalThrows) * 100) : 0}% success</span>
-        <span>★ {achievements.size}/{Object.keys(ACHIEVEMENTS).length}</span>
-        <span>Daily {dailyStats.bestDistance.toFixed(2)}</span>
-        {(hotStreak.current > 0 || hotStreak.best > 0) && (
-          <span style={{ color: hotStreak.current > 0 ? theme.highlight : theme.uiText }}>
-            {hotStreak.current > 0 ? '🔥' : ''} {hotStreak.current > 0 ? hotStreak.current : hotStreak.best} streak
-          </span>
-        )}
-      </div>
-
-      {/* Session goals - hidden in landscape */}
-      <div className="text-xs text-center max-w-md landscape:hidden" style={{ color: theme.uiText, opacity: 0.85 }}>
-        {sessionGoals.map((g) => (
-          <span key={g.id} style={{ marginRight: 10, color: g.done ? theme.highlight : theme.uiText }}>
-            {g.label}: {Math.min(g.target, g.progress)}/{g.target}
-          </span>
-        ))}
-      </div>
-
-      {/* Daily Challenge - hidden in landscape */}
-      <div
-        className="text-xs text-center max-w-md py-1.5 px-2 rounded landscape:hidden"
-        style={{
-          background: dailyChallenge.completed ? `${theme.highlight}15` : `${theme.accent3}08`,
-          border: `1px solid ${dailyChallenge.completed ? theme.highlight : theme.accent3}40`,
-          color: theme.uiText,
-        }}
-      >
-        <span className="font-bold" style={{ color: theme.accent1 }}>
-          Daily Challenge:{' '}
-        </span>
-        <span className={dailyChallenge.completed ? 'line-through opacity-50' : ''}>
-          {dailyChallenge.description}
-        </span>
-        {dailyChallenge.completed && (
-          <span style={{ color: theme.highlight }}> Complete!</span>
-        )}
-        {!dailyChallenge.completed && dailyChallenge.progress > 0 && (
-          <span style={{ color: theme.accent2 }}> ({Math.floor(dailyChallenge.progress)}/{dailyChallenge.target})</span>
-        )}
-      </div>
-
-      {/* Game info - hidden in landscape */}
-      <p className="text-xs text-center max-w-xs opacity-60 landscape:hidden" style={{ color: theme.uiText }}>
-        Hold SPACE to charge, release to flick. Get as close to 145 as possible without falling off. Beat the target to level up!
-      </p>
 
       {/* Achievement popup */}
       {newAchievement && (

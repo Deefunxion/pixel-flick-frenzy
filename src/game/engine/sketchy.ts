@@ -231,7 +231,34 @@ export function drawStickFigure(
   state: 'idle' | 'charging' | 'flying' | 'landing' = 'idle',
   angle: number = 0,
   velocity: { vx: number; vy: number } = { vx: 0, vy: 0 },
+  chargePower: number = 0,  // 0-1 charge amount for squash
 ) {
+  // Squash & Stretch calculations
+  let scaleX = 1;
+  let scaleY = 1;
+
+  if (state === 'charging') {
+    // Charging SQUASH: compress vertically, expand horizontally
+    const squashAmount = chargePower * 0.3; // Max 30% squash
+    scaleX = 1 + squashAmount * 0.43; // ~130% width at full charge
+    scaleY = 1 - squashAmount; // ~70% height at full charge
+  } else if (state === 'flying') {
+    // Flying STRETCH: elongate in velocity direction
+    const speed = Math.sqrt(velocity.vx ** 2 + velocity.vy ** 2);
+    const stretchAmount = Math.min(0.3, speed * 0.02);
+    scaleX = 1 - stretchAmount * 0.3;
+    scaleY = 1 + stretchAmount;
+  } else if (state === 'landing') {
+    // Landing SQUASH: impact compression
+    scaleX = 1.3;
+    scaleY = 0.7;
+  }
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scaleX, scaleY);
+  ctx.translate(-x, -y);
+
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = 2.5;
@@ -254,33 +281,61 @@ export function drawStickFigure(
     armAngleL = Math.sin(nowMs / 800) * 0.1;
     armAngleR = -Math.sin(nowMs / 800) * 0.1;
   } else if (state === 'charging') {
-    // Crouching, arms back
-    bodyLean = -5;
-    armAngleL = -0.8 - angle * 0.01;
-    armAngleR = -0.6 - angle * 0.01;
-    legSpread = 12 * scale;
-    y += 5;
+    // Charging wind-up with anticipation
+    // Lean BACK first (opposite to launch direction)
+    bodyLean = -8 - chargePower * 12; // Lean back more at higher charge
+
+    // Arms pull behind body
+    armAngleL = -0.6 - chargePower * 0.6;
+    armAngleR = -0.4 - chargePower * 0.5;
+
+    // One leg steps back to brace
+    legSpread = 10 * scale + chargePower * 6;
+
+    // Lower center of gravity
+    y += 3 + chargePower * 8;
   } else if (state === 'flying') {
-    const rising = velocity.vy < 0;
-    if (rising) {
-      // Arms up, superman pose
-      armAngleL = -1.2;
-      armAngleR = -1.0;
-      legSpread = 4 * scale;
+    // Check if just launched (first ~100ms of flight)
+    const justLaunched = velocity.vy < -3 && Math.abs(velocity.vx) > 4;
+
+    if (justLaunched && velocity.vy < -2) {
+      // Release snap: everything whips forward
+      armAngleL = -1.5; // Arms thrust forward
+      armAngleR = -1.3;
+      legSpread = 3 * scale; // Legs together, trailing
+      bodyLean = velocity.vx * 1.5;
     } else {
-      // Falling, arms flailing
-      const flail = Math.sin(nowMs / 80) * 0.5;
-      armAngleL = 0.3 + flail;
-      armAngleR = 0.3 - flail;
-      legSpread = 10 * scale;
+      const rising = velocity.vy < 0;
+      if (rising) {
+        // Arms up, superman pose
+        armAngleL = -1.2;
+        armAngleR = -1.0;
+        legSpread = 4 * scale;
+      } else {
+        // Falling, arms flailing
+        const flail = Math.sin(nowMs / 80) * 0.5;
+        armAngleL = 0.3 + flail;
+        armAngleR = 0.3 - flail;
+        legSpread = 10 * scale;
+      }
+      bodyLean = velocity.vx * 2;
     }
-    bodyLean = velocity.vx * 2;
   } else if (state === 'landing') {
-    // Impact squash - enhanced
-    y += 8;
-    armAngleL = 0.8;
-    armAngleR = 0.8;
-    legSpread = 16 * scale;
+    // Impact squash with recovery sequence
+    // Frame 0-3: Maximum squash
+    // Frame 4-8: Recovery wobble
+    // Frame 9+: Settle to proud stance
+
+    // For now, enhanced single-frame squash
+    y += 10;
+    armAngleL = 1.0; // Arms out for balance
+    armAngleR = 1.0;
+    legSpread = 18 * scale; // Wide stance
+
+    // Windmill effect (arms reaching out)
+    const wobble = Math.sin(nowMs * 0.02) * 0.3;
+    armAngleL += wobble;
+    armAngleR -= wobble;
   }
 
   // Enhanced line width for landing emphasis (1-2 frame squash effect)
@@ -358,6 +413,8 @@ export function drawStickFigure(
   ctx.moveTo(x + bodyLean, bodyBottomY);
   ctx.lineTo(x + bodyLean + legSpread, y);
   ctx.stroke();
+
+  ctx.restore();
 }
 
 // Draw a failing/falling stick figure
@@ -1040,4 +1097,176 @@ export function drawInkSplatter(
     ctx.arc(x + offsetX, y + offsetY, splatSize, 0, Math.PI * 2);
     ctx.fill();
   }
+}
+
+// Draw a ghost/echo stick figure (faded, thinner strokes)
+export function drawGhostFigure(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string,
+  opacity: number,
+  nowMs: number,
+  angle: number,
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  ctx.save();
+  ctx.globalAlpha = opacity;
+
+  // Thinner strokes for ghosts
+  ctx.strokeStyle = color;
+  ctx.lineWidth = themeKind === 'flipbook' ? 1.5 : 1;
+  ctx.lineCap = 'round';
+
+  const scale = 0.4; // Slightly smaller than main figure
+  const headRadius = 6 * scale;
+
+  // Simple tumbling pose based on angle
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+
+  // Head
+  ctx.beginPath();
+  ctx.arc(0, -10, headRadius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Body
+  ctx.beginPath();
+  ctx.moveTo(0, -7);
+  ctx.lineTo(0, 5);
+  ctx.stroke();
+
+  // Arms (spread out)
+  ctx.beginPath();
+  ctx.moveTo(-8, -2);
+  ctx.lineTo(0, -3);
+  ctx.lineTo(8, -2);
+  ctx.stroke();
+
+  // Legs
+  ctx.beginPath();
+  ctx.moveTo(-5, 12);
+  ctx.lineTo(0, 5);
+  ctx.lineTo(5, 12);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// Draw scribble energy lines radiating from a point
+export function drawScribbleEnergy(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  intensity: number, // 0-1
+  color: string,
+  nowMs: number,
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  if (intensity < 0.1) return;
+
+  const lineCount = Math.floor(4 + intensity * 8);
+  const maxLen = 8 + intensity * 15;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = themeKind === 'flipbook' ? 1.5 : 1;
+  ctx.lineCap = 'round';
+
+  for (let i = 0; i < lineCount; i++) {
+    // Deterministic but animated positions
+    const seed = i * 137.5 + nowMs * 0.01;
+    const angle = (i / lineCount) * Math.PI * 2 + Math.sin(seed) * 0.5;
+    const len = maxLen * (0.5 + seededRandom(seed) * 0.5);
+    const startDist = 8 + seededRandom(seed + 1) * 5;
+
+    const startX = x + Math.cos(angle) * startDist;
+    const startY = y + Math.sin(angle) * startDist;
+    const endX = x + Math.cos(angle) * (startDist + len);
+    const endY = y + Math.sin(angle) * (startDist + len);
+
+    // Wobbly line
+    ctx.globalAlpha = 0.4 + intensity * 0.4;
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+
+    // Add mid-point wobble
+    const midX = (startX + endX) / 2 + (seededRandom(seed + 2) - 0.5) * 4;
+    const midY = (startY + endY) / 2 + (seededRandom(seed + 3) - 0.5) * 4;
+    ctx.quadraticCurveTo(midX, midY, endX, endY);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+// Draw horizontal speed lines during high-velocity flight
+export function drawSpeedLines(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  velocity: { vx: number; vy: number },
+  color: string,
+  nowMs: number,
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  const speed = Math.sqrt(velocity.vx ** 2 + velocity.vy ** 2);
+  if (speed < 4) return;
+
+  const lineCount = Math.min(6, Math.floor(speed / 2));
+  const lineLen = 10 + speed * 2;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = themeKind === 'flipbook' ? 1.5 : 1;
+  ctx.lineCap = 'round';
+
+  for (let i = 0; i < lineCount; i++) {
+    const seed = i * 47 + nowMs * 0.02;
+    const offsetY = (seededRandom(seed) - 0.5) * 30;
+    const alpha = 0.3 + seededRandom(seed + 1) * 0.3;
+    const len = lineLen * (0.6 + seededRandom(seed + 2) * 0.4);
+
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.moveTo(x - len, y + offsetY);
+    ctx.lineTo(x - len * 0.3, y + offsetY + (seededRandom(seed + 3) - 0.5) * 3);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+// Draw explosion of scribbles at launch
+export function drawLaunchBurst(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  frame: number, // frames since launch
+  color: string,
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  if (frame > 12) return;
+
+  const progress = frame / 12;
+  const alpha = 1 - progress;
+  const spread = 10 + progress * 25;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = themeKind === 'flipbook' ? 2 : 1.5;
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = alpha * 0.7;
+
+  // Radiating star pattern
+  const rays = 8;
+  for (let i = 0; i < rays; i++) {
+    const angle = (i / rays) * Math.PI * 2 - Math.PI / 2;
+    const innerR = 5 + progress * 8;
+    const outerR = innerR + spread * (0.5 + seededRandom(i * 7) * 0.5);
+
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(angle) * innerR, y + Math.sin(angle) * innerR);
+    ctx.lineTo(x + Math.cos(angle) * outerR, y + Math.sin(angle) * outerR);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
 }

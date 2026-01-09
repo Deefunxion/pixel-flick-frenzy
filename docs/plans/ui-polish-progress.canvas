@@ -1,0 +1,296 @@
+{
+  "nodes": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 0,
+      "y": -200,
+      "width": 400,
+      "height": 80,
+      "text": "# UI Polish Implementation\n\n**16/16 tasks COMPLETE**"
+    },
+    {
+      "id": "phase1-group",
+      "type": "group",
+      "x": -600,
+      "y": 0,
+      "width": 280,
+      "height": 180,
+      "label": "Phase 1: Slider Fix"
+    },
+    {
+      "id": "task1.1",
+      "type": "text",
+      "x": -580,
+      "y": 40,
+      "width": 240,
+      "height": 100,
+      "text": "### Task 1.1\n**Add accentColor to slider**\n\n`Game.tsx:558-565`\n\n- [x] Complete"
+    },
+    {
+      "id": "phase2-group",
+      "type": "group",
+      "x": -280,
+      "y": 0,
+      "width": 280,
+      "height": 380,
+      "label": "Phase 2: Typography"
+    },
+    {
+      "id": "task2.1",
+      "type": "text",
+      "x": -260,
+      "y": 40,
+      "width": 240,
+      "height": 90,
+      "text": "### Task 2.1\n**Hero stat labels**\n\n`Game.tsx:616,619,624`\n\n- [x] Complete"
+    },
+    {
+      "id": "task2.2",
+      "type": "text",
+      "x": -260,
+      "y": 150,
+      "width": 240,
+      "height": 90,
+      "text": "### Task 2.2\n**Last/Best labels**\n\n`Game.tsx:634,654`\n\n- [x] Complete"
+    },
+    {
+      "id": "task2.3",
+      "type": "text",
+      "x": -260,
+      "y": 260,
+      "width": 240,
+      "height": 90,
+      "text": "### Task 2.3\n**Microcopy (5 locations)**\n\n`Game.tsx:458,662,675,685,707`\n\n- [x] Complete"
+    },
+    {
+      "id": "phase3-group",
+      "type": "group",
+      "x": 40,
+      "y": 0,
+      "width": 280,
+      "height": 180,
+      "label": "Phase 3: Background"
+    },
+    {
+      "id": "task3.1",
+      "type": "text",
+      "x": 60,
+      "y": 40,
+      "width": 240,
+      "height": 100,
+      "text": "### Task 3.1\n**Full-width wrapper**\n\n`Game.tsx:442-446`\n\n- [x] Complete"
+    },
+    {
+      "id": "phase4-group",
+      "type": "group",
+      "x": 360,
+      "y": 0,
+      "width": 280,
+      "height": 380,
+      "label": "Phase 4: Controls"
+    },
+    {
+      "id": "task4.1",
+      "type": "text",
+      "x": 380,
+      "y": 40,
+      "width": 240,
+      "height": 90,
+      "text": "### Task 4.1\n**Button min-height 32px**\n\n`Game.tsx:527,537`\n\n- [x] Complete"
+    },
+    {
+      "id": "task4.2",
+      "type": "text",
+      "x": 380,
+      "y": 150,
+      "width": 240,
+      "height": 90,
+      "text": "### Task 4.2\n**Hover/active states**\n\n`Game.tsx:538-540`\n\n- [x] Complete"
+    },
+    {
+      "id": "task4.3",
+      "type": "text",
+      "x": 380,
+      "y": 260,
+      "width": 240,
+      "height": 90,
+      "text": "### Task 4.3\n**max-w-md on controls**\n\n`Game.tsx:543`\n\n- [x] Complete"
+    },
+    {
+      "id": "phase5-group",
+      "type": "group",
+      "x": -600,
+      "y": 420,
+      "width": 280,
+      "height": 180,
+      "label": "Phase 5: Daily Challenge"
+    },
+    {
+      "id": "task5.1",
+      "type": "text",
+      "x": -580,
+      "y": 460,
+      "width": 240,
+      "height": 100,
+      "text": "### Task 5.1\n**Reduce prominence**\n\n`Game.tsx:684-690`\n\n- [x] Complete"
+    },
+    {
+      "id": "phase6-group",
+      "type": "group",
+      "x": -280,
+      "y": 420,
+      "width": 280,
+      "height": 280,
+      "label": "Phase 6: Spacing"
+    },
+    {
+      "id": "task6.1",
+      "type": "text",
+      "x": -260,
+      "y": 460,
+      "width": 240,
+      "height": 90,
+      "text": "### Task 6.1\n**Hero stats max-w-md**\n\n`Game.tsx:614,632`\n\n- [x] Complete"
+    },
+    {
+      "id": "task6.2",
+      "type": "text",
+      "x": -260,
+      "y": 570,
+      "width": 240,
+      "height": 90,
+      "text": "### Task 6.2\n**Stats row max-w-md**\n\n`Game.tsx:662`\n\n- [x] Complete"
+    },
+    {
+      "id": "phase7-group",
+      "type": "group",
+      "x": 40,
+      "y": 420,
+      "width": 600,
+      "height": 280,
+      "label": "Phase 7: Modal Consistency"
+    },
+    {
+      "id": "task7.1",
+      "type": "text",
+      "x": 60,
+      "y": 460,
+      "width": 260,
+      "height": 90,
+      "text": "### Task 7.1\n**StatsOverlay backdrop**\n\n`StatsOverlay.tsx:70,74`\n\n- [x] Complete"
+    },
+    {
+      "id": "task7.2",
+      "type": "text",
+      "x": 360,
+      "y": 460,
+      "width": 260,
+      "height": 90,
+      "text": "### Task 7.2\n**Leaderboard close btn**\n\n`LeaderboardScreen.tsx:66`\n\n- [x] Complete"
+    },
+    {
+      "id": "task7.3",
+      "type": "text",
+      "x": 60,
+      "y": 570,
+      "width": 260,
+      "height": 90,
+      "text": "### Task 7.3\n**Leaderboard backdrop**\n\n`LeaderboardScreen.tsx:48`\n\n- [x] Complete"
+    },
+    {
+      "id": "task7.4",
+      "type": "text",
+      "x": 360,
+      "y": 570,
+      "width": 260,
+      "height": 90,
+      "text": "### Task 7.4\n**NicknameModal backdrop**\n\n`NicknameModal.tsx:83`\n\n- [x] Complete"
+    },
+    {
+      "id": "phase8-group",
+      "type": "group",
+      "x": -100,
+      "y": 740,
+      "width": 600,
+      "height": 200,
+      "label": "Phase 8: Final QA"
+    },
+    {
+      "id": "task8.1",
+      "type": "text",
+      "x": -80,
+      "y": 780,
+      "width": 560,
+      "height": 120,
+      "text": "### Task 8.1: Full QA Pass\n\n- [x] Desktop: full-width gradient\n- [x] Mobile: readable labels, adequate touch targets\n- [x] Flipbook theme: cohesive paper feel\n- [x] Noir theme: slider matches, no blue\n- [x] Landscape: tertiary hidden, stable layout\n- [x] All modals: consistent backdrop"
+    },
+    {
+      "id": "legend",
+      "type": "text",
+      "x": 500,
+      "y": -200,
+      "width": 200,
+      "height": 120,
+      "text": "## Legend\n\n- [ ] = Pending\n- [x] = Done\n\n**Update checkboxes as you complete tasks**"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "fromNode": "phase1-group",
+      "toNode": "phase2-group",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "e2",
+      "fromNode": "phase2-group",
+      "toNode": "phase3-group",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "e3",
+      "fromNode": "phase3-group",
+      "toNode": "phase4-group",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "e4",
+      "fromNode": "phase1-group",
+      "toNode": "phase5-group",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "e5",
+      "fromNode": "phase5-group",
+      "toNode": "phase6-group",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "e6",
+      "fromNode": "phase6-group",
+      "toNode": "phase7-group",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "e7",
+      "fromNode": "phase4-group",
+      "toNode": "phase7-group",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "e8",
+      "fromNode": "phase7-group",
+      "toNode": "phase8-group",
+      "fromSide": "bottom",
+      "toSide": "top"
+    }
+  ]
+}

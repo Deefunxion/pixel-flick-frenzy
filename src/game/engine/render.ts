@@ -19,6 +19,10 @@ import {
   drawLayeredHandCircle,
   drawImpactBurst,
   drawInkSplatter,
+  drawGhostFigure,
+  drawScribbleEnergy,
+  drawLaunchBurst,
+  drawSpeedLines,
   LINE_WEIGHTS,
 } from './sketchy';
 
@@ -261,6 +265,28 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     drawDashedCurve(ctx, ghostPoints, COLORS.accent3, 1.5, 6, 8);
   }
 
+  // Ghost trail - fading echo figures during flight
+  if (state.flying && state.ghostTrail.length > 0) {
+    const trailLen = state.ghostTrail.length;
+    for (let i = 0; i < trailLen; i++) {
+      const ghost = state.ghostTrail[i];
+      // Progressive fade: older = fainter
+      const opacity = (0.6 - (trailLen - i - 1) * 0.15) * (1 - i / trailLen);
+      if (opacity > 0.05) {
+        drawGhostFigure(
+          ctx,
+          ghost.x,
+          ghost.y,
+          COLORS.pencilGray,
+          opacity,
+          nowMs,
+          ghost.angle,
+          'flipbook',
+        );
+      }
+    }
+  }
+
   // Current trail - graphite/chalk dots with variation
   for (let i = 0; i < state.trail.length; i++) {
     const tr = state.trail[i];
@@ -330,7 +356,31 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       playerState,
       state.angle,
       { vx: state.vx, vy: state.vy },
+      state.chargePower,
     );
+  }
+
+  // Scribble energy during charging
+  if (state.charging && state.chargePower > 0.1) {
+    drawScribbleEnergy(
+      ctx,
+      state.px,
+      state.py,
+      state.chargePower,
+      COLORS.accent1,
+      nowMs,
+      'flipbook',
+    );
+  }
+
+  // Launch burst effect
+  if (state.flying && state.launchFrame < 12) {
+    drawLaunchBurst(ctx, state.px - 20, state.py, state.launchFrame, COLORS.accent3, 'flipbook');
+  }
+
+  // Speed lines during high-velocity flight
+  if (state.flying && !state.reduceFx) {
+    drawSpeedLines(ctx, state.px, state.py, { vx: state.vx, vy: state.vy }, COLORS.accent3, nowMs, 'flipbook');
   }
 
   // Impact burst on landing (flipbook style)
@@ -741,6 +791,27 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.setLineDash([]);
   }
 
+  // Ghost trail - sharper, fewer figures
+  if (state.flying && state.ghostTrail.length > 0) {
+    const trailLen = state.ghostTrail.length;
+    for (let i = Math.max(0, trailLen - 6); i < trailLen; i++) {
+      const ghost = state.ghostTrail[i];
+      const opacity = 0.5 - (trailLen - i - 1) * 0.15;
+      if (opacity > 0.1) {
+        drawGhostFigure(
+          ctx,
+          ghost.x,
+          ghost.y,
+          COLORS.accent3,
+          opacity,
+          nowMs,
+          ghost.angle,
+          'noir',
+        );
+      }
+    }
+  }
+
   // Current trail - ink droplets with occasional splatter
   for (let i = 0; i < state.trail.length; i++) {
     const tr = state.trail[i];
@@ -802,7 +873,22 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   if (state.failureAnimating && state.failureType && (state.failureType === 'tumble' || state.failureType === 'dive')) {
     drawFailingStickFigure(ctx, state.px, state.py, playerColor, nowMs, state.failureType, state.failureFrame);
   } else {
-    drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy });
+    drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
+  }
+
+  // Scribble energy during charging
+  if (state.charging && state.chargePower > 0.2) {
+    drawScribbleEnergy(ctx, state.px, state.py, state.chargePower * 0.7, COLORS.accent1, nowMs, 'noir');
+  }
+
+  // Launch burst (more subtle for noir)
+  if (state.flying && state.launchFrame < 8) {
+    drawLaunchBurst(ctx, state.px - 15, state.py, state.launchFrame, COLORS.accent3, 'noir');
+  }
+
+  // Speed lines (sharper for noir)
+  if (state.flying && !state.reduceFx) {
+    drawSpeedLines(ctx, state.px, state.py, { vx: state.vx, vy: state.vy }, COLORS.accent3, nowMs, 'noir');
   }
 
   // Impact burst on landing (noir style)

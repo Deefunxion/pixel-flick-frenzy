@@ -81,6 +81,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     paused: false,
     bestTrail: loadJson('best_trail', [], 'omf_best_trail'),
     runTrail: [],
+    ghostTrail: [],
     reduceFx: params.reduceFx,
     recordZoneActive: false,
     recordZoneIntensity: 0,
@@ -91,6 +92,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     failureType: null,
     hotStreak: 0,
     bestHotStreak: loadNumber('best_hot_streak', 0, 'omf_best_hot_streak'),
+    launchFrame: 0,
   };
 }
 
@@ -124,6 +126,7 @@ export function resetPhysics(state: GameState) {
   state.failureAnimating = false;
   state.failureFrame = 0;
   state.failureType = null;
+  state.launchFrame = 0;
 }
 
 export function nextWind(state: GameState) {

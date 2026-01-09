@@ -19,6 +19,16 @@ export interface Particle {
 export type TrailPoint = { x: number; y: number; age: number; pastTarget?: boolean };
 export type GhostPoint = { x: number; y: number };
 
+// Ghost trail frame - stores snapshot of player state for echo/motion blur effect
+export interface GhostFrame {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  angle: number;
+  timestamp: number;
+}
+
 export interface Stats {
   totalThrows: number;
   successfulLandings: number;
@@ -78,6 +88,7 @@ export interface GameState {
   // Ghost trails
   bestTrail: GhostPoint[];
   runTrail: GhostPoint[];
+  ghostTrail: GhostFrame[];  // Echo figures during flight
   // Settings
   reduceFx: boolean;
   // Record zone camera
@@ -92,4 +103,6 @@ export interface GameState {
   // Hot streak (consecutive 419+ throws)
   hotStreak: number;
   bestHotStreak: number;
+  // Launch effects
+  launchFrame: number;  // Frames since last launch (for burst effect)
 }
