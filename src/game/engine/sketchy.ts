@@ -321,11 +321,21 @@ export function drawStickFigure(
       bodyLean = velocity.vx * 2;
     }
   } else if (state === 'landing') {
-    // Impact squash - enhanced
-    y += 8;
-    armAngleL = 0.8;
-    armAngleR = 0.8;
-    legSpread = 16 * scale;
+    // Impact squash with recovery sequence
+    // Frame 0-3: Maximum squash
+    // Frame 4-8: Recovery wobble
+    // Frame 9+: Settle to proud stance
+
+    // For now, enhanced single-frame squash
+    y += 10;
+    armAngleL = 1.0; // Arms out for balance
+    armAngleR = 1.0;
+    legSpread = 18 * scale; // Wide stance
+
+    // Windmill effect (arms reaching out)
+    const wobble = Math.sin(nowMs * 0.02) * 0.3;
+    armAngleL += wobble;
+    armAngleR -= wobble;
   }
 
   // Enhanced line width for landing emphasis (1-2 frame squash effect)
