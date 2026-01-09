@@ -281,27 +281,45 @@ export function drawStickFigure(
     armAngleL = Math.sin(nowMs / 800) * 0.1;
     armAngleR = -Math.sin(nowMs / 800) * 0.1;
   } else if (state === 'charging') {
-    // Crouching, arms back
-    bodyLean = -5;
-    armAngleL = -0.8 - angle * 0.01;
-    armAngleR = -0.6 - angle * 0.01;
-    legSpread = 12 * scale;
-    y += 5;
+    // Charging wind-up with anticipation
+    // Lean BACK first (opposite to launch direction)
+    bodyLean = -8 - chargePower * 12; // Lean back more at higher charge
+
+    // Arms pull behind body
+    armAngleL = -0.6 - chargePower * 0.6;
+    armAngleR = -0.4 - chargePower * 0.5;
+
+    // One leg steps back to brace
+    legSpread = 10 * scale + chargePower * 6;
+
+    // Lower center of gravity
+    y += 3 + chargePower * 8;
   } else if (state === 'flying') {
-    const rising = velocity.vy < 0;
-    if (rising) {
-      // Arms up, superman pose
-      armAngleL = -1.2;
-      armAngleR = -1.0;
-      legSpread = 4 * scale;
+    // Check if just launched (first ~100ms of flight)
+    const justLaunched = velocity.vy < -3 && Math.abs(velocity.vx) > 4;
+
+    if (justLaunched && velocity.vy < -2) {
+      // Release snap: everything whips forward
+      armAngleL = -1.5; // Arms thrust forward
+      armAngleR = -1.3;
+      legSpread = 3 * scale; // Legs together, trailing
+      bodyLean = velocity.vx * 1.5;
     } else {
-      // Falling, arms flailing
-      const flail = Math.sin(nowMs / 80) * 0.5;
-      armAngleL = 0.3 + flail;
-      armAngleR = 0.3 - flail;
-      legSpread = 10 * scale;
+      const rising = velocity.vy < 0;
+      if (rising) {
+        // Arms up, superman pose
+        armAngleL = -1.2;
+        armAngleR = -1.0;
+        legSpread = 4 * scale;
+      } else {
+        // Falling, arms flailing
+        const flail = Math.sin(nowMs / 80) * 0.5;
+        armAngleL = 0.3 + flail;
+        armAngleR = 0.3 - flail;
+        legSpread = 10 * scale;
+      }
+      bodyLean = velocity.vx * 2;
     }
-    bodyLean = velocity.vx * 2;
   } else if (state === 'landing') {
     // Impact squash - enhanced
     y += 8;
