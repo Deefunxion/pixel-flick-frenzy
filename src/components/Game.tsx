@@ -527,7 +527,7 @@ const Game = () => {
               border: `1px solid ${theme.accent3}`,
               color: theme.uiText,
               padding: '4px 8px',
-              minHeight: '28px', // Touch-friendly minimum
+              minHeight: '32px', // Touch-friendly minimum
             }
           : {
               // Flipbook: sticker label feel - rounded, paper-like
@@ -536,14 +536,14 @@ const Game = () => {
               color: theme.uiText,
               padding: '4px 10px',
               boxShadow: '1px 1px 0 rgba(0,0,0,0.1)',
-              minHeight: '28px', // Touch-friendly minimum
+              minHeight: '32px', // Touch-friendly minimum
             };
         const buttonClass = isNoir
-          ? 'rounded-sm focus-visible:outline-none focus-visible:ring-1'
-          : 'rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1';
+          ? 'rounded-sm focus-visible:outline-none focus-visible:ring-1 hover:opacity-80 active:opacity-70 transition-opacity'
+          : 'rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 hover:opacity-90 active:translate-y-px transition-all';
 
         return (
-          <div className="flex flex-wrap items-center justify-center gap-2 text-xs" style={{ color: theme.uiText }}>
+          <div className="w-full max-w-md flex flex-wrap items-center justify-center gap-2 text-xs" style={{ color: theme.uiText }}>
             <button
               className={buttonClass}
               style={buttonStyle}
