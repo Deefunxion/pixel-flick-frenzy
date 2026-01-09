@@ -129,6 +129,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.vy = -power * Math.sin(angleRad);
     state.initialSpeed = power;
     state.trail = [];
+    state.ghostTrail = []; // Clear ghost trail for new throw
     state.chargePower = 0;
     state.nudgeUsed = false;
 
@@ -167,6 +168,23 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
     const pastTarget = state.px >= state.zenoTarget;
     state.trail.push({ x: state.px, y: state.py, age: 0, pastTarget });
+
+    // Record ghost frame for trail (every 50ms during flight)
+    const lastGhostTimestamp = state.ghostTrail[state.ghostTrail.length - 1]?.timestamp ?? 0;
+    if (nowMs - lastGhostTimestamp > 50) {
+      state.ghostTrail.push({
+        x: state.px,
+        y: state.py,
+        vx: state.vx,
+        vy: state.vy,
+        angle: Math.atan2(-state.vy, state.vx),
+        timestamp: nowMs,
+      });
+      // Keep max 20 ghost frames
+      if (state.ghostTrail.length > 20) {
+        state.ghostTrail.shift();
+      }
+    }
 
     if (state.runTrail.length === 0 || state.runTrail.length % 2 === 0) {
       state.runTrail.push({ x: state.px, y: state.py });
