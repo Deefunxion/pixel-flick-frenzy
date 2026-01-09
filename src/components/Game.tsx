@@ -47,6 +47,7 @@ import { createInitialState, resetPhysics } from '@/game/engine/state';
 import { updateFrame, type GameAudio, type GameUI } from '@/game/engine/update';
 import type { GameState } from '@/game/engine/types';
 import { StatsOverlay } from './StatsOverlay';
+import { LeaderboardScreen } from './LeaderboardScreen';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 
 const Game = () => {
@@ -81,6 +82,7 @@ const Game = () => {
   const [newAchievement, setNewAchievement] = useState<string | null>(null);
   const [showMobileHint, setShowMobileHint] = useState(true);
   const [showStats, setShowStats] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [themeId, setThemeId] = useState<ThemeId>(() => {
     const stored = loadString('theme_id', DEFAULT_THEME_ID, 'omf_theme_id');
     // Validate stored value is a valid ThemeId
@@ -583,6 +585,17 @@ const Game = () => {
             >
               Stats
             </button>
+            <button
+              className={buttonClass}
+              style={{
+                ...buttonStyle,
+                borderColor: theme.highlight,
+              }}
+              onClick={() => setShowLeaderboard(true)}
+              aria-label="View leaderboard"
+            >
+              Leaderboard
+            </button>
           </div>
         );
       })()}
@@ -702,6 +715,11 @@ const Game = () => {
       {/* Stats overlay */}
       {showStats && (
         <StatsOverlay theme={theme} onClose={() => setShowStats(false)} />
+      )}
+
+      {/* Leaderboard screen */}
+      {showLeaderboard && (
+        <LeaderboardScreen theme={theme} onClose={() => setShowLeaderboard(false)} />
       )}
 
       {/* Onboarding modal for first-time users */}
