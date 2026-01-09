@@ -353,6 +353,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       playerState,
       state.angle,
       { vx: state.vx, vy: state.vy },
+      state.chargePower,
     );
   }
 
@@ -846,7 +847,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   if (state.failureAnimating && state.failureType && (state.failureType === 'tumble' || state.failureType === 'dive')) {
     drawFailingStickFigure(ctx, state.px, state.py, playerColor, nowMs, state.failureType, state.failureFrame);
   } else {
-    drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy });
+    drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
   }
 
   // Impact burst on landing (noir style)

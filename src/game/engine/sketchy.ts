@@ -231,7 +231,34 @@ export function drawStickFigure(
   state: 'idle' | 'charging' | 'flying' | 'landing' = 'idle',
   angle: number = 0,
   velocity: { vx: number; vy: number } = { vx: 0, vy: 0 },
+  chargePower: number = 0,  // 0-1 charge amount for squash
 ) {
+  // Squash & Stretch calculations
+  let scaleX = 1;
+  let scaleY = 1;
+
+  if (state === 'charging') {
+    // Charging SQUASH: compress vertically, expand horizontally
+    const squashAmount = chargePower * 0.3; // Max 30% squash
+    scaleX = 1 + squashAmount * 0.43; // ~130% width at full charge
+    scaleY = 1 - squashAmount; // ~70% height at full charge
+  } else if (state === 'flying') {
+    // Flying STRETCH: elongate in velocity direction
+    const speed = Math.sqrt(velocity.vx ** 2 + velocity.vy ** 2);
+    const stretchAmount = Math.min(0.3, speed * 0.02);
+    scaleX = 1 - stretchAmount * 0.3;
+    scaleY = 1 + stretchAmount;
+  } else if (state === 'landing') {
+    // Landing SQUASH: impact compression
+    scaleX = 1.3;
+    scaleY = 0.7;
+  }
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scaleX, scaleY);
+  ctx.translate(-x, -y);
+
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = 2.5;
@@ -358,6 +385,8 @@ export function drawStickFigure(
   ctx.moveTo(x + bodyLean, bodyBottomY);
   ctx.lineTo(x + bodyLean + legSpread, y);
   ctx.stroke();
+
+  ctx.restore();
 }
 
 // Draw a failing/falling stick figure
