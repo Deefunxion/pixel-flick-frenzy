@@ -51,13 +51,25 @@ export function NicknameModal({ theme, onComplete }: NicknameModalProps) {
       setIsChecking(false);
       setIsSubmitting(true);
 
-      // Create user (uses transaction for race-safe reservation)
-      const profile = await createAnonymousUser(nickname);
+      // Create user with timeout (uses transaction for race-safe reservation)
+      const timeoutPromise = new Promise<null>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out. Please try again.')), 15000);
+      });
+
+      const profile = await Promise.race([
+        createAnonymousUser(nickname),
+        timeoutPromise,
+      ]);
+
       if (profile) {
         onComplete(profile);
+      } else {
+        setError('Failed to create profile. Please try again.');
+        setIsSubmitting(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      console.error('Nickname creation error:', err);
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
       setIsSubmitting(false);
       setIsChecking(false);
     }
