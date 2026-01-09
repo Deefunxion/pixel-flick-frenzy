@@ -543,41 +543,8 @@ const Game = () => {
           : 'rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 hover:opacity-90 active:translate-y-px transition-all';
 
         return (
-          <div className="w-full max-w-md flex flex-wrap items-center justify-center gap-2 text-xs" style={{ color: theme.uiText }}>
-            <button
-              className={buttonClass}
-              style={buttonStyle}
-              onClick={async () => {
-                ensureAudioContext(audioRefs.current);
-                await resumeIfSuspended(audioRefs.current);
-                setAudioSettings((s) => ({ ...s, muted: !s.muted }));
-              }}
-              aria-label="Toggle mute"
-            >
-              {audioSettings.muted ? 'Muted' : 'Sound'}
-            </button>
-            <label className="flex items-center gap-1" aria-label="Volume">
-              <span style={{ opacity: 0.7 }}>Vol</span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={Math.round(audioSettings.volume * 100)}
-                onChange={(e) => setAudioSettings((s) => ({ ...s, volume: Number(e.target.value) / 100 }))}
-                style={{
-                  width: isNoir ? '50px' : '60px',
-                  accentColor: isNoir ? theme.accent2 : theme.accent1
-                }}
-              />
-            </label>
-            <button
-              className={buttonClass}
-              style={buttonStyle}
-              onClick={() => setReduceFx((v) => !v)}
-              aria-label="Toggle reduce effects"
-            >
-              {reduceFx ? 'FX: Low' : 'FX: On'}
-            </button>
+          <div className="w-full max-w-md flex items-center justify-between gap-2 text-xs px-2" style={{ color: theme.uiText }}>
+            {/* Left: Theme picker */}
             <button
               className={buttonClass}
               style={{
@@ -593,14 +560,8 @@ const Game = () => {
             >
               {isNoir ? 'Noir' : 'Flipbook'}
             </button>
-            <button
-              className={buttonClass}
-              style={buttonStyle}
-              onClick={() => setShowStats(true)}
-              aria-label="View stats"
-            >
-              Stats
-            </button>
+
+            {/* Center: Leaderboard */}
             <button
               className={buttonClass}
               style={{
@@ -612,15 +573,55 @@ const Game = () => {
             >
               Leaderboard
             </button>
+
+            {/* Right: Stats + Sound */}
+            <div className="flex items-center gap-2">
+              <button
+                className={buttonClass}
+                style={buttonStyle}
+                onClick={() => setShowStats(true)}
+                aria-label="View stats"
+              >
+                Stats
+              </button>
+              <button
+                className={buttonClass}
+                style={buttonStyle}
+                onClick={async () => {
+                  ensureAudioContext(audioRefs.current);
+                  await resumeIfSuspended(audioRefs.current);
+                  setAudioSettings((s) => ({ ...s, muted: !s.muted }));
+                }}
+                aria-label="Toggle sound"
+              >
+                {audioSettings.muted ? '🔇' : '🔊'}
+              </button>
+            </div>
           </div>
         );
       })()}
 
-      {/* Hero row: SCORE, LV, TARGET - primary focus */}
+      {/* Hero row: LAST, LV, TARGET - primary focus */}
       <div className="w-full max-w-md flex justify-center items-end gap-6 text-center">
         <div>
-          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Score</p>
-          <p className="text-2xl font-bold font-mono" style={{ color: theme.accent4 }}>{Math.floor(totalScore).toLocaleString()}</p>
+          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Last</p>
+          <p className="text-2xl font-bold font-mono">
+            {fellOff ? (
+              <span style={{ color: theme.danger }}>FELL</span>
+            ) : lastDist !== null ? (
+              <span style={{ color: theme.accent1 }}>
+                {formatScore(lastDist).int}<span className="text-sm opacity-60">.{formatScore(lastDist).dec}</span>
+                {perfectLanding && <span style={{ color: theme.highlight }}> ★</span>}
+              </span>
+            ) : (
+              <span style={{ color: theme.uiText, opacity: 0.4 }}>-</span>
+            )}
+          </p>
+          {lastDist !== null && !fellOff && (
+            <p className="text-xs font-mono" style={{ color: theme.accent2, opacity: 0.8 }}>
+              x{lastMultiplier.toFixed(1)}
+            </p>
+          )}
         </div>
         <div>
           <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Lv</p>
@@ -634,27 +635,11 @@ const Game = () => {
         </div>
       </div>
 
-      {/* Secondary row: LAST, BEST */}
+      {/* Secondary row: SCORE, BEST */}
       <div className="w-full max-w-md flex justify-center gap-6 text-center">
         <div>
-          <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Last</p>
-          <p className="text-base font-bold font-mono">
-            {fellOff ? (
-              <span style={{ color: theme.danger }}>FELL</span>
-            ) : lastDist !== null ? (
-              <span style={{ color: theme.accent1 }}>
-                {formatScore(lastDist).int}<span className="text-xs opacity-60">.{formatScore(lastDist).dec}</span>
-                {perfectLanding && <span style={{ color: theme.highlight }}> ★</span>}
-              </span>
-            ) : (
-              <span style={{ color: theme.uiText, opacity: 0.4 }}>-</span>
-            )}
-          </p>
-          {lastDist !== null && !fellOff && (
-            <p className="text-xs font-mono" style={{ color: theme.accent2, opacity: 0.8 }}>
-              x{lastMultiplier.toFixed(1)}
-            </p>
-          )}
+          <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Score</p>
+          <p className="text-base font-bold font-mono" style={{ color: theme.accent4 }}>{Math.floor(totalScore).toLocaleString()}</p>
         </div>
         <div>
           <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Best</p>
