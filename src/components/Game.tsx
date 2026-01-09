@@ -435,14 +435,18 @@ const Game = () => {
             height={H}
             className="game-canvas cursor-pointer touch-none select-none"
             style={{
-              boxShadow: '2px 3px 8px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.05)',
-              border: '2px solid #374151',
-              borderRadius: '2px',
+              boxShadow: themeId === 'noir'
+                ? '0 2px 8px rgba(0,0,0,0.4)'
+                : '2px 3px 8px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.05)',
+              border: themeId === 'noir'
+                ? `1.5px solid ${theme.accent3}`  // Noir: thin, stark contrast
+                : `2.5px solid ${theme.accent3}`, // Flipbook: thicker, warmer
+              borderRadius: themeId === 'noir' ? '1px' : '3px',
               width: isMobileRef.current ? 'min(calc(100vw - 0.5rem), 520px)' : 'min(calc(100vw - 1rem), 480px)',
               height: 'auto',
               aspectRatio: `${W} / ${H}`,
               imageRendering: 'pixelated',
-              // @ts-ignore - vendor prefixes for cross-browser crisp rendering
+              // @ts-expect-error - vendor prefixes for cross-browser crisp rendering
               WebkitImageRendering: 'pixelated',
               MozImageRendering: 'crisp-edges',
               msInterpolationMode: 'nearest-neighbor',

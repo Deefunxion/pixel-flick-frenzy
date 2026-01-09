@@ -13,7 +13,7 @@ export type AudioRefs = {
 
 export function ensureAudioContext(refs: AudioRefs): AudioContext {
   if (!refs.ctx) {
-    refs.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    refs.ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
   }
   return refs.ctx;
 }
@@ -133,7 +133,7 @@ export function playImpact(refs: AudioRefs, settings: AudioSettings, intensity01
 
 export function stopChargeTone(refs: AudioRefs) {
   if (refs.chargeOsc) {
-    try { refs.chargeOsc.stop(); } catch {}
+    try { refs.chargeOsc.stop(); } catch { /* oscillator already stopped */ }
     refs.chargeOsc = null;
   }
   refs.chargeGain = null;
@@ -171,7 +171,7 @@ export function updateChargeTone(refs: AudioRefs, settings: AudioSettings, charg
 
 export function stopEdgeWarning(refs: AudioRefs) {
   if (refs.edgeOsc) {
-    try { refs.edgeOsc.stop(); } catch {}
+    try { refs.edgeOsc.stop(); } catch { /* oscillator already stopped */ }
     refs.edgeOsc = null;
   }
   refs.edgeGain = null;

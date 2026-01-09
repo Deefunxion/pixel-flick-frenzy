@@ -805,10 +805,10 @@ export function drawSpiralHoles(
   const holeRadius = 5;
 
   ctx.strokeStyle = color;
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = LINE_WEIGHTS.secondary;
 
   for (let y = holeSpacing; y < height - holeSpacing; y += holeSpacing) {
-    drawHandCircle(ctx, holeX, y, holeRadius, color, 1.5, nowMs, false);
+    drawHandCircle(ctx, holeX, y, holeRadius, color, LINE_WEIGHTS.secondary, nowMs, false);
   }
 }
 

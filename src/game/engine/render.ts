@@ -18,6 +18,7 @@ import {
   drawLayeredHandLine,
   drawLayeredHandCircle,
   drawImpactBurst,
+  drawInkSplatter,
   LINE_WEIGHTS,
 } from './sketchy';
 
@@ -82,10 +83,23 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   }
 
 
-  // Cliff edge - jagged hand-drawn line going down
+  // Cliff edge - jagged hand-drawn line going down (layered for consistency)
   const edgeX = CLIFF_EDGE;
+  // Layer 2: faint graphite shadow
+  ctx.strokeStyle = COLORS.accent3;
+  ctx.lineWidth = LINE_WEIGHTS.secondary;
+  ctx.globalAlpha = 0.3;
+  ctx.beginPath();
+  ctx.moveTo(edgeX + 1, groundY + 1);
+  ctx.lineTo(edgeX + 4, groundY + 9);
+  ctx.lineTo(edgeX - 1, groundY + 17);
+  ctx.lineTo(edgeX + 5, groundY + 25);
+  ctx.lineTo(edgeX + 1, H);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  // Layer 1: primary ink
   ctx.strokeStyle = COLORS.player;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = LINE_WEIGHTS.primary;
   ctx.beginPath();
   ctx.moveTo(edgeX, groundY);
   ctx.lineTo(edgeX + 3, groundY + 8);
@@ -94,16 +108,13 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   ctx.lineTo(edgeX, H);
   ctx.stroke();
 
-  // Danger zone warning - hand-drawn exclamation
+  // Danger zone warning - hand-drawn exclamation (layered)
   const blink = Math.floor(nowMs / 400) % 2;
   if (blink) {
-    ctx.strokeStyle = COLORS.danger;
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(edgeX - 8, groundY - 30);
-    ctx.lineTo(edgeX - 8, groundY - 15);
-    ctx.stroke();
-    drawHandCircle(ctx, edgeX - 8, groundY - 8, 2, COLORS.danger, 2, nowMs, true);
+    // Exclamation line with layered effect
+    drawLayeredHandLine(ctx, edgeX - 8, groundY - 30, edgeX - 8, groundY - 15, COLORS.danger, nowMs, 2);
+    // Dot at bottom
+    drawLayeredHandCircle(ctx, edgeX - 8, groundY - 8, 2, COLORS.danger, nowMs, 2, true);
   }
 
   // Best marker - checkered flag
@@ -112,14 +123,14 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     drawCheckeredFlag(ctx, flagX, groundY, 18, 14, COLORS.accent2, 1.5, nowMs);
   }
 
-  // Zeno target marker - hand-drawn star with line
+  // Zeno target marker - hand-drawn star with line (consistent LINE_WEIGHTS)
   if (state.zenoTarget > 0 && state.zenoTarget <= CLIFF_EDGE) {
     const targetX = Math.floor(state.zenoTarget);
     const pulse = Math.sin(nowMs / 300) * 2;
 
-    // Vertical dashed line to ground
+    // Vertical dashed line to ground (secondary weight)
     ctx.strokeStyle = COLORS.highlight;
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = LINE_WEIGHTS.secondary;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
     ctx.moveTo(targetX, groundY);
@@ -127,10 +138,26 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Star shape
+    // Star shape with layered effect
     const starY = groundY - 42 + pulse;
+    // Layer 2: faint offset
     ctx.strokeStyle = COLORS.highlight;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = LINE_WEIGHTS.shadow;
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const angle = (i * 144 - 90) * Math.PI / 180;
+      const r = 8;
+      const px = targetX + Math.cos(angle) * r + 0.5;
+      const py = starY + Math.sin(angle) * r + 0.5;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    // Layer 1: primary stroke
+    ctx.lineWidth = LINE_WEIGHTS.primary;
     ctx.beginPath();
     for (let i = 0; i < 5; i++) {
       const angle = (i * 144 - 90) * Math.PI / 180;
@@ -731,21 +758,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
 
       // Occasional ink splatter (every ~5th point, when fresh)
       if (i % 5 === 0 && tr.age < 10) {
-        const splatCount = 2 + Math.floor(Math.sin(i * 0.7) * 1.5);
-        for (let s = 0; s < splatCount; s++) {
-          const splatAngle = (s / splatCount) * Math.PI * 2 + i * 0.3;
-          const splatDist = 2 + Math.sin(s * 2.1) * 1.5;
-          const splatSize = 0.5 + Math.cos(s * 1.3) * 0.3;
-
-          ctx.beginPath();
-          ctx.arc(
-            tr.x + Math.cos(splatAngle) * splatDist,
-            tr.y + Math.sin(splatAngle) * splatDist,
-            Math.max(0.3, splatSize),
-            0, Math.PI * 2
-          );
-          ctx.fill();
-        }
+        drawInkSplatter(ctx, tr.x, tr.y, ctx.fillStyle as string, 1.5, nowMs + i);
       }
 
       // Elongated smear in velocity direction (for faster points)
