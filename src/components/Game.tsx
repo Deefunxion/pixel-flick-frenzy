@@ -561,7 +561,10 @@ const Game = () => {
                 max={100}
                 value={Math.round(audioSettings.volume * 100)}
                 onChange={(e) => setAudioSettings((s) => ({ ...s, volume: Number(e.target.value) / 100 }))}
-                style={{ width: isNoir ? '50px' : '60px' }}
+                style={{
+                  width: isNoir ? '50px' : '60px',
+                  accentColor: isNoir ? theme.accent2 : theme.accent1
+                }}
               />
             </label>
             <button
