@@ -81,6 +81,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     paused: false,
     bestTrail: loadJson('best_trail', [], 'omf_best_trail'),
     runTrail: [],
+    ghostTrail: [],
     reduceFx: params.reduceFx,
     recordZoneActive: false,
     recordZoneIntensity: 0,
