@@ -31,6 +31,7 @@ import {
   drawDetailedCloud,
   drawDecorativeCurl,
   drawCrossHatch,
+  drawStyledTrajectory,
   LINE_WEIGHTS,
 } from './sketchy';
 import { renderParticles } from './particles';
@@ -463,19 +464,9 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
         if (py > groundY || px > W) break;
       }
 
-      // Draw dashed preview arc
-      ctx.strokeStyle = COLORS.accent3;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 4]);
+      // Draw styled preview arc
       ctx.globalAlpha = 0.5 + state.chargePower * 0.3;
-      ctx.beginPath();
-      for (let i = 0; i < previewPoints.length; i++) {
-        const p = previewPoints[i];
-        if (i === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-      }
-      ctx.stroke();
-      ctx.setLineDash([]);
+      drawStyledTrajectory(ctx, previewPoints, COLORS.accent3, nowMs, 'flipbook');
       ctx.globalAlpha = 1;
     }
   }
@@ -1009,19 +1000,9 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
         if (py > groundY || px > W) break;
       }
 
-      // Draw dashed preview arc (noir style - visible)
-      ctx.strokeStyle = COLORS.player;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 4]);
+      // Draw styled preview arc (noir style)
       ctx.globalAlpha = 0.6 + state.chargePower * 0.3;
-      ctx.beginPath();
-      for (let i = 0; i < previewPoints.length; i++) {
-        const p = previewPoints[i];
-        if (i === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-      }
-      ctx.stroke();
-      ctx.setLineDash([]);
+      drawStyledTrajectory(ctx, previewPoints, COLORS.player, nowMs, 'noir');
       ctx.globalAlpha = 1;
     }
   }
