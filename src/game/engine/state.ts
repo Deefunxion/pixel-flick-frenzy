@@ -73,6 +73,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     lastMultiplier: 1,
     perfectLanding: false,
     totalScore: loadNumber('total_score', 0, 'omf_total_score'),
+    totalFalls: loadNumber('total_falls', 0, 'omf_total_falls'),
     stats: loadJson('stats', { totalThrows: 0, successfulLandings: 0, totalDistance: 0, perfectLandings: 0, maxMultiplier: 1 }, 'omf_stats'),
     achievements: loadStringSet('achievements', 'omf_achievements'),
     newAchievement: null,

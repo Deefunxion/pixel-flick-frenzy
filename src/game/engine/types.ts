@@ -77,6 +77,7 @@ export interface GameState {
   lastMultiplier: number;
   perfectLanding: boolean;
   totalScore: number;
+  totalFalls: number;
   // Meta Progression
   stats: Stats;
   achievements: Set<string>;

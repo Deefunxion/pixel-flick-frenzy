@@ -51,5 +51,17 @@ service cloud.firestore {
         // Score can only increase
         && request.resource.data.score > resource.data.score;
     }
+
+    match /leaderboard_falls/{uid} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.score <= 1000000
+        && request.resource.data.score >= 0;
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.score <= 1000000
+        && request.resource.data.score >= 0
+        // Falls can only increase
+        && request.resource.data.score > resource.data.score;
+    }
   }
 }

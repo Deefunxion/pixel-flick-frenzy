@@ -58,6 +58,7 @@ export type GameUI = {
   setDailyChallenge: (v: DailyChallenge) => void;
   setHotStreak: (current: number, best: number) => void;
   onNewPersonalBest?: (totalScore: number, bestThrow: number) => void;
+  onFall?: (totalFalls: number) => void;
 };
 
 export type GameServices = {
@@ -361,6 +362,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
         ui.setLastMultiplier(0);
         ui.setPerfectLanding(false);
 
+        // Increment and sync total falls
+        state.totalFalls++;
+        saveNumber('total_falls', state.totalFalls);
+        ui.onFall?.(state.totalFalls);
+
         // Trigger comedic failure
         state.failureAnimating = true;
         state.failureFrame = 0;
@@ -514,6 +520,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.fellOff = true;
       state.dist = 0;
       ui.setFellOff(true);
+
+      // Increment and sync total falls
+      state.totalFalls++;
+      saveNumber('total_falls', state.totalFalls);
+      ui.onFall?.(state.totalFalls);
 
       // Comedic failure
       state.failureAnimating = true;

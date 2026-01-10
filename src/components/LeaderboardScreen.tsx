@@ -89,6 +89,16 @@ export function LeaderboardScreen({ theme, onClose }: LeaderboardScreenProps) {
           >
             Best Throw
           </button>
+          <button
+            className="flex-1 py-2 text-sm font-bold transition-colors"
+            style={{
+              background: activeTab === 'mostFalls' ? theme.accent1 : 'transparent',
+              color: activeTab === 'mostFalls' ? theme.background : theme.uiText,
+            }}
+            onClick={() => handleTabChange('mostFalls')}
+          >
+            Most Falls
+          </button>
         </div>
 
         {/* Your Rank */}
@@ -160,7 +170,7 @@ export function LeaderboardScreen({ theme, onClose }: LeaderboardScreenProps) {
                       className="font-mono font-bold"
                       style={{ color: theme.accent1 }}
                     >
-                      {activeTab === 'totalScore'
+                      {activeTab === 'totalScore' || activeTab === 'mostFalls'
                         ? entry.score.toLocaleString()
                         : entry.score.toFixed(4)
                       }

@@ -22,12 +22,12 @@ export type LeaderboardEntry = {
   updatedAt: Timestamp;
 };
 
-export type LeaderboardType = 'totalScore' | 'bestThrow';
+export type LeaderboardType = 'totalScore' | 'bestThrow' | 'mostFalls';
 
 // Get top 100 for a leaderboard (with tie-breaker ordering)
 export async function getLeaderboard(type: LeaderboardType): Promise<LeaderboardEntry[]> {
   try {
-    const collectionName = type === 'totalScore' ? 'leaderboard_total' : 'leaderboard_throw';
+    const collectionName = type === 'totalScore' ? 'leaderboard_total' : type === 'bestThrow' ? 'leaderboard_throw' : 'leaderboard_falls';
     const q = query(
       collection(db, collectionName),
       orderBy('score', 'desc'),
@@ -46,7 +46,7 @@ export async function getLeaderboard(type: LeaderboardType): Promise<Leaderboard
 // Get user's rank in a leaderboard (efficient count query)
 export async function getUserRank(type: LeaderboardType, userId: string): Promise<number | null> {
   try {
-    const collectionName = type === 'totalScore' ? 'leaderboard_total' : 'leaderboard_throw';
+    const collectionName = type === 'totalScore' ? 'leaderboard_total' : type === 'bestThrow' ? 'leaderboard_throw' : 'leaderboard_falls';
     const userDoc = await getDoc(doc(db, collectionName, userId));
 
     if (!userDoc.exists()) return null;
@@ -75,7 +75,7 @@ export async function updateLeaderboardScore(
   newScore: number
 ): Promise<boolean> {
   try {
-    const collectionName = type === 'totalScore' ? 'leaderboard_total' : 'leaderboard_throw';
+    const collectionName = type === 'totalScore' ? 'leaderboard_total' : type === 'bestThrow' ? 'leaderboard_throw' : 'leaderboard_falls';
     const docRef = doc(db, collectionName, userId);
     const existingDoc = await getDoc(docRef);
 
@@ -108,7 +108,7 @@ export async function getUserLeaderboardEntry(
   userId: string
 ): Promise<LeaderboardEntry | null> {
   try {
-    const collectionName = type === 'totalScore' ? 'leaderboard_total' : 'leaderboard_throw';
+    const collectionName = type === 'totalScore' ? 'leaderboard_total' : type === 'bestThrow' ? 'leaderboard_throw' : 'leaderboard_falls';
     const docRef = doc(db, collectionName, userId);
     const docSnap = await getDoc(docRef);
 

@@ -1,7 +1,7 @@
 // src/firebase/scoreSync.ts
-import { doc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './config';
-import { updateLeaderboardScore } from './leaderboard';
+import { updateLeaderboardScore, type LeaderboardEntry } from './leaderboard';
 
 export async function syncScoreToFirebase(
   userId: string,
@@ -44,5 +44,33 @@ export async function syncScoreToFirebase(
   } catch (error) {
     console.error('Error syncing score to Firebase:', error);
     return results;
+  }
+}
+
+export async function syncFallsToFirebase(
+  userId: string,
+  nickname: string,
+  totalFalls: number
+): Promise<boolean> {
+  try {
+    // Update user profile
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+
+    if (userDoc.exists()) {
+      const currentData = userDoc.data();
+      if (totalFalls > (currentData.totalFalls || 0)) {
+        await updateDoc(userRef, {
+          totalFalls,
+          updatedAt: serverTimestamp(),
+        });
+      }
+    }
+
+    // Update leaderboard (only on new record)
+    return await updateLeaderboardScore('mostFalls', userId, nickname, totalFalls);
+  } catch (error) {
+    console.error('Error syncing falls to Firebase:', error);
+    return false;
   }
 }
