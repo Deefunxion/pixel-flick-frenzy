@@ -27,6 +27,21 @@ export const LINE_WEIGHTS = {
   shadow: 1.0,       // Faint pencil shadow offset
 };
 
+// Character scale - controls overall character size
+export const CHARACTER_SCALE = {
+  normal: 2.5,    // 3x larger than original 0.85
+  ghost: 1.8,     // Ghost trail figures
+  mini: 1.2,      // Small UI previews
+};
+
+// Line widths for scaled characters
+export const SCALED_LINE_WEIGHTS = {
+  body: 6,        // Main body strokes
+  limbs: 5,       // Arms, legs
+  details: 4,     // Fingers, face
+  effects: 3,     // Energy spirals, etc.
+};
+
 // Draw a layered hand-drawn line with primary ink + faint graphite + shadow offset
 export function drawLayeredHandLine(
   ctx: CanvasRenderingContext2D,
