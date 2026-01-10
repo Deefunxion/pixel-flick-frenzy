@@ -56,6 +56,7 @@ import { FIREBASE_ENABLED } from '@/firebase/flags';
 
 const Game = () => {
   const { firebaseUser, profile, isLoading, needsOnboarding, completeOnboarding } = useUser();
+  console.log('[Game] Render, isLoading:', isLoading, 'needsOnboarding:', needsOnboarding);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputPadRef = useRef<HTMLDivElement>(null);
@@ -221,17 +222,28 @@ const Game = () => {
   );
 
   useEffect(() => {
+    console.log('[Game] useEffect running');
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      console.log('[Game] No canvas ref');
+      return;
+    }
 
     const inputPad = inputPadRef.current;
-    if (!inputPad) return;
+    if (!inputPad) {
+      console.log('[Game] No inputPad ref');
+      return;
+    }
 
     const extraInputPad = extraInputPadRef.current; // May be null, that's ok
 
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      console.log('[Game] No canvas context');
+      return;
+    }
 
+    console.log('[Game] Canvas ready, initializing state');
     ctx.imageSmoothingEnabled = false;
     stateRef.current = initState();
 
@@ -417,22 +429,28 @@ const Game = () => {
       extraInputPad.addEventListener('pointercancel', handlePointerCancel);
     }
 
+    console.log('[Game] Starting game loop, state:', !!stateRef.current, 'ctx:', !!ctx);
+
     const loop = () => {
       const state = stateRef.current;
       if (state) {
-        const now = performance.now();
-        const currentTheme = themeRef.current;
-        updateFrame(state, {
-          theme: currentTheme,
-          nowMs: now,
-          pressed: pressedRef.current,
-          audio,
-          ui,
-          triggerHaptic,
-          scheduleReset,
-          getDailyStats: () => dailyStatsRef.current,
-        });
-        renderFrame(ctx, state, currentTheme, now);
+        try {
+          const now = performance.now();
+          const currentTheme = themeRef.current;
+          updateFrame(state, {
+            theme: currentTheme,
+            nowMs: now,
+            pressed: pressedRef.current,
+            audio,
+            ui,
+            triggerHaptic,
+            scheduleReset,
+            getDailyStats: () => dailyStatsRef.current,
+          });
+          renderFrame(ctx, state, currentTheme, now);
+        } catch (err) {
+          console.error('[Game] Loop error:', err);
+        }
       }
       animFrameRef.current = requestAnimationFrame(loop);
     };
@@ -458,7 +476,7 @@ const Game = () => {
       stopChargeTone(audioRefs.current);
       stopEdgeWarning(audioRefs.current);
     };
-  }, [initState, playZenoJingle, triggerHaptic, handleNewPersonalBest]);
+  }, [initState, playZenoJingle, triggerHaptic, handleNewPersonalBest, isLoading]);
 
   const theme = getTheme(themeId);
 
