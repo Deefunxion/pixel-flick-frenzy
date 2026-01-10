@@ -119,7 +119,7 @@ Based on the branding implementation plan, we will create a suite of promotional
 ### Core Messages
 1. **"One More Flick"** - The addictive loop
 2. **"Zeno's Paradox as a Game"** - The philosophical hook
-3. **"145 is Forever Unreachable"** - The core challenge
+3. **"420 is Forever Unreachable"** - The core challenge
 4. **"Two Themes. Infinite Tries."** - The variety
 
 ### Tone of Voice

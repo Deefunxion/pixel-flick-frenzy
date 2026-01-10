@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- X mark with slight wobble -->
+  <path d="M 12 12 Q 24 23, 36 36"
+        stroke="#1a4a7a" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 36 12 Q 24 23, 12 36"
+        stroke="#1a4a7a" stroke-width="3" stroke-linecap="round"/>
+</svg>
