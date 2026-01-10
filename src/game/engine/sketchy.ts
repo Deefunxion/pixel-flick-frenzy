@@ -261,11 +261,11 @@ export function drawStickFigure(
 
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = 4;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  const scale = 0.5;
+  const scale = 0.85;
   const headRadius = 8 * scale;
 
   // Animation offsets based on state
@@ -341,7 +341,7 @@ export function drawStickFigure(
   // Enhanced line width for landing emphasis (1-2 frame squash effect)
   const isLanding = state === 'landing';
   const landingEmphasis = isLanding ? 1.3 : 1.0;
-  ctx.lineWidth = 2.5 * landingEmphasis;
+  ctx.lineWidth = 4 * landingEmphasis;
 
   // Micro-offset for landing impact feel
   const impactOffset = isLanding ? Math.sin(nowMs * 0.5) * 0.5 : 0;
@@ -428,7 +428,7 @@ export function drawFailingStickFigure(
   frame: number,
 ) {
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = 4;
   ctx.lineCap = 'round';
 
   const spin = (frame * 0.3) % (Math.PI * 2);
@@ -1401,8 +1401,8 @@ export function drawZenoCoil(
   chargePower: number, // 0-1
   themeKind: 'flipbook' | 'noir' = 'flipbook',
 ) {
-  const scale = 0.5;
-  const lineWidth = themeKind === 'flipbook' ? 2.5 : 2;
+  const scale = 0.85;
+  const lineWidth = themeKind === 'flipbook' ? 4 : 3;
 
   // Squash effect - compress vertically, expand horizontally
   const squashAmount = chargePower * 0.3;
@@ -1554,8 +1554,8 @@ export function drawZenoBolt(
   velocity: { vx: number; vy: number },
   themeKind: 'flipbook' | 'noir' = 'flipbook',
 ) {
-  const scale = 0.5;
-  const lineWidth = themeKind === 'flipbook' ? 2.5 : 2;
+  const scale = 0.85;
+  const lineWidth = themeKind === 'flipbook' ? 4 : 3;
   const speed = Math.sqrt(velocity.vx ** 2 + velocity.vy ** 2);
 
   // Determine flight phase
@@ -1818,8 +1818,8 @@ export function drawZenoImpact(
   landingFrame: number,
   themeKind: 'flipbook' | 'noir' = 'flipbook',
 ) {
-  const scale = 0.5;
-  const lineWidth = themeKind === 'flipbook' ? 2.5 : 2;
+  const scale = 0.85;
+  const lineWidth = themeKind === 'flipbook' ? 4 : 3;
 
   // Impact squash - maximum at frame 0, recovers over time
   const impactProgress = Math.min(1, landingFrame / 10);
