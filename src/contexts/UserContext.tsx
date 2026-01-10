@@ -28,7 +28,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function init() {
+      console.log('[UserContext] init, FIREBASE_ENABLED:', FIREBASE_ENABLED);
       if (!FIREBASE_ENABLED) {
+        console.log('[UserContext] Firebase disabled, skipping auth');
         setFirebaseUser(null);
         setProfile(null);
         // In offline builds we don't show onboarding / nickname UI.

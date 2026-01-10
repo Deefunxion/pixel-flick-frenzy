@@ -120,7 +120,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
     audio.updateCharge(dt);
 
     // Emit charging swirls every 4 frames
-    if (Math.floor(nowMs / 64) % 4 === 0) {
+    if (Math.floor(nowMs / 64) % 4 === 0 && state.particleSystem) {
       state.particleSystem.emitChargingSwirls(state.px, state.py, dt, theme.accent1);
     }
   }
@@ -141,7 +141,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.launchFrame = 0; // Reset launch frame for burst effect
 
     // Emit launch sparks
-    state.particleSystem.emitLaunchSparks(state.px, state.py, theme.accent3);
+    if (state.particleSystem) {
+      state.particleSystem.emitLaunchSparks(state.px, state.py, theme.accent3);
+    }
 
     audio.stopCharge();
     audio.whoosh();
@@ -215,9 +217,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
       spawnParticles(state, state.px, state.py, particleCount, 1.5 + impactVelocity * 0.3, theme.accent4);
 
       // New particle system landing effects
-      state.particleSystem.emitLandingDust(state.px, state.py, theme.accent3);
-      state.particleSystem.emitImpactDebris(state.px, state.py, theme.accent3);
-      state.particleSystem.emitGroundCracks(state.px, state.py, theme.accent3);
+      if (state.particleSystem) {
+        state.particleSystem.emitLandingDust(state.px, state.py, theme.accent3);
+        state.particleSystem.emitImpactDebris(state.px, state.py, theme.accent3);
+        state.particleSystem.emitGroundCracks(state.px, state.py, theme.accent3);
+      }
 
       state.vx *= 0.55;
       state.vy = 0;
@@ -240,7 +244,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
   });
 
   // New particle system update
-  state.particleSystem.update(1);
+  if (state.particleSystem) {
+    state.particleSystem.update(1);
+  }
 
   // Failure animation update
   if (state.failureAnimating) {

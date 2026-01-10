@@ -130,7 +130,9 @@ export function resetPhysics(state: GameState) {
   state.failureFrame = 0;
   state.failureType = null;
   state.launchFrame = 0;
-  state.particleSystem.clear();
+  if (state.particleSystem) {
+    state.particleSystem.clear();
+  }
 }
 
 export function nextWind(state: GameState) {

@@ -160,6 +160,11 @@ export async function linkGoogleAccount(): Promise<boolean> {
 
 // Subscribe to auth state changes
 export function subscribeToAuthState(callback: (user: User | null) => void) {
+  if (!auth) {
+    // Firebase disabled (itch build) - call with null user immediately
+    callback(null);
+    return () => {}; // No-op unsubscribe
+  }
   return onAuthStateChanged(auth, callback);
 }
 
