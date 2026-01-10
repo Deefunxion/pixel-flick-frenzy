@@ -1,3 +1,5 @@
+import type { ParticleSystem } from './particles';
+
 export interface Star {
   x: number;
   y: number;
@@ -106,4 +108,6 @@ export interface GameState {
   bestHotStreak: number;
   // Launch effects
   launchFrame: number;  // Frames since last launch (for burst effect)
+  // New particle system
+  particleSystem: ParticleSystem;
 }
