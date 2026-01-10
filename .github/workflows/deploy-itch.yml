@@ -1,0 +1,37 @@
+name: Deploy to itch.io
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for itch.io
+        run: npm run build:itch
+
+      - name: Deploy to itch.io
+        uses: robpc/itchio-upload-action@v1
+        with:
+          path: dist
+          project: deefunxion/zeno
+          channel: html5
+          api-key: ${{ secrets.BUTLER_API_KEY }}

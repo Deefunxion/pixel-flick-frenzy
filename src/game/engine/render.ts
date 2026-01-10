@@ -1,5 +1,5 @@
 import type { Theme } from '@/game/themes';
-import { CLIFF_EDGE, H, MAX_ANGLE, MIN_ANGLE, OPTIMAL_ANGLE, W } from '@/game/constants';
+import { CLIFF_EDGE, H, MAX_ANGLE, MIN_ANGLE, OPTIMAL_ANGLE, W, BASE_GRAV, MIN_POWER, MAX_POWER } from '@/game/constants';
 import type { GameState } from './types';
 import {
   drawStickFigure,
@@ -10,7 +10,9 @@ import {
   drawHandLine,
   drawHandCircle,
   drawCheckeredFlag,
+  drawEnhancedFlag,
   drawCloud,
+  drawCloudPlatform,
   drawBird,
   drawDashedCurve,
   drawFilmGrain,
@@ -23,6 +25,9 @@ import {
   drawScribbleEnergy,
   drawLaunchBurst,
   drawSpeedLines,
+  drawZenoCoil,
+  drawZenoBolt,
+  drawZenoImpact,
   LINE_WEIGHTS,
 } from './sketchy';
 
@@ -68,63 +73,28 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   // Spiral holes on left margin
   drawSpiralHoles(ctx, H, COLORS.accent3, nowMs);
 
-  // Ground line - hand-drawn style with layered pencil effect
+  // Ground level reference (for positioning)
   const groundY = H - 20;
-  drawLayeredHandLine(ctx, 40, groundY, CLIFF_EDGE + 5, groundY, COLORS.player, nowMs, 2);
 
-  // Hatching under the ground for depth
-  ctx.strokeStyle = COLORS.accent3;
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 6; i++) {
-    const hatchY = groundY + 4 + i * 3;
-    const endX = CLIFF_EDGE - i * 15;
-    if (endX > 50) {
-      ctx.beginPath();
-      ctx.moveTo(45, hatchY);
-      ctx.lineTo(endX, hatchY);
-      ctx.stroke();
-    }
-  }
+  // Cloud platforms instead of ground line
+  // Starting platform (where player launches from)
+  drawCloudPlatform(ctx, 70, groundY - 5, 120, 40, COLORS.player, 3, nowMs, true);
 
+  // Middle floating cloud (decorative)
+  drawCloudPlatform(ctx, 220, groundY - 50, 80, 28, COLORS.accent3, 2.5, nowMs, false);
 
-  // Cliff edge - jagged hand-drawn line going down (layered for consistency)
-  const edgeX = CLIFF_EDGE;
-  // Layer 2: faint graphite shadow
-  ctx.strokeStyle = COLORS.accent3;
-  ctx.lineWidth = LINE_WEIGHTS.secondary;
-  ctx.globalAlpha = 0.3;
-  ctx.beginPath();
-  ctx.moveTo(edgeX + 1, groundY + 1);
-  ctx.lineTo(edgeX + 4, groundY + 9);
-  ctx.lineTo(edgeX - 1, groundY + 17);
-  ctx.lineTo(edgeX + 5, groundY + 25);
-  ctx.lineTo(edgeX + 1, H);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-  // Layer 1: primary ink
-  ctx.strokeStyle = COLORS.player;
-  ctx.lineWidth = LINE_WEIGHTS.primary;
-  ctx.beginPath();
-  ctx.moveTo(edgeX, groundY);
-  ctx.lineTo(edgeX + 3, groundY + 8);
-  ctx.lineTo(edgeX - 2, groundY + 16);
-  ctx.lineTo(edgeX + 4, groundY + 24);
-  ctx.lineTo(edgeX, H);
-  ctx.stroke();
+  // Landing platform (near target area)
+  drawCloudPlatform(ctx, 380, groundY - 5, 100, 40, COLORS.player, 3, nowMs, true);
 
-  // Danger zone warning - hand-drawn exclamation (layered)
-  const blink = Math.floor(nowMs / 400) % 2;
-  if (blink) {
-    // Exclamation line with layered effect
-    drawLayeredHandLine(ctx, edgeX - 8, groundY - 30, edgeX - 8, groundY - 15, COLORS.danger, nowMs, 2);
-    // Dot at bottom
-    drawLayeredHandCircle(ctx, edgeX - 8, groundY - 8, 2, COLORS.danger, nowMs, 2, true);
-  }
+  // Sky decorative clouds (smaller, higher)
+  drawCloud(ctx, 150, 60, 15, COLORS.accent3, 2, nowMs);
+  drawCloud(ctx, 320, 45, 12, COLORS.accent3, 1.5, nowMs);
+  drawCloud(ctx, 450, 70, 10, COLORS.accent3, 1.5, nowMs)
 
-  // Best marker - checkered flag
+  // Best marker - enhanced checkered flag with star
   if (state.best > 0 && state.best <= CLIFF_EDGE) {
     const flagX = Math.floor(state.best);
-    drawCheckeredFlag(ctx, flagX, groundY, 18, 14, COLORS.accent2, 1.5, nowMs);
+    drawEnhancedFlag(ctx, flagX, groundY, 28, 20, 50, COLORS.accent2, COLORS.highlight, 2.5, nowMs);
   }
 
   // Zeno target marker - hand-drawn star with line (consistent LINE_WEIGHTS)
@@ -151,7 +121,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.beginPath();
     for (let i = 0; i < 5; i++) {
       const angle = (i * 144 - 90) * Math.PI / 180;
-      const r = 8;
+      const r = 12;
       const px = targetX + Math.cos(angle) * r + 0.5;
       const py = starY + Math.sin(angle) * r + 0.5;
       if (i === 0) ctx.moveTo(px, py);
@@ -165,7 +135,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.beginPath();
     for (let i = 0; i < 5; i++) {
       const angle = (i * 144 - 90) * Math.PI / 180;
-      const r = 8;
+      const r = 12;
       const px = targetX + Math.cos(angle) * r;
       const py = starY + Math.sin(angle) * r;
       if (i === 0) ctx.moveTo(px, py);
@@ -259,10 +229,15 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   drawBird(ctx, 150 + Math.sin(nowMs / 2000) * 30, 90, 6, COLORS.accent3, 1.5, nowMs);
   drawBird(ctx, 320 + Math.cos(nowMs / 2500) * 25, 85, 5, COLORS.accent3, 1.5, nowMs + 500);
 
-  // Ghost trail (best attempt) - dashed curve
+  // Ghost trail (best attempt) - prominent dashed arc
   if (state.bestTrail.length > 4) {
-    const ghostPoints = state.bestTrail.filter((_, i) => i % 3 === 0);
-    drawDashedCurve(ctx, ghostPoints, COLORS.accent3, 1.5, 6, 8);
+    const ghostPoints = state.bestTrail.filter((_, i) => i % 2 === 0);
+    // Draw thicker, more visible arc
+    drawDashedCurve(ctx, ghostPoints, COLORS.accent3, 3, 8, 6);
+    // Add glow effect
+    ctx.globalAlpha = 0.3;
+    drawDashedCurve(ctx, ghostPoints, COLORS.player, 5, 8, 6);
+    ctx.globalAlpha = 1;
   }
 
   // Ghost trail - fading echo figures during flight
@@ -271,7 +246,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     for (let i = 0; i < trailLen; i++) {
       const ghost = state.ghostTrail[i];
       // Progressive fade: older = fainter
-      const opacity = (0.6 - (trailLen - i - 1) * 0.15) * (1 - i / trailLen);
+      const opacity = (0.8 - (trailLen - i - 1) * 0.12) * (1 - i / trailLen);
       if (opacity > 0.05) {
         drawGhostFigure(
           ctx,
@@ -346,18 +321,15 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       state.failureType,
       state.failureFrame,
     );
+  } else if (state.charging) {
+    drawZenoCoil(ctx, state.px, state.py, playerColor, nowMs, state.chargePower, 'flipbook');
+  } else if (state.flying && !state.failureAnimating) {
+    drawZenoBolt(ctx, state.px, state.py, playerColor, nowMs, { vx: state.vx, vy: state.vy }, 'flipbook');
+  } else if (state.landingFrame > 0 && state.landingFrame < 15 && !state.fellOff) {
+    drawZenoImpact(ctx, state.px, state.py, playerColor, nowMs, state.landingFrame, 'flipbook');
   } else {
-    drawStickFigure(
-      ctx,
-      state.px,
-      state.py,
-      playerColor,
-      nowMs,
-      playerState,
-      state.angle,
-      { vx: state.vx, vy: state.vy },
-      state.chargePower,
-    );
+    // Idle or other states
+    drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
   }
 
   // Scribble energy during charging
@@ -461,6 +433,43 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       const optX = arcX + Math.cos(optRad) * (arcRadius + 8);
       const optY = arcY - Math.sin(optRad) * (arcRadius + 8);
       drawHandCircle(ctx, optX, optY, 5, COLORS.highlight, 2, nowMs, false);
+    }
+
+    // Trajectory preview arc (dashed curve showing predicted path)
+    if (state.chargePower > 0.2) {
+      const power = MIN_POWER + state.chargePower * (MAX_POWER - MIN_POWER);
+      const vx = Math.cos(angleRad) * power;
+      const vy = -Math.sin(angleRad) * power;
+
+      // Generate preview points
+      const previewPoints: { x: number; y: number }[] = [];
+      let px = state.px;
+      let py = state.py;
+      const pvx = vx;
+      let pvy = vy;
+
+      for (let i = 0; i < 40; i++) {
+        previewPoints.push({ x: px, y: py });
+        px += pvx;
+        pvy += BASE_GRAV;
+        py += pvy;
+        if (py > groundY || px > W) break;
+      }
+
+      // Draw dashed preview arc
+      ctx.strokeStyle = COLORS.accent3;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.globalAlpha = 0.5 + state.chargePower * 0.3;
+      ctx.beginPath();
+      for (let i = 0; i < previewPoints.length; i++) {
+        const p = previewPoints[i];
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
     }
   }
 
@@ -658,48 +667,59 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   ctx.fillStyle = bgGradient;
   ctx.fillRect(0, 0, W, H);
 
-  // Minimal horizon line
-  ctx.strokeStyle = COLORS.gridPrimary;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, H - 60);
-  ctx.lineTo(W, H - 60);
-  ctx.stroke();
-
-  // Ground line - clean, sharp
+  // Ground level reference
   const groundY = H - 20;
+
+  // Noir platforms - angular, dramatic
+  // Starting platform
   ctx.strokeStyle = COLORS.player;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(40, groundY);
-  ctx.lineTo(CLIFF_EDGE + 5, groundY);
+  ctx.moveTo(10, groundY);
+  ctx.lineTo(30, groundY - 25);
+  ctx.lineTo(110, groundY - 25);
+  ctx.lineTo(130, groundY);
   ctx.stroke();
 
-  // Subtle ground shadow
+  // Platform top surface glow
   ctx.strokeStyle = COLORS.gridPrimary;
   ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.5;
   ctx.beginPath();
-  ctx.moveTo(40, groundY + 3);
-  ctx.lineTo(CLIFF_EDGE - 20, groundY + 3);
+  ctx.moveTo(32, groundY - 27);
+  ctx.lineTo(108, groundY - 27);
   ctx.stroke();
+  ctx.globalAlpha = 1;
 
-  // Cliff edge - sharp vertical drop
-  const edgeX = CLIFF_EDGE;
-  ctx.strokeStyle = COLORS.player;
+  // Middle floating platform
+  ctx.strokeStyle = COLORS.accent3;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(edgeX, groundY);
-  ctx.lineTo(edgeX, H);
+  ctx.moveTo(180, groundY - 45);
+  ctx.lineTo(195, groundY - 60);
+  ctx.lineTo(255, groundY - 60);
+  ctx.lineTo(270, groundY - 45);
   ctx.stroke();
 
-  // Danger zone - subtle pulsing glow
-  const dangerPulse = Math.sin(nowMs / 300) * 0.3 + 0.7;
-  ctx.strokeStyle = `rgba(220, 53, 69, ${dangerPulse * 0.6})`;
-  ctx.lineWidth = 1;
+  // Landing platform
+  ctx.strokeStyle = COLORS.player;
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(edgeX - 15, groundY - 5);
-  ctx.lineTo(edgeX - 15, groundY - 25);
+  ctx.moveTo(330, groundY);
+  ctx.lineTo(350, groundY - 25);
+  ctx.lineTo(430, groundY - 25);
+  ctx.lineTo(450, groundY);
   ctx.stroke();
+
+  // Landing platform top glow
+  ctx.strokeStyle = COLORS.gridPrimary;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(352, groundY - 27);
+  ctx.lineTo(428, groundY - 27);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
 
   // Best marker - simple vertical line with dot
   if (state.best > 0 && state.best <= CLIFF_EDGE) {
@@ -776,18 +796,30 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   ctx.closePath();
   ctx.fill();
 
-  // Ghost trail (best attempt) - faint dashes
+  // Ghost trail (best attempt) - prominent dashes for noir
   if (state.bestTrail.length > 4) {
+    const ghostPoints = state.bestTrail.filter((_, i) => i % 2 === 0);
+    // Primary trail
     ctx.strokeStyle = COLORS.star;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 6]);
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([6, 4]);
     ctx.beginPath();
-    const ghostPoints = state.bestTrail.filter((_, i) => i % 4 === 0);
     for (let i = 0; i < ghostPoints.length; i++) {
       if (i === 0) ctx.moveTo(ghostPoints[i].x, ghostPoints[i].y);
       else ctx.lineTo(ghostPoints[i].x, ghostPoints[i].y);
     }
     ctx.stroke();
+    // Glow effect
+    ctx.strokeStyle = COLORS.player;
+    ctx.lineWidth = 4;
+    ctx.globalAlpha = 0.2;
+    ctx.beginPath();
+    for (let i = 0; i < ghostPoints.length; i++) {
+      if (i === 0) ctx.moveTo(ghostPoints[i].x, ghostPoints[i].y);
+      else ctx.lineTo(ghostPoints[i].x, ghostPoints[i].y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
     ctx.setLineDash([]);
   }
 
@@ -796,7 +828,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     const trailLen = state.ghostTrail.length;
     for (let i = Math.max(0, trailLen - 6); i < trailLen; i++) {
       const ghost = state.ghostTrail[i];
-      const opacity = 0.5 - (trailLen - i - 1) * 0.15;
+      const opacity = 0.7 - (trailLen - i - 1) * 0.12;
       if (opacity > 0.1) {
         drawGhostFigure(
           ctx,
@@ -872,7 +904,14 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
 
   if (state.failureAnimating && state.failureType && (state.failureType === 'tumble' || state.failureType === 'dive')) {
     drawFailingStickFigure(ctx, state.px, state.py, playerColor, nowMs, state.failureType, state.failureFrame);
+  } else if (state.charging) {
+    drawZenoCoil(ctx, state.px, state.py, playerColor, nowMs, state.chargePower, 'noir');
+  } else if (state.flying && !state.failureAnimating) {
+    drawZenoBolt(ctx, state.px, state.py, playerColor, nowMs, { vx: state.vx, vy: state.vy }, 'noir');
+  } else if (state.landingFrame > 0 && state.landingFrame < 15 && !state.fellOff) {
+    drawZenoImpact(ctx, state.px, state.py, playerColor, nowMs, state.landingFrame, 'noir');
   } else {
+    // Idle or other states
     drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
   }
 
@@ -938,6 +977,43 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.beginPath();
     ctx.arc(arcX + Math.cos(angleRad) * lineLen, arcY - Math.sin(angleRad) * lineLen, 3, 0, Math.PI * 2);
     ctx.fill();
+
+    // Trajectory preview arc (noir style)
+    if (state.chargePower > 0.2) {
+      const power = MIN_POWER + state.chargePower * (MAX_POWER - MIN_POWER);
+      const vx = Math.cos(angleRad) * power;
+      const vy = -Math.sin(angleRad) * power;
+
+      // Generate preview points
+      const previewPoints: { x: number; y: number }[] = [];
+      let px = state.px;
+      let py = state.py;
+      const pvx = vx;
+      let pvy = vy;
+
+      for (let i = 0; i < 40; i++) {
+        previewPoints.push({ x: px, y: py });
+        px += pvx;
+        pvy += BASE_GRAV;
+        py += pvy;
+        if (py > groundY || px > W) break;
+      }
+
+      // Draw dashed preview arc (noir style - visible)
+      ctx.strokeStyle = COLORS.player;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.globalAlpha = 0.6 + state.chargePower * 0.3;
+      ctx.beginPath();
+      for (let i = 0; i < previewPoints.length; i++) {
+        const p = previewPoints[i];
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
   }
 
   // Nudge indicator

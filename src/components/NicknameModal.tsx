@@ -1,7 +1,8 @@
 // src/components/NicknameModal.tsx
 import { useState, useCallback } from 'react';
-import { isNicknameAvailable, createAnonymousUser, type UserProfile } from '@/firebase/auth';
+import { type UserProfile } from '@/firebase/auth';
 import type { Theme } from '@/game/themes';
+import { FIREBASE_ENABLED } from '@/firebase/flags';
 
 type NicknameModalProps = {
   theme: Theme;
@@ -30,6 +31,11 @@ export function NicknameModal({ theme, onComplete }: NicknameModalProps) {
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!FIREBASE_ENABLED) {
+      setError('Online features are disabled in this build.');
+      return;
+    }
+
     const validationError = validateNickname(nickname);
     if (validationError) {
       setError(validationError);
@@ -40,6 +46,8 @@ export function NicknameModal({ theme, onComplete }: NicknameModalProps) {
     setError(null);
 
     try {
+      const { isNicknameAvailable, createAnonymousUser } = await import('@/firebase/auth');
+
       // Quick availability check (non-authoritative, just for UX)
       const available = await isNicknameAvailable(nickname);
       if (!available) {

@@ -5,7 +5,9 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: "/",
+  // Firebase hosting works best with an absolute base.
+  // itch.io hosts HTML games under a subpath, so we use a relative base there.
+  base: mode === "itch" ? "./" : "/",
   server: {
     host: "::",
     port: 8080,

@@ -26,20 +26,22 @@ export type LeaderboardType = 'totalScore' | 'bestThrow' | 'mostFalls';
 
 // Get top 100 for a leaderboard (with tie-breaker ordering)
 export async function getLeaderboard(type: LeaderboardType): Promise<LeaderboardEntry[]> {
-  try {
-    const collectionName = type === 'totalScore' ? 'leaderboard_total' : type === 'bestThrow' ? 'leaderboard_throw' : 'leaderboard_falls';
-    const q = query(
-      collection(db, collectionName),
-      orderBy('score', 'desc'),
-      orderBy('updatedAt', 'asc'), // Tie-breaker: earlier timestamp wins
-      limit(100)
-    );
+  const collectionName = type === 'totalScore' ? 'leaderboard_total' : type === 'bestThrow' ? 'leaderboard_throw' : 'leaderboard_falls';
+  const q = query(
+    collection(db, collectionName),
+    orderBy('score', 'desc'),
+    orderBy('updatedAt', 'asc'), // Tie-breaker: earlier timestamp wins
+    limit(100)
+  );
 
+  try {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data() as LeaderboardEntry);
   } catch (error) {
     console.error('Error fetching leaderboard:', error);
-    return [];
+    // Common cause: missing composite index for (score desc, updatedAt asc)
+    // Fix by deploying Firestore indexes (firebase deploy --only firestore:indexes)
+    throw error;
   }
 }
 

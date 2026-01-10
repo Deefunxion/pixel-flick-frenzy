@@ -52,7 +52,7 @@ import type { GameState } from '@/game/engine/types';
 import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
-import { syncScoreToFirebase, syncFallsToFirebase } from '@/firebase/scoreSync';
+import { FIREBASE_ENABLED } from '@/firebase/flags';
 
 const Game = () => {
   const { firebaseUser, profile, isLoading, needsOnboarding, completeOnboarding } = useUser();
@@ -199,23 +199,18 @@ const Game = () => {
   // Sync new personal best to Firebase
   const handleNewPersonalBest = useCallback(async (totalScore: number, bestThrow: number) => {
     if (firebaseUser && profile) {
-      await syncScoreToFirebase(
-        firebaseUser.uid,
-        profile.nickname,
-        totalScore,
-        bestThrow
-      );
+      if (!FIREBASE_ENABLED) return;
+      const { syncScoreToFirebase } = await import('@/firebase/scoreSync');
+      await syncScoreToFirebase(firebaseUser.uid, profile.nickname, totalScore, bestThrow);
     }
   }, [firebaseUser, profile]);
 
   // Sync falls to Firebase
   const handleFall = useCallback(async (totalFalls: number) => {
     if (firebaseUser && profile) {
-      await syncFallsToFirebase(
-        firebaseUser.uid,
-        profile.nickname,
-        totalFalls
-      );
+      if (!FIREBASE_ENABLED) return;
+      const { syncFallsToFirebase } = await import('@/firebase/scoreSync');
+      await syncFallsToFirebase(firebaseUser.uid, profile.nickname, totalFalls);
     }
   }, [firebaseUser, profile]);
 

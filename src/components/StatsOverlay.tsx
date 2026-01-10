@@ -2,11 +2,10 @@ import { useState } from 'react';
 import { loadJson, loadStringSet } from '@/game/storage';
 import { ACHIEVEMENTS } from '@/game/engine/achievements';
 import { getPersonalLeaderboard, getCurrentPrecision, getMaxAtPrecision } from '@/game/leaderboard';
-import { linkGoogleAccount } from '@/firebase/auth';
-import { syncAfterGoogleLink } from '@/firebase/sync';
 import { useUser } from '@/contexts/UserContext';
 import type { Stats } from '@/game/engine/types';
 import type { Theme } from '@/game/themes';
+import { FIREBASE_ENABLED } from '@/firebase/flags';
 
 type StatsOverlayProps = {
   theme: Theme;
@@ -38,10 +37,19 @@ export function StatsOverlay({ theme, onClose }: StatsOverlayProps) {
   const handleLinkGoogle = async () => {
     if (!firebaseUser) return;
 
+    if (!FIREBASE_ENABLED) {
+      setLinkError('Cloud sync is disabled in the itch build.');
+      return;
+    }
+
     setIsLinking(true);
     setLinkError(null);
 
     try {
+      const [{ linkGoogleAccount }, { syncAfterGoogleLink }] = await Promise.all([
+        import('@/firebase/auth'),
+        import('@/firebase/sync'),
+      ]);
       const success = await linkGoogleAccount();
       if (success) {
         await syncAfterGoogleLink(firebaseUser.uid);

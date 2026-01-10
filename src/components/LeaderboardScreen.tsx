@@ -1,13 +1,15 @@
 // src/components/LeaderboardScreen.tsx
 import { useState, useEffect, useCallback } from 'react';
-import {
-  getLeaderboard,
-  getUserRank,
-  type LeaderboardEntry,
-  type LeaderboardType,
-} from '@/firebase/leaderboard';
 import { useUser } from '@/contexts/UserContext';
 import type { Theme } from '@/game/themes';
+import { FIREBASE_ENABLED } from '@/firebase/flags';
+
+type LeaderboardType = 'totalScore' | 'bestThrow' | 'mostFalls';
+type LeaderboardEntry = {
+  uid: string;
+  nickname: string;
+  score: number;
+};
 
 type LeaderboardScreenProps = {
   theme: Theme;
@@ -20,17 +22,42 @@ export function LeaderboardScreen({ theme, onClose }: LeaderboardScreenProps) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [userRank, setUserRank] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadLeaderboard = useCallback(async (type: LeaderboardType) => {
     setIsLoading(true);
 
-    const [leaderboardData, rank] = await Promise.all([
+    setErrorMessage(null);
+
+    if (!FIREBASE_ENABLED) {
+      setEntries([]);
+      setUserRank(null);
+      setErrorMessage('Online leaderboards are disabled in the itch build.');
+      setIsLoading(false);
+      return;
+    }
+
+    const { getLeaderboard, getUserRank } = await import('@/firebase/leaderboard');
+
+    const [leaderboardRes, rankRes] = await Promise.allSettled([
       getLeaderboard(type),
-      firebaseUser ? getUserRank(type, firebaseUser.uid) : null,
+      firebaseUser ? getUserRank(type, firebaseUser.uid) : Promise.resolve(null),
     ]);
 
-    setEntries(leaderboardData);
-    setUserRank(rank);
+    if (leaderboardRes.status === 'fulfilled') {
+      setEntries(leaderboardRes.value);
+    } else {
+      setEntries([]);
+      setErrorMessage(
+        'Leaderboard unavailable right now (Firestore index missing or still building). Please try again in a bit.'
+      );
+    }
+
+    if (rankRes.status === 'fulfilled') {
+      setUserRank(rankRes.value);
+    } else {
+      setUserRank(null);
+    }
     setIsLoading(false);
   }, [firebaseUser]);
 
@@ -123,6 +150,15 @@ export function LeaderboardScreen({ theme, onClose }: LeaderboardScreenProps) {
           {isLoading ? (
             <div className="text-center py-8" style={{ color: theme.uiText }}>
               Loading...
+            </div>
+          ) : errorMessage ? (
+            <div className="text-center py-8 px-4" style={{ color: theme.uiText }}>
+              <div className="font-bold" style={{ color: theme.highlight }}>
+                Couldn\'t load entries
+              </div>
+              <div className="text-sm opacity-80 mt-2">
+                {errorMessage}
+              </div>
             </div>
           ) : entries.length === 0 ? (
             <div className="text-center py-8" style={{ color: theme.uiText }}>
