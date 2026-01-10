@@ -20,17 +20,32 @@ export function LeaderboardScreen({ theme, onClose }: LeaderboardScreenProps) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [userRank, setUserRank] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadLeaderboard = useCallback(async (type: LeaderboardType) => {
     setIsLoading(true);
 
-    const [leaderboardData, rank] = await Promise.all([
+    setErrorMessage(null);
+
+    const [leaderboardRes, rankRes] = await Promise.allSettled([
       getLeaderboard(type),
-      firebaseUser ? getUserRank(type, firebaseUser.uid) : null,
+      firebaseUser ? getUserRank(type, firebaseUser.uid) : Promise.resolve(null),
     ]);
 
-    setEntries(leaderboardData);
-    setUserRank(rank);
+    if (leaderboardRes.status === 'fulfilled') {
+      setEntries(leaderboardRes.value);
+    } else {
+      setEntries([]);
+      setErrorMessage(
+        'Leaderboard unavailable right now (Firestore index missing or still building). Please try again in a bit.'
+      );
+    }
+
+    if (rankRes.status === 'fulfilled') {
+      setUserRank(rankRes.value);
+    } else {
+      setUserRank(null);
+    }
     setIsLoading(false);
   }, [firebaseUser]);
 
@@ -123,6 +138,15 @@ export function LeaderboardScreen({ theme, onClose }: LeaderboardScreenProps) {
           {isLoading ? (
             <div className="text-center py-8" style={{ color: theme.uiText }}>
               Loading...
+            </div>
+          ) : errorMessage ? (
+            <div className="text-center py-8 px-4" style={{ color: theme.uiText }}>
+              <div className="font-bold" style={{ color: theme.highlight }}>
+                Couldn\'t load entries
+              </div>
+              <div className="text-sm opacity-80 mt-2">
+                {errorMessage}
+              </div>
             </div>
           ) : entries.length === 0 ? (
             <div className="text-center py-8" style={{ color: theme.uiText }}>

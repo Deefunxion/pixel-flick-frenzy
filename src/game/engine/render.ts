@@ -445,7 +445,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       const previewPoints: { x: number; y: number }[] = [];
       let px = state.px;
       let py = state.py;
-      let pvx = vx;
+      const pvx = vx;
       let pvy = vy;
 
       for (let i = 0; i < 40; i++) {
@@ -988,7 +988,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
       const previewPoints: { x: number; y: number }[] = [];
       let px = state.px;
       let py = state.py;
-      let pvx = vx;
+      const pvx = vx;
       let pvy = vy;
 
       for (let i = 0; i < 40; i++) {
@@ -999,11 +999,11 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
         if (py > groundY || px > W) break;
       }
 
-      // Draw dashed preview arc (noir style - subtle)
-      ctx.strokeStyle = COLORS.gridPrimary;
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 4]);
-      ctx.globalAlpha = 0.4 + state.chargePower * 0.3;
+      // Draw dashed preview arc (noir style - visible)
+      ctx.strokeStyle = COLORS.player;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.globalAlpha = 0.6 + state.chargePower * 0.3;
       ctx.beginPath();
       for (let i = 0; i < previewPoints.length; i++) {
         const p = previewPoints[i];
