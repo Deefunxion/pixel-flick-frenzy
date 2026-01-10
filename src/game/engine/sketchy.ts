@@ -1716,13 +1716,13 @@ export function drawGroundCracks(
 
   const progress = frame / 15;
   const alpha = 1 - progress * 0.8;
-  const crackCount = 6;
-  const maxLen = 25 + (1 - progress) * 15;
+  const crackCount = 10;
+  const maxLen = 45 + (1 - progress) * 25;
 
   ctx.strokeStyle = color;
-  ctx.lineWidth = themeKind === 'flipbook' ? 1.5 : 1;
+  ctx.lineWidth = themeKind === 'flipbook' ? 3 : 2.5;
   ctx.lineCap = 'round';
-  ctx.globalAlpha = alpha * 0.7;
+  ctx.globalAlpha = alpha * 0.9;
 
   for (let i = 0; i < crackCount; i++) {
     const baseAngle = (i / crackCount) * Math.PI + Math.PI * 0.1;
@@ -1770,20 +1770,20 @@ export function drawDustPuffs(
 
   const progress = frame / 12;
   const alpha = 1 - progress;
-  const puffCount = 4;
-  const spread = 8 + progress * 20;
-  const rise = progress * 8;
+  const puffCount = 10;
+  const spread = 15 + progress * 35;
+  const rise = progress * 15;
 
   ctx.strokeStyle = color;
-  ctx.lineWidth = themeKind === 'flipbook' ? 1.5 : 1;
-  ctx.globalAlpha = alpha * 0.5;
+  ctx.lineWidth = themeKind === 'flipbook' ? 2.5 : 2;
+  ctx.globalAlpha = alpha * 0.7;
 
   for (let i = 0; i < puffCount; i++) {
     const angle = (i / puffCount) * Math.PI + Math.PI * 0.2;
     const dist = spread * (0.7 + seededRandom(i * 13) * 0.3);
     const puffX = x + Math.cos(angle) * dist;
     const puffY = y - rise + Math.sin(angle) * dist * 0.3;
-    const puffSize = 3 + (1 - progress) * 3 + seededRandom(i * 19) * 2;
+    const puffSize = 6 + (1 - progress) * 6 + seededRandom(i * 19) * 4;
 
     // Draw wobbly cloud shape
     drawHandCircle(ctx, puffX, puffY, puffSize, color, 1, nowMs + i * 50, false);
