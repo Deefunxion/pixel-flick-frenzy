@@ -1212,17 +1212,17 @@ export function drawSpeedLines(
   const speed = Math.sqrt(velocity.vx ** 2 + velocity.vy ** 2);
   if (speed < 4) return;
 
-  const lineCount = Math.min(8, Math.floor(speed / 1.5));
-  const lineLen = 12 + speed * 2.5;
+  const lineCount = Math.min(12, Math.floor(speed / 1.2));
+  const lineLen = 18 + speed * 3.5;
 
   ctx.strokeStyle = color;
-  ctx.lineWidth = themeKind === 'flipbook' ? 1.5 : 1;
+  ctx.lineWidth = themeKind === 'flipbook' ? 2.5 : 2;
   ctx.lineCap = 'round';
 
   // Main speed lines
   for (let i = 0; i < lineCount; i++) {
     const seed = i * 47 + nowMs * 0.02;
-    const offsetY = (seededRandom(seed) - 0.5) * 35;
+    const offsetY = (seededRandom(seed) - 0.5) * 50;
     const alpha = 0.25 + seededRandom(seed + 1) * 0.35;
     const len = lineLen * (0.5 + seededRandom(seed + 2) * 0.5);
 
@@ -1236,7 +1236,7 @@ export function drawSpeedLines(
   // Whoosh marks at high speed (curved streaks)
   if (speed > 6) {
     const whooshCount = Math.min(4, Math.floor((speed - 6) / 2));
-    ctx.lineWidth = themeKind === 'flipbook' ? 1 : 0.75;
+    ctx.lineWidth = themeKind === 'flipbook' ? 2 : 1.5;
 
     for (let i = 0; i < whooshCount; i++) {
       const seed = i * 73 + nowMs * 0.015;
@@ -1302,12 +1302,12 @@ export function drawEnergySpirals(
 ) {
   if (intensity < 0.1) return;
 
-  const spiralCount = 2 + Math.floor(intensity);
-  const baseRadius = 20 + intensity * 15;
+  const spiralCount = 3 + Math.floor(intensity * 2);
+  const baseRadius = 35 + intensity * 25;
   const rotationSpeed = 0.002 + intensity * 0.003;
 
   ctx.strokeStyle = color;
-  ctx.lineWidth = themeKind === 'flipbook' ? 2 : 1.5;
+  ctx.lineWidth = themeKind === 'flipbook' ? 3 : 2;
   ctx.lineCap = 'round';
 
   for (let s = 0; s < spiralCount; s++) {
@@ -1315,7 +1315,7 @@ export function drawEnergySpirals(
     const rotation = nowMs * rotationSpeed + angleOffset;
     const tiltAngle = (s * 0.4) + 0.3; // Different tilt for each spiral
 
-    ctx.globalAlpha = 0.3 + intensity * 0.4;
+    ctx.globalAlpha = 0.4 + intensity * 0.5;
     ctx.beginPath();
 
     // Draw elliptical orbit
@@ -1354,11 +1354,11 @@ export function drawSpringLines(
 ) {
   if (intensity < 0.2) return;
 
-  const zigCount = 4 + Math.floor(intensity * 4);
-  const amplitude = 3 + intensity * 4;
+  const zigCount = 6 + Math.floor(intensity * 5);
+  const amplitude = 5 + intensity * 7;
 
   ctx.strokeStyle = color;
-  ctx.lineWidth = themeKind === 'flipbook' ? 1.5 : 1;
+  ctx.lineWidth = themeKind === 'flipbook' ? 2.5 : 2;
   ctx.lineCap = 'round';
   ctx.globalAlpha = 0.4 + intensity * 0.3;
 
