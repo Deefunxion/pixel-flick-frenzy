@@ -1,7 +1,7 @@
 // src/firebase/config.ts
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+// Firebase is conditionally initialized based on build mode
+
+import { FIREBASE_ENABLED } from './flags';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -12,6 +12,24 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-export const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+// Only import and initialize Firebase when enabled
+let app: any = null;
+let auth: any = null;
+let db: any = null;
+
+if (FIREBASE_ENABLED) {
+  // Dynamic import to avoid loading Firebase in itch builds
+  import('firebase/app').then(({ initializeApp }) => {
+    app = initializeApp(firebaseConfig);
+
+    import('firebase/auth').then(({ getAuth }) => {
+      auth = getAuth(app);
+    });
+
+    import('firebase/firestore').then(({ getFirestore }) => {
+      db = getFirestore(app);
+    });
+  });
+}
+
+export { app, auth, db };

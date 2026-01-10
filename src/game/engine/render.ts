@@ -28,8 +28,13 @@ import {
   drawZenoCoil,
   drawZenoBolt,
   drawZenoImpact,
+  drawDetailedCloud,
+  drawDecorativeCurl,
+  drawCrossHatch,
+  drawStyledTrajectory,
   LINE_WEIGHTS,
 } from './sketchy';
+import { renderParticles } from './particles';
 
 export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, theme: Theme, nowMs: number) {
   const COLORS = theme;
@@ -76,15 +81,15 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   // Ground level reference (for positioning)
   const groundY = H - 20;
 
-  // Cloud platforms instead of ground line
+  // Cloud platforms - enhanced with cross-hatching
   // Starting platform (where player launches from)
-  drawCloudPlatform(ctx, 70, groundY - 5, 120, 40, COLORS.player, 3, nowMs, true);
+  drawDetailedCloud(ctx, 70, groundY - 5, 120, 35, COLORS.player, nowMs, true);
 
   // Middle floating cloud (decorative)
-  drawCloudPlatform(ctx, 220, groundY - 50, 80, 28, COLORS.accent3, 2.5, nowMs, false);
+  drawDetailedCloud(ctx, 220, groundY - 50, 80, 25, COLORS.accent3, nowMs, false);
 
   // Landing platform (near target area)
-  drawCloudPlatform(ctx, 380, groundY - 5, 100, 40, COLORS.player, 3, nowMs, true);
+  drawDetailedCloud(ctx, 380, groundY - 5, 100, 35, COLORS.player, nowMs, true);
 
   // Sky decorative clouds (smaller, higher)
   drawCloud(ctx, 150, 60, 15, COLORS.accent3, 2, nowMs);
@@ -163,6 +168,10 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   ctx.strokeStyle = COLORS.accent3;
   ctx.lineWidth = 1.5;
   ctx.strokeRect(windBoxX, windBoxY, windBoxW, windBoxH);
+
+  // Decorative corner curls
+  drawDecorativeCurl(ctx, windBoxX - 2, windBoxY - 2, 6, COLORS.accent3, 1, nowMs, -1);
+  drawDecorativeCurl(ctx, windBoxX + windBoxW + 2, windBoxY - 2, 6, COLORS.accent3, 1, nowMs, 1);
 
   // "WIND" label
   ctx.fillStyle = COLORS.accent3;
@@ -293,7 +302,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   }
   ctx.globalAlpha = 1;
 
-  // Particles as small circles
+  // Particles as small circles (old system)
   for (const p of state.particles) {
     if (p.life < 3) continue;
     ctx.fillStyle = p.color || COLORS.accent1;
@@ -301,6 +310,9 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  // Render new particle system
+  renderParticles(ctx, state.particleSystem.getParticles(), nowMs, 'flipbook');
 
   // Player as stick figure
   let playerState: 'idle' | 'charging' | 'flying' | 'landing' = 'idle';
@@ -387,6 +399,10 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.rect(barX, barY, barW, barH);
     ctx.stroke();
 
+    // Decorative curls at bar ends
+    drawDecorativeCurl(ctx, barX - 3, barY + barH / 2, 5, COLORS.accent3, 1, nowMs, -1);
+    drawDecorativeCurl(ctx, barX + barW + 3, barY + barH / 2, 5, COLORS.accent3, 1, nowMs, 1);
+
     // Fill based on power
     const fillW = state.chargePower * (barW - 4);
     const powerColor = state.chargePower > 0.8 ? COLORS.danger
@@ -456,19 +472,9 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
         if (py > groundY || px > W) break;
       }
 
-      // Draw dashed preview arc
-      ctx.strokeStyle = COLORS.accent3;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 4]);
+      // Draw styled preview arc
       ctx.globalAlpha = 0.5 + state.chargePower * 0.3;
-      ctx.beginPath();
-      for (let i = 0; i < previewPoints.length; i++) {
-        const p = previewPoints[i];
-        if (i === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-      }
-      ctx.stroke();
-      ctx.setLineDash([]);
+      drawStyledTrajectory(ctx, previewPoints, COLORS.accent3, nowMs, 'flipbook');
       ctx.globalAlpha = 1;
     }
   }
@@ -885,7 +891,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   }
   ctx.globalAlpha = 1;
 
-  // Particles
+  // Particles (old system)
   for (const p of state.particles) {
     if (p.life < 3) continue;
     ctx.fillStyle = p.color || COLORS.accent1;
@@ -893,6 +899,9 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  // Render new particle system
+  renderParticles(ctx, state.particleSystem.getParticles(), nowMs, 'noir');
 
   // Player stick figure
   let playerState: 'idle' | 'charging' | 'flying' | 'landing' = 'idle';
@@ -999,19 +1008,9 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
         if (py > groundY || px > W) break;
       }
 
-      // Draw dashed preview arc (noir style - visible)
-      ctx.strokeStyle = COLORS.player;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 4]);
+      // Draw styled preview arc (noir style)
       ctx.globalAlpha = 0.6 + state.chargePower * 0.3;
-      ctx.beginPath();
-      for (let i = 0; i < previewPoints.length; i++) {
-        const p = previewPoints[i];
-        if (i === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-      }
-      ctx.stroke();
-      ctx.setLineDash([]);
+      drawStyledTrajectory(ctx, previewPoints, COLORS.player, nowMs, 'noir');
       ctx.globalAlpha = 1;
     }
   }

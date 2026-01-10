@@ -14,6 +14,7 @@ import {
   todayLocalISODate,
 } from '@/game/storage';
 import type { GameState, Star } from './types';
+import { ParticleSystem } from './particles';
 
 export function createInitialState(params: { reduceFx: boolean }): GameState {
   const best = loadNumber('best', 0, 'omf_best');
@@ -94,6 +95,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     hotStreak: 0,
     bestHotStreak: loadNumber('best_hot_streak', 0, 'omf_best_hot_streak'),
     launchFrame: 0,
+    particleSystem: new ParticleSystem(),
   };
 }
 
@@ -128,6 +130,7 @@ export function resetPhysics(state: GameState) {
   state.failureFrame = 0;
   state.failureType = null;
   state.launchFrame = 0;
+  state.particleSystem.clear();
 }
 
 export function nextWind(state: GameState) {
