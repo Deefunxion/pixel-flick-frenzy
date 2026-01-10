@@ -1115,10 +1115,10 @@ export function drawGhostFigure(
 
   // Thinner strokes for ghosts
   ctx.strokeStyle = color;
-  ctx.lineWidth = themeKind === 'flipbook' ? 1.5 : 1;
+  ctx.lineWidth = themeKind === 'flipbook' ? 2.5 : 2;
   ctx.lineCap = 'round';
 
-  const scale = 0.4; // Slightly smaller than main figure
+  const scale = 0.65; // Closer to main figure size
   const headRadius = 6 * scale;
 
   // Simple tumbling pose based on angle
