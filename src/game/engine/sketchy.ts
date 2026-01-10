@@ -755,114 +755,6 @@ export function drawEnhancedFlag(
   ctx.stroke();
 }
 
-// Draw a cloud
-export function drawCloud(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  size: number,
-  color: string,
-  lineWidth: number = 2,
-  nowMs: number = 0,
-) {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = lineWidth;
-  ctx.lineCap = 'round';
-
-  const wobble = getWobble(x, y, nowMs, 1);
-
-  // Draw cloud as overlapping circles
-  const cloudParts = [
-    { dx: 0, dy: 0, r: size },
-    { dx: -size * 0.8, dy: size * 0.2, r: size * 0.7 },
-    { dx: size * 0.8, dy: size * 0.2, r: size * 0.7 },
-    { dx: -size * 0.4, dy: -size * 0.3, r: size * 0.6 },
-    { dx: size * 0.4, dy: -size * 0.3, r: size * 0.6 },
-  ];
-
-  for (const part of cloudParts) {
-    ctx.beginPath();
-    ctx.arc(x + part.dx + wobble.dx, y + part.dy + wobble.dy, part.r, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-}
-
-// Draw a large cloud platform (for ground replacement)
-export function drawCloudPlatform(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  color: string,
-  lineWidth: number = 3,
-  nowMs: number = 0,
-  filled: boolean = false,
-) {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = lineWidth;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-
-  const wobble = getWobble(x, y, nowMs, 0.5);
-
-  // Cloud platform made of overlapping bumps
-  const bumpCount = Math.floor(width / 25);
-  const bumpWidth = width / bumpCount;
-
-  ctx.beginPath();
-
-  // Start from bottom left
-  ctx.moveTo(x - width / 2, y + height / 2 + wobble.dy);
-
-  // Draw top bumps (the fluffy part)
-  for (let i = 0; i <= bumpCount; i++) {
-    const bumpX = x - width / 2 + i * bumpWidth;
-    const bumpY = y - height / 2;
-    const bumpHeight = height * (0.6 + Math.sin(i * 1.7) * 0.2);
-    const wobbleOffset = getWobble(bumpX, bumpY, nowMs, 0.3);
-
-    if (i === 0) {
-      ctx.lineTo(bumpX + wobbleOffset.dx, bumpY + wobbleOffset.dy);
-    } else {
-      // Quadratic curve for fluffy bump
-      const cpX = bumpX - bumpWidth / 2;
-      const cpY = bumpY - bumpHeight + wobbleOffset.dy;
-      ctx.quadraticCurveTo(cpX, cpY, bumpX + wobbleOffset.dx, bumpY + wobbleOffset.dy);
-    }
-  }
-
-  // Close bottom
-  ctx.lineTo(x + width / 2, y + height / 2 + wobble.dy);
-  ctx.lineTo(x - width / 2, y + height / 2 + wobble.dy);
-
-  if (filled) {
-    ctx.fillStyle = color;
-    ctx.globalAlpha = 0.1;
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-  ctx.stroke();
-
-  // Add internal scribble lines for depth
-  ctx.globalAlpha = 0.3;
-  ctx.lineWidth = lineWidth * 0.5;
-  for (let i = 1; i < bumpCount; i++) {
-    const lineX = x - width / 2 + i * bumpWidth;
-    const lineWobble = getWobble(lineX, y, nowMs, 0.2);
-    ctx.beginPath();
-    ctx.moveTo(lineX + lineWobble.dx, y - height * 0.3);
-    ctx.quadraticCurveTo(
-      lineX + lineWobble.dx + 5,
-      y,
-      lineX + lineWobble.dx,
-      y + height * 0.3
-    );
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-}
-
 // Draw a bird (simple V shape)
 export function drawBird(
   ctx: CanvasRenderingContext2D,
@@ -2215,114 +2107,6 @@ export function drawDecorativeCurl(
   ctx.stroke();
 }
 
-// Draw an enhanced cloud platform with cross-hatching and decorative curls
-export function drawDetailedCloud(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  color: string,
-  nowMs: number,
-  filled: boolean = true,
-) {
-  const wobble = getWobble(x, y, nowMs, 0.5);
-
-  // Cloud made of overlapping circles for fluffy outline
-  const circleCount = Math.floor(width / 15) + 2;
-  const circleSpacing = width / (circleCount - 1);
-
-  // Store circle positions for cross-hatch clipping
-  const circles: { cx: number; cy: number; r: number }[] = [];
-
-  // Generate circle positions with varying heights
-  for (let i = 0; i < circleCount; i++) {
-    const cx = x - width / 2 + i * circleSpacing + wobble.dx;
-    const heightVariation = Math.sin(i * 1.5) * (height * 0.3);
-    const cy = y + heightVariation + wobble.dy;
-    const r = height * 0.5 + Math.sin(i * 2.1) * (height * 0.15);
-    circles.push({ cx, cy, r });
-  }
-
-  // If filled, draw cross-hatching first (will be clipped)
-  if (filled) {
-    ctx.save();
-
-    // Create clipping path from all circles
-    ctx.beginPath();
-    for (const c of circles) {
-      ctx.moveTo(c.cx + c.r, c.cy);
-      ctx.arc(c.cx, c.cy, c.r, 0, Math.PI * 2);
-    }
-    ctx.clip();
-
-    // Draw cross-hatching inside cloud
-    drawCrossHatch(
-      ctx,
-      x - width / 2 - 10,
-      y - height,
-      width + 20,
-      height * 2,
-      color,
-      nowMs,
-      3, // density
-      30, // angle1
-      -30, // angle2
-    );
-
-    ctx.restore();
-  }
-
-  // Draw cloud outlines (overlapping circles)
-  ctx.strokeStyle = color;
-  ctx.lineWidth = LINE_WEIGHTS.primary;
-
-  for (const c of circles) {
-    drawHandCircle(ctx, c.cx, c.cy, c.r, color, LINE_WEIGHTS.primary, nowMs, false);
-  }
-
-  // Add decorative curls at edges
-  const leftmostCircle = circles[0];
-  const rightmostCircle = circles[circles.length - 1];
-
-  // Left curl
-  drawDecorativeCurl(
-    ctx,
-    leftmostCircle.cx - leftmostCircle.r * 0.7,
-    leftmostCircle.cy + leftmostCircle.r * 0.3,
-    8,
-    color,
-    1.5,
-    nowMs,
-    -1, // counter-clockwise
-  );
-
-  // Right curl
-  drawDecorativeCurl(
-    ctx,
-    rightmostCircle.cx + rightmostCircle.r * 0.7,
-    rightmostCircle.cy + rightmostCircle.r * 0.3,
-    8,
-    color,
-    1.5,
-    nowMs,
-    1, // clockwise
-  );
-
-  // Top curls (decorative wisps)
-  const topCircle = circles[Math.floor(circles.length / 2)];
-  drawDecorativeCurl(
-    ctx,
-    topCircle.cx - 5,
-    topCircle.cy - topCircle.r * 0.8,
-    6,
-    color,
-    1,
-    nowMs,
-    1,
-  );
-}
-
 // Draw a styled trajectory arc with varying thickness and wobble
 export function drawStyledTrajectory(
   ctx: CanvasRenderingContext2D,
@@ -2369,4 +2153,239 @@ export function drawStyledTrajectory(
     ctx.arc(lastPoint.x, lastPoint.y, themeKind === 'flipbook' ? 4 : 3, 0, Math.PI * 2);
     ctx.fill();
   }
+}
+
+/**
+ * Draws the ground and cliff edge with a hand-drawn aesthetic.
+ * Ground line from left edge to cliff, with cross-hatching underneath and grass scribbles on top.
+ */
+export function drawGround(
+  ctx: CanvasRenderingContext2D,
+  groundY: number,
+  cliffEdgeX: number,
+  color: string,
+  nowMs: number,
+) {
+  const wobble = getWobble(0, groundY, nowMs, 0.3);
+
+  // Ground line from left to cliff edge
+  drawHandLine(ctx, 0, groundY + wobble.dy, cliffEdgeX, groundY + wobble.dy, color, LINE_WEIGHTS.primary, nowMs);
+
+  // Cliff drop-off line (vertical)
+  drawHandLine(ctx, cliffEdgeX, groundY + wobble.dy, cliffEdgeX, groundY + 40, color, LINE_WEIGHTS.primary, nowMs);
+
+  // Cross-hatching underneath the ground (earth texture)
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, groundY, cliffEdgeX, 40);
+  ctx.clip();
+
+  drawCrossHatch(
+    ctx,
+    0, groundY,
+    cliffEdgeX, 40,
+    color,
+    nowMs,
+    2.5,  // density
+    45,   // angle1
+    -45,  // angle2
+  );
+  ctx.restore();
+
+  // Sparse grass scribbles on top
+  ctx.strokeStyle = color;
+  ctx.lineWidth = LINE_WEIGHTS.secondary;
+  ctx.lineCap = 'round';
+
+  for (let x = 15; x < cliffEdgeX - 10; x += 35) {
+    const grassWobble = getWobble(x, groundY, nowMs, 0.5);
+    const grassHeight = 4 + Math.sin(x * 0.3) * 2;
+
+    ctx.beginPath();
+    ctx.moveTo(x + grassWobble.dx, groundY + wobble.dy);
+    ctx.lineTo(x + grassWobble.dx - 2, groundY + wobble.dy - grassHeight);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x + grassWobble.dx + 3, groundY + wobble.dy);
+    ctx.lineTo(x + grassWobble.dx + 5, groundY + wobble.dy - grassHeight * 0.8);
+    ctx.stroke();
+  }
+}
+
+/**
+ * Draws a clean decorative sky cloud with fixed, pleasing proportions.
+ * Outline only (no fill), with small decorative curls at edges.
+ */
+export function drawSkyCloud(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+  nowMs: number,
+) {
+  // Fixed circle proportions for consistent, pleasing shape
+  const puffs = [
+    { dx: -0.35, dy: 0,     r: 0.3  },  // left
+    { dx: -0.1,  dy: -0.2,  r: 0.35 },  // top-left
+    { dx: 0.2,   dy: -0.15, r: 0.32 },  // top-right
+    { dx: 0.4,   dy: 0.05,  r: 0.28 },  // right
+    { dx: 0.05,  dy: 0.15,  r: 0.25 },  // bottom-center
+  ];
+
+  // Minimal wobble to keep it clean
+  const wobble = getWobble(x, y, nowMs, 0.3);
+
+  // Draw each puff as outline only
+  for (const puff of puffs) {
+    const cx = x + puff.dx * size + wobble.dx;
+    const cy = y + puff.dy * size + wobble.dy;
+    const radius = puff.r * size;
+    drawHandCircle(ctx, cx, cy, radius, color, LINE_WEIGHTS.primary, nowMs, false);
+  }
+
+  // Small decorative curl on left edge
+  drawDecorativeCurl(
+    ctx,
+    x - size * 0.5,
+    y + size * 0.1,
+    size * 0.2,
+    color,
+    LINE_WEIGHTS.secondary,
+    nowMs,
+    -1,
+  );
+
+  // Small decorative curl on right edge
+  drawDecorativeCurl(
+    ctx,
+    x + size * 0.55,
+    y + size * 0.15,
+    size * 0.18,
+    color,
+    LINE_WEIGHTS.secondary,
+    nowMs,
+    1,
+  );
+}
+
+/**
+ * Draws a crescent moon for noir theme.
+ */
+export function drawMoon(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+  glowColor: string,
+  nowMs: number,
+) {
+  // Subtle glow behind moon
+  ctx.save();
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = glowColor;
+  ctx.beginPath();
+  ctx.arc(x, y, size * 1.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 0.08;
+  ctx.beginPath();
+  ctx.arc(x, y, size * 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Main moon circle
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y, size, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cut out crescent shape (darker circle offset to create crescent)
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = 'black';
+  ctx.beginPath();
+  ctx.arc(x + size * 0.4, y - size * 0.1, size * 0.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Subtle outline
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.5;
+  ctx.beginPath();
+  ctx.arc(x, y, size, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * Draws a night cloud (simpler, more ethereal than day clouds).
+ */
+export function drawNightCloud(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+  nowMs: number,
+) {
+  // Fewer, more spread out puffs for wispy night clouds
+  const puffs = [
+    { dx: -0.3, dy: 0,    r: 0.28 },
+    { dx: 0.1,  dy: -0.1, r: 0.32 },
+    { dx: 0.35, dy: 0.05, r: 0.25 },
+  ];
+
+  ctx.globalAlpha = 0.6;
+
+  for (const puff of puffs) {
+    const cx = x + puff.dx * size;
+    const cy = y + puff.dy * size;
+    const radius = puff.r * size;
+
+    // Soft filled circle
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * Draws a wind strength meter (visual bars showing intensity).
+ */
+export function drawWindStrengthMeter(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  strength: number, // 0 to 1
+  direction: number, // -1 or 1
+  color: string,
+  accentColor: string,
+) {
+  const barCount = 5;
+  const barWidth = 4;
+  const barSpacing = 6;
+  const maxBarHeight = 16;
+  const activeBars = Math.ceil(strength * barCount * 10); // 0-5 bars lit
+
+  // Draw bars from left to right (or right to left based on direction)
+  for (let i = 0; i < barCount; i++) {
+    const barIndex = direction > 0 ? i : (barCount - 1 - i);
+    const barX = x + barIndex * barSpacing;
+    const barHeight = 4 + (i * 2.5); // Increasing height
+    const barY = y + (maxBarHeight - barHeight);
+
+    const isActive = i < activeBars;
+
+    ctx.fillStyle = isActive ? accentColor : color;
+    ctx.globalAlpha = isActive ? 1 : 0.3;
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+  }
+
+  ctx.globalAlpha = 1;
 }
