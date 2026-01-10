@@ -28,6 +28,9 @@ import {
   drawZenoCoil,
   drawZenoBolt,
   drawZenoImpact,
+  drawDetailedCloud,
+  drawDecorativeCurl,
+  drawCrossHatch,
   LINE_WEIGHTS,
 } from './sketchy';
 
@@ -76,15 +79,15 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   // Ground level reference (for positioning)
   const groundY = H - 20;
 
-  // Cloud platforms instead of ground line
+  // Cloud platforms - enhanced with cross-hatching
   // Starting platform (where player launches from)
-  drawCloudPlatform(ctx, 70, groundY - 5, 120, 40, COLORS.player, 3, nowMs, true);
+  drawDetailedCloud(ctx, 70, groundY - 5, 120, 35, COLORS.player, nowMs, true);
 
   // Middle floating cloud (decorative)
-  drawCloudPlatform(ctx, 220, groundY - 50, 80, 28, COLORS.accent3, 2.5, nowMs, false);
+  drawDetailedCloud(ctx, 220, groundY - 50, 80, 25, COLORS.accent3, nowMs, false);
 
   // Landing platform (near target area)
-  drawCloudPlatform(ctx, 380, groundY - 5, 100, 40, COLORS.player, 3, nowMs, true);
+  drawDetailedCloud(ctx, 380, groundY - 5, 100, 35, COLORS.player, nowMs, true);
 
   // Sky decorative clouds (smaller, higher)
   drawCloud(ctx, 150, 60, 15, COLORS.accent3, 2, nowMs);
