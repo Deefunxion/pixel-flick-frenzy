@@ -1212,24 +1212,43 @@ export function drawSpeedLines(
   const speed = Math.sqrt(velocity.vx ** 2 + velocity.vy ** 2);
   if (speed < 4) return;
 
-  const lineCount = Math.min(6, Math.floor(speed / 2));
-  const lineLen = 10 + speed * 2;
+  const lineCount = Math.min(8, Math.floor(speed / 1.5));
+  const lineLen = 12 + speed * 2.5;
 
   ctx.strokeStyle = color;
   ctx.lineWidth = themeKind === 'flipbook' ? 1.5 : 1;
   ctx.lineCap = 'round';
 
+  // Main speed lines
   for (let i = 0; i < lineCount; i++) {
     const seed = i * 47 + nowMs * 0.02;
-    const offsetY = (seededRandom(seed) - 0.5) * 30;
-    const alpha = 0.3 + seededRandom(seed + 1) * 0.3;
-    const len = lineLen * (0.6 + seededRandom(seed + 2) * 0.4);
+    const offsetY = (seededRandom(seed) - 0.5) * 35;
+    const alpha = 0.25 + seededRandom(seed + 1) * 0.35;
+    const len = lineLen * (0.5 + seededRandom(seed + 2) * 0.5);
 
     ctx.globalAlpha = alpha;
     ctx.beginPath();
     ctx.moveTo(x - len, y + offsetY);
-    ctx.lineTo(x - len * 0.3, y + offsetY + (seededRandom(seed + 3) - 0.5) * 3);
+    ctx.lineTo(x - len * 0.2, y + offsetY + (seededRandom(seed + 3) - 0.5) * 3);
     ctx.stroke();
+  }
+
+  // Whoosh marks at high speed (curved streaks)
+  if (speed > 6) {
+    const whooshCount = Math.min(4, Math.floor((speed - 6) / 2));
+    ctx.lineWidth = themeKind === 'flipbook' ? 1 : 0.75;
+
+    for (let i = 0; i < whooshCount; i++) {
+      const seed = i * 73 + nowMs * 0.015;
+      const offsetY = (seededRandom(seed) - 0.5) * 40;
+      const curveHeight = (seededRandom(seed + 1) - 0.5) * 8;
+
+      ctx.globalAlpha = 0.2 + seededRandom(seed + 2) * 0.2;
+      ctx.beginPath();
+      ctx.moveTo(x - 25, y + offsetY);
+      ctx.quadraticCurveTo(x - 15, y + offsetY + curveHeight, x - 5, y + offsetY);
+      ctx.stroke();
+    }
   }
 
   ctx.globalAlpha = 1;
