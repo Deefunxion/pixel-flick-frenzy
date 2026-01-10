@@ -1,14 +1,9 @@
 // src/contexts/UserContext.tsx
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { type User } from 'firebase/auth';
-import {
-  subscribeToAuthState,
-  getUserProfile,
-  hasUserProfile,
-  type UserProfile,
-} from '@/firebase/auth';
-import { syncScoreToFirebase } from '@/firebase/scoreSync';
+import { type UserProfile } from '@/firebase/auth';
 import { loadNumber } from '@/game/storage';
+import { FIREBASE_ENABLED } from '@/firebase/flags';
 
 type UserContextType = {
   firebaseUser: User | null;
@@ -29,50 +24,80 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = subscribeToAuthState(async (user) => {
-      setFirebaseUser(user);
+    let unsubscribe: null | (() => void) = null;
+    let cancelled = false;
 
-      if (user) {
-        // Check if user has completed onboarding
-        const hasProfile = await hasUserProfile(user.uid);
-        if (hasProfile) {
-          const userProfile = await getUserProfile(user.uid);
-          setProfile(userProfile);
-          setNeedsOnboarding(false);
+    async function init() {
+      if (!FIREBASE_ENABLED) {
+        setFirebaseUser(null);
+        setProfile(null);
+        // In offline builds we don't show onboarding / nickname UI.
+        setNeedsOnboarding(false);
+        setIsLoading(false);
+        return;
+      }
 
-          // One-time sync: upload existing local scores to Firebase
-          if (userProfile) {
-            const localTotalScore = loadNumber('total_score', 0, 'omf_total_score');
-            const localBestThrow = loadNumber('best', 0, 'omf_best');
-            if (localTotalScore > 0 || localBestThrow > 0) {
-              syncScoreToFirebase(
-                user.uid,
-                userProfile.nickname,
-                localTotalScore,
-                localBestThrow
-              );
+      const [{ subscribeToAuthState, getUserProfile, hasUserProfile }, { syncScoreToFirebase }] =
+        await Promise.all([import('@/firebase/auth'), import('@/firebase/scoreSync')]);
+
+      if (cancelled) return;
+
+      unsubscribe = subscribeToAuthState(async (user) => {
+        setFirebaseUser(user);
+
+        if (user) {
+          const hasProfile = await hasUserProfile(user.uid);
+          if (hasProfile) {
+            const userProfile = await getUserProfile(user.uid);
+            setProfile(userProfile);
+            setNeedsOnboarding(false);
+
+            // One-time sync: upload existing local scores to Firebase
+            if (userProfile) {
+              const localTotalScore = loadNumber('total_score', 0, 'omf_total_score');
+              const localBestThrow = loadNumber('best', 0, 'omf_best');
+              if (localTotalScore > 0 || localBestThrow > 0) {
+                syncScoreToFirebase(
+                  user.uid,
+                  userProfile.nickname,
+                  localTotalScore,
+                  localBestThrow
+                );
+              }
             }
+          } else {
+            setNeedsOnboarding(true);
           }
         } else {
           setNeedsOnboarding(true);
+          setProfile(null);
         }
-      } else {
-        // No user - needs onboarding
-        setNeedsOnboarding(true);
-        setProfile(null);
-      }
 
+        setIsLoading(false);
+      });
+    }
+
+    init().catch((err) => {
+      console.error('Failed to initialize user context:', err);
+      setFirebaseUser(null);
+      setProfile(null);
+      setNeedsOnboarding(false);
       setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, []);
 
   const refreshProfile = async () => {
-    if (firebaseUser) {
-      const userProfile = await getUserProfile(firebaseUser.uid);
-      setProfile(userProfile);
-    }
+    if (!FIREBASE_ENABLED) return;
+    if (!firebaseUser) return;
+
+    const { getUserProfile } = await import('@/firebase/auth');
+    const userProfile = await getUserProfile(firebaseUser.uid);
+    setProfile(userProfile);
   };
 
   // Complete onboarding - sets profile AND closes the modal

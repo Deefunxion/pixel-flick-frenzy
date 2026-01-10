@@ -1,13 +1,15 @@
 // src/components/LeaderboardScreen.tsx
 import { useState, useEffect, useCallback } from 'react';
-import {
-  getLeaderboard,
-  getUserRank,
-  type LeaderboardEntry,
-  type LeaderboardType,
-} from '@/firebase/leaderboard';
 import { useUser } from '@/contexts/UserContext';
 import type { Theme } from '@/game/themes';
+import { FIREBASE_ENABLED } from '@/firebase/flags';
+
+type LeaderboardType = 'totalScore' | 'bestThrow' | 'mostFalls';
+type LeaderboardEntry = {
+  uid: string;
+  nickname: string;
+  score: number;
+};
 
 type LeaderboardScreenProps = {
   theme: Theme;
@@ -26,6 +28,16 @@ export function LeaderboardScreen({ theme, onClose }: LeaderboardScreenProps) {
     setIsLoading(true);
 
     setErrorMessage(null);
+
+    if (!FIREBASE_ENABLED) {
+      setEntries([]);
+      setUserRank(null);
+      setErrorMessage('Online leaderboards are disabled in the itch build.');
+      setIsLoading(false);
+      return;
+    }
+
+    const { getLeaderboard, getUserRank } = await import('@/firebase/leaderboard');
 
     const [leaderboardRes, rankRes] = await Promise.allSettled([
       getLeaderboard(type),
