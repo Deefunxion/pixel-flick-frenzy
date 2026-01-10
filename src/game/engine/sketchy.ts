@@ -1289,3 +1289,257 @@ export function drawLaunchBurst(
 
   ctx.globalAlpha = 1;
 }
+
+// Draw orbiting energy spiral rings for charging pose
+export function drawEnergySpirals(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  intensity: number, // 0-1 charge level
+  color: string,
+  nowMs: number,
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  if (intensity < 0.1) return;
+
+  const spiralCount = 2 + Math.floor(intensity);
+  const baseRadius = 20 + intensity * 15;
+  const rotationSpeed = 0.002 + intensity * 0.003;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = themeKind === 'flipbook' ? 2 : 1.5;
+  ctx.lineCap = 'round';
+
+  for (let s = 0; s < spiralCount; s++) {
+    const angleOffset = (s / spiralCount) * Math.PI * 2;
+    const rotation = nowMs * rotationSpeed + angleOffset;
+    const tiltAngle = (s * 0.4) + 0.3; // Different tilt for each spiral
+
+    ctx.globalAlpha = 0.3 + intensity * 0.4;
+    ctx.beginPath();
+
+    // Draw elliptical orbit
+    const steps = 24;
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * Math.PI * 2;
+      const orbX = Math.cos(t + rotation) * baseRadius;
+      const orbY = Math.sin(t + rotation) * baseRadius * 0.4 * Math.cos(tiltAngle);
+
+      const px = x + orbX;
+      const py = y - 15 + orbY; // Center on figure
+
+      if (i === 0) {
+        ctx.moveTo(px, py);
+      } else {
+        ctx.lineTo(px, py);
+      }
+    }
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+// Draw zig-zag spring tension lines along extended leg
+export function drawSpringLines(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  intensity: number,
+  color: string,
+  nowMs: number,
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  if (intensity < 0.2) return;
+
+  const zigCount = 4 + Math.floor(intensity * 4);
+  const amplitude = 3 + intensity * 4;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = themeKind === 'flipbook' ? 1.5 : 1;
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = 0.4 + intensity * 0.3;
+
+  ctx.beginPath();
+
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  const nx = -dy / len; // Normal vector
+  const ny = dx / len;
+
+  for (let i = 0; i <= zigCount; i++) {
+    const t = i / zigCount;
+    const baseX = x1 + dx * t;
+    const baseY = y1 + dy * t;
+    const side = (i % 2 === 0) ? 1 : -1;
+    const wobble = Math.sin(nowMs * 0.01 + i) * 0.5;
+
+    const px = baseX + nx * amplitude * side + wobble;
+    const py = baseY + ny * amplitude * side + wobble;
+
+    if (i === 0) {
+      ctx.moveTo(px, py);
+    } else {
+      ctx.lineTo(px, py);
+    }
+  }
+
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+// Draw Zeno in "The Coil" charging pose - compressed spring ready to explode
+export function drawZenoCoil(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string,
+  nowMs: number,
+  chargePower: number, // 0-1
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  const scale = 0.5;
+  const lineWidth = themeKind === 'flipbook' ? 2.5 : 2;
+
+  // Squash effect - compress vertically, expand horizontally
+  const squashAmount = chargePower * 0.3;
+  const scaleX = 1 + squashAmount * 0.43;
+  const scaleY = 1 - squashAmount;
+
+  // Lower center of gravity as charge builds
+  const yOffset = 3 + chargePower * 10;
+  const baseY = y + yOffset;
+
+  ctx.save();
+  ctx.translate(x, baseY);
+  ctx.scale(scaleX, scaleY);
+  ctx.translate(-x, -baseY);
+
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // Body geometry - deep crouch
+  const headRadius = 8 * scale;
+  const crouchDepth = 8 + chargePower * 12; // How low the crouch goes
+
+  // Head position - lower and more forward
+  const headX = x - chargePower * 3;
+  const headY = baseY - 30 * scale + crouchDepth * 0.3;
+
+  // Draw head
+  drawHandCircle(ctx, headX, headY, headRadius, color, lineWidth, nowMs, false);
+
+  // Determined expression - focused eyes, slight frown
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(headX - headRadius * 0.35, headY - 1, 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(headX + headRadius * 0.35, headY - 1, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Determined mouth - slight line
+  ctx.beginPath();
+  ctx.moveTo(headX - 3, headY + 3);
+  ctx.lineTo(headX + 2, headY + 3);
+  ctx.stroke();
+
+  // Torso - twisted, coiled
+  const torsoTopY = headY + headRadius + 2;
+  const torsoBottomY = baseY - 5 * scale;
+  const torsoTwist = chargePower * 4;
+
+  ctx.beginPath();
+  ctx.moveTo(headX, torsoTopY);
+  ctx.quadraticCurveTo(x - torsoTwist, (torsoTopY + torsoBottomY) / 2, x, torsoBottomY);
+  ctx.stroke();
+
+  // Arms - one pulled back (fist), other forward
+  const shoulderY = torsoTopY + 6 * scale;
+  const armLen = 16 * scale;
+
+  // Back arm (pulled behind, fist clenched)
+  const backArmAngle = -0.8 - chargePower * 0.7;
+  const backArmX = x + Math.cos(backArmAngle + Math.PI) * armLen;
+  const backArmY = shoulderY + Math.sin(backArmAngle + Math.PI) * armLen;
+
+  ctx.beginPath();
+  ctx.moveTo(x - 2, shoulderY);
+  ctx.lineTo(backArmX, backArmY);
+  ctx.stroke();
+
+  // Fist on back arm
+  ctx.beginPath();
+  ctx.arc(backArmX, backArmY, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Front arm (forward for balance)
+  const frontArmAngle = -0.3 + chargePower * 0.2;
+  const frontArmX = x + Math.cos(frontArmAngle) * armLen * 0.8;
+  const frontArmY = shoulderY + Math.sin(frontArmAngle) * armLen * 0.8;
+
+  ctx.beginPath();
+  ctx.moveTo(x + 2, shoulderY);
+  ctx.lineTo(frontArmX, frontArmY);
+  ctx.stroke();
+
+  // Legs - front bent 90°, back extended FAR behind
+  const hipY = torsoBottomY;
+  const legLen = 18 * scale;
+
+  // Front leg - bent, foot at edge
+  const frontKneeX = x + 5;
+  const frontKneeY = hipY + 8;
+  const frontFootX = x + 3;
+  const frontFootY = baseY;
+
+  ctx.beginPath();
+  ctx.moveTo(x, hipY);
+  ctx.lineTo(frontKneeX, frontKneeY);
+  ctx.lineTo(frontFootX, frontFootY);
+  ctx.stroke();
+
+  // Back leg - extended far behind (sprinter starting blocks)
+  const backLegExtension = 15 + chargePower * 20;
+  const backFootX = x - backLegExtension;
+  const backFootY = baseY + 2;
+  const backKneeX = x - backLegExtension * 0.5;
+  const backKneeY = hipY + 4;
+
+  ctx.beginPath();
+  ctx.moveTo(x, hipY);
+  ctx.lineTo(backKneeX, backKneeY);
+  ctx.lineTo(backFootX, backFootY);
+  ctx.stroke();
+
+  ctx.restore();
+
+  // Energy effects (drawn without transform)
+  // Spring tension on back leg
+  drawSpringLines(ctx, x - 5, hipY + 3, backFootX + 5, backFootY - 2, chargePower, color, nowMs, themeKind);
+
+  // Orbiting energy spirals
+  drawEnergySpirals(ctx, x, baseY - 15, chargePower, color, nowMs, themeKind);
+
+  // Ground dust at back foot
+  if (chargePower > 0.3) {
+    const dustIntensity = (chargePower - 0.3) / 0.7;
+    ctx.globalAlpha = dustIntensity * 0.4;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+
+    for (let i = 0; i < 3; i++) {
+      const dustX = backFootX - 5 + i * 4;
+      const dustY = backFootY + 2;
+      const dustSize = 2 + dustIntensity * 2;
+      drawHandCircle(ctx, dustX, dustY, dustSize, color, 1, nowMs + i * 100, false);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
