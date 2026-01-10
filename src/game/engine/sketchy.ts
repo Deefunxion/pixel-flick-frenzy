@@ -1702,3 +1702,239 @@ export function drawZenoBolt(
   // Speed lines (drawn without rotation)
   drawSpeedLines(ctx, x, y, velocity, color, nowMs, themeKind);
 }
+
+// Draw radiating crack lines for superhero landing impact
+export function drawGroundCracks(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  frame: number,
+  color: string,
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  if (frame > 15) return;
+
+  const progress = frame / 15;
+  const alpha = 1 - progress * 0.8;
+  const crackCount = 6;
+  const maxLen = 25 + (1 - progress) * 15;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = themeKind === 'flipbook' ? 1.5 : 1;
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = alpha * 0.7;
+
+  for (let i = 0; i < crackCount; i++) {
+    const baseAngle = (i / crackCount) * Math.PI + Math.PI * 0.1;
+    const angleVariation = (seededRandom(i * 17) - 0.5) * 0.3;
+    const angle = baseAngle + angleVariation;
+    const len = maxLen * (0.6 + seededRandom(i * 23) * 0.4);
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+
+    // Main crack line with slight wobble
+    const midX = x + Math.cos(angle) * len * 0.5;
+    const midY = y + Math.sin(angle) * len * 0.5;
+    const wobble = (seededRandom(i * 31) - 0.5) * 4;
+
+    ctx.lineTo(midX + wobble, midY + wobble * 0.5);
+    ctx.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len);
+    ctx.stroke();
+
+    // Branch cracks
+    if (seededRandom(i * 41) > 0.5) {
+      const branchAngle = angle + (seededRandom(i * 47) - 0.5) * 0.8;
+      const branchLen = len * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(midX, midY);
+      ctx.lineTo(midX + Math.cos(branchAngle) * branchLen, midY + Math.sin(branchAngle) * branchLen);
+      ctx.stroke();
+    }
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+// Draw scribble dust clouds for landing impact
+export function drawDustPuffs(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  frame: number,
+  color: string,
+  nowMs: number,
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  if (frame > 12) return;
+
+  const progress = frame / 12;
+  const alpha = 1 - progress;
+  const puffCount = 4;
+  const spread = 8 + progress * 20;
+  const rise = progress * 8;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = themeKind === 'flipbook' ? 1.5 : 1;
+  ctx.globalAlpha = alpha * 0.5;
+
+  for (let i = 0; i < puffCount; i++) {
+    const angle = (i / puffCount) * Math.PI + Math.PI * 0.2;
+    const dist = spread * (0.7 + seededRandom(i * 13) * 0.3);
+    const puffX = x + Math.cos(angle) * dist;
+    const puffY = y - rise + Math.sin(angle) * dist * 0.3;
+    const puffSize = 3 + (1 - progress) * 3 + seededRandom(i * 19) * 2;
+
+    // Draw wobbly cloud shape
+    drawHandCircle(ctx, puffX, puffY, puffSize, color, 1, nowMs + i * 50, false);
+
+    // Add smaller satellite puffs
+    if (seededRandom(i * 29) > 0.4) {
+      const satAngle = angle + (seededRandom(i * 37) - 0.5) * 1;
+      const satDist = puffSize * 1.2;
+      drawHandCircle(
+        ctx,
+        puffX + Math.cos(satAngle) * satDist,
+        puffY + Math.sin(satAngle) * satDist,
+        puffSize * 0.5,
+        color,
+        1,
+        nowMs + i * 70,
+        false
+      );
+    }
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+// Draw Zeno in "The Impact" pose - three-point superhero landing
+export function drawZenoImpact(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string,
+  nowMs: number,
+  landingFrame: number,
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  const scale = 0.5;
+  const lineWidth = themeKind === 'flipbook' ? 2.5 : 2;
+
+  // Impact squash - maximum at frame 0, recovers over time
+  const impactProgress = Math.min(1, landingFrame / 10);
+  const squashAmount = 0.3 * (1 - impactProgress);
+  const scaleX = 1 + squashAmount * 0.5;
+  const scaleY = 1 - squashAmount;
+
+  // Lower position during squash
+  const yOffset = squashAmount * 8;
+
+  ctx.save();
+  ctx.translate(x, y + yOffset);
+  ctx.scale(scaleX, scaleY);
+  ctx.translate(-x, -(y + yOffset));
+
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const headRadius = 7 * scale;
+  const baseY = y + yOffset;
+
+  // THREE-POINT LANDING POSE
+  // Head - looking up triumphantly
+  const headX = x - 2;
+  const headY = baseY - 22 * scale;
+
+  drawHandCircle(ctx, headX, headY, headRadius, color, lineWidth, nowMs, false);
+
+  // Triumphant expression - confident smirk
+  ctx.beginPath();
+  ctx.arc(headX - headRadius * 0.35, headY - 1, 1.5, 0, Math.PI * 2);
+  ctx.arc(headX + headRadius * 0.35, headY - 1, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Confident smirk
+  ctx.beginPath();
+  ctx.arc(headX + 1, headY + 2, 3, 0.2, Math.PI - 0.4);
+  ctx.stroke();
+
+  // Torso - low, leaning forward
+  const torsoTopY = headY + headRadius + 2;
+  const torsoBottomY = baseY - 8 * scale;
+
+  ctx.beginPath();
+  ctx.moveTo(headX, torsoTopY);
+  ctx.lineTo(x + 3, torsoBottomY);
+  ctx.stroke();
+
+  // Left arm - PLANTED on ground, fingers splayed
+  const plantedHandX = x - 15 * scale;
+  const plantedHandY = baseY;
+
+  ctx.beginPath();
+  ctx.moveTo(x, torsoTopY + 5);
+  ctx.lineTo(plantedHandX, plantedHandY);
+  ctx.stroke();
+
+  // Splayed fingers
+  for (let i = 0; i < 4; i++) {
+    const fingerAngle = Math.PI * 0.8 + (i / 3) * Math.PI * 0.4;
+    const fingerLen = 4;
+    ctx.beginPath();
+    ctx.moveTo(plantedHandX, plantedHandY);
+    ctx.lineTo(
+      plantedHandX + Math.cos(fingerAngle) * fingerLen,
+      plantedHandY + Math.sin(fingerAngle) * fingerLen
+    );
+    ctx.stroke();
+  }
+
+  // Right arm - UP and back for dramatic balance
+  const upArmAngle = -Math.PI * 0.3;
+  const upArmLen = 18 * scale;
+
+  ctx.beginPath();
+  ctx.moveTo(x + 5, torsoTopY + 5);
+  ctx.lineTo(
+    x + 5 + Math.cos(upArmAngle) * upArmLen,
+    torsoTopY + 5 + Math.sin(upArmAngle) * upArmLen
+  );
+  ctx.stroke();
+
+  // Left knee - DOWN, touching ground
+  const leftKneeX = x - 5;
+  const leftKneeY = baseY - 4;
+
+  ctx.beginPath();
+  ctx.moveTo(x, torsoBottomY);
+  ctx.lineTo(leftKneeX, leftKneeY);
+  ctx.lineTo(leftKneeX - 3, baseY); // Foot
+  ctx.stroke();
+
+  // Right leg - extended to side for stability
+  const rightFootX = x + 18 * scale;
+  const rightFootY = baseY;
+
+  ctx.beginPath();
+  ctx.moveTo(x + 5, torsoBottomY);
+  ctx.lineTo(x + 10, baseY - 6);
+  ctx.lineTo(rightFootX, rightFootY);
+  ctx.stroke();
+
+  ctx.restore();
+
+  // Ground effects (drawn without transform)
+  // Cracks from impact point (hand + knee)
+  drawGroundCracks(ctx, plantedHandX + 3, baseY + 2, landingFrame, color, themeKind);
+  drawGroundCracks(ctx, leftKneeX, baseY + 1, landingFrame, color, themeKind);
+
+  // Dust puffs
+  drawDustPuffs(ctx, x, baseY, landingFrame, color, nowMs, themeKind);
+
+  // Impact burst (existing function)
+  drawImpactBurst(ctx, x, baseY, color, landingFrame, themeKind);
+}
