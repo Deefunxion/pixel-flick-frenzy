@@ -1464,12 +1464,12 @@ export function drawEnergySpirals(
 ) {
   if (intensity < 0.1) return;
 
-  const spiralCount = 3 + Math.floor(intensity * 2);
-  const baseRadius = 35 + intensity * 25;
+  const spiralCount = 4 + Math.floor(intensity * 2);
+  const baseRadius = 45 + intensity * 30;
   const rotationSpeed = 0.002 + intensity * 0.003;
 
   ctx.strokeStyle = color;
-  ctx.lineWidth = themeKind === 'flipbook' ? 3 : 2;
+  ctx.lineWidth = themeKind === 'flipbook' ? SCALED_LINE_WEIGHTS.effects : SCALED_LINE_WEIGHTS.details;
   ctx.lineCap = 'round';
 
   for (let s = 0; s < spiralCount; s++) {
