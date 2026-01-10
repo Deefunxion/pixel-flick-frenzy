@@ -11,6 +11,7 @@ import {
   drawHandCircle,
   drawCheckeredFlag,
   drawCloud,
+  drawCloudPlatform,
   drawBird,
   drawDashedCurve,
   drawFilmGrain,
@@ -71,58 +72,23 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   // Spiral holes on left margin
   drawSpiralHoles(ctx, H, COLORS.accent3, nowMs);
 
-  // Ground line - hand-drawn style with layered pencil effect
+  // Ground level reference (for positioning)
   const groundY = H - 20;
-  drawLayeredHandLine(ctx, 40, groundY, CLIFF_EDGE + 5, groundY, COLORS.player, nowMs, 2);
 
-  // Hatching under the ground for depth
-  ctx.strokeStyle = COLORS.accent3;
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 6; i++) {
-    const hatchY = groundY + 4 + i * 3;
-    const endX = CLIFF_EDGE - i * 15;
-    if (endX > 50) {
-      ctx.beginPath();
-      ctx.moveTo(45, hatchY);
-      ctx.lineTo(endX, hatchY);
-      ctx.stroke();
-    }
-  }
+  // Cloud platforms instead of ground line
+  // Starting platform (where player launches from)
+  drawCloudPlatform(ctx, 70, groundY - 5, 120, 40, COLORS.player, 3, nowMs, true);
 
+  // Middle floating cloud (decorative)
+  drawCloudPlatform(ctx, 220, groundY - 50, 80, 28, COLORS.accent3, 2.5, nowMs, false);
 
-  // Cliff edge - jagged hand-drawn line going down (layered for consistency)
-  const edgeX = CLIFF_EDGE;
-  // Layer 2: faint graphite shadow
-  ctx.strokeStyle = COLORS.accent3;
-  ctx.lineWidth = LINE_WEIGHTS.secondary;
-  ctx.globalAlpha = 0.3;
-  ctx.beginPath();
-  ctx.moveTo(edgeX + 1, groundY + 1);
-  ctx.lineTo(edgeX + 4, groundY + 9);
-  ctx.lineTo(edgeX - 1, groundY + 17);
-  ctx.lineTo(edgeX + 5, groundY + 25);
-  ctx.lineTo(edgeX + 1, H);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-  // Layer 1: primary ink
-  ctx.strokeStyle = COLORS.player;
-  ctx.lineWidth = LINE_WEIGHTS.primary;
-  ctx.beginPath();
-  ctx.moveTo(edgeX, groundY);
-  ctx.lineTo(edgeX + 3, groundY + 8);
-  ctx.lineTo(edgeX - 2, groundY + 16);
-  ctx.lineTo(edgeX + 4, groundY + 24);
-  ctx.lineTo(edgeX, H);
-  ctx.stroke();
+  // Landing platform (near target area)
+  drawCloudPlatform(ctx, 380, groundY - 5, 100, 40, COLORS.player, 3, nowMs, true);
 
-  // Danger zone warning - hand-drawn exclamation (layered)
-  const blink = Math.floor(nowMs / 400) % 2;
-  if (blink) {
-    // Exclamation line with layered effect
-    drawLayeredHandLine(ctx, edgeX - 8, groundY - 30, edgeX - 8, groundY - 15, COLORS.danger, nowMs, 2);
-    // Dot at bottom
-    drawLayeredHandCircle(ctx, edgeX - 8, groundY - 8, 2, COLORS.danger, nowMs, 2, true);
-  }
+  // Sky decorative clouds (smaller, higher)
+  drawCloud(ctx, 150, 60, 15, COLORS.accent3, 2, nowMs);
+  drawCloud(ctx, 320, 45, 12, COLORS.accent3, 1.5, nowMs);
+  drawCloud(ctx, 450, 70, 10, COLORS.accent3, 1.5, nowMs)
 
   // Best marker - checkered flag
   if (state.best > 0 && state.best <= CLIFF_EDGE) {
