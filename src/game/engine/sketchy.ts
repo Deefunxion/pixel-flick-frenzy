@@ -1645,8 +1645,8 @@ export function drawZenoBolt(
   velocity: { vx: number; vy: number },
   themeKind: 'flipbook' | 'noir' = 'flipbook',
 ) {
-  const scale = 0.85;
-  const lineWidth = themeKind === 'flipbook' ? 4 : 3;
+  const scale = CHARACTER_SCALE.normal;
+  const lineWidth = themeKind === 'flipbook' ? SCALED_LINE_WEIGHTS.body : SCALED_LINE_WEIGHTS.limbs;
   const speed = Math.sqrt(velocity.vx ** 2 + velocity.vy ** 2);
 
   // Determine flight phase
