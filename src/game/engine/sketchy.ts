@@ -1374,17 +1374,17 @@ export function drawSpeedLines(
   const speed = Math.sqrt(velocity.vx ** 2 + velocity.vy ** 2);
   if (speed < 4) return;
 
-  const lineCount = Math.min(12, Math.floor(speed / 1.2));
-  const lineLen = 18 + speed * 3.5;
+  const lineCount = Math.min(14, Math.floor(speed / 1.0));
+  const lineLen = 25 + speed * 4;
 
   ctx.strokeStyle = color;
-  ctx.lineWidth = themeKind === 'flipbook' ? 2.5 : 2;
+  ctx.lineWidth = themeKind === 'flipbook' ? SCALED_LINE_WEIGHTS.effects : SCALED_LINE_WEIGHTS.details;
   ctx.lineCap = 'round';
 
   // Main speed lines
   for (let i = 0; i < lineCount; i++) {
     const seed = i * 47 + nowMs * 0.02;
-    const offsetY = (seededRandom(seed) - 0.5) * 50;
+    const offsetY = (seededRandom(seed) - 0.5) * 65;
     const alpha = 0.25 + seededRandom(seed + 1) * 0.35;
     const len = lineLen * (0.5 + seededRandom(seed + 2) * 0.5);
 
