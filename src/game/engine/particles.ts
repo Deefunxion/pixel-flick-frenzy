@@ -133,6 +133,102 @@ export class ParticleSystem {
   get count(): number {
     return this.particles.length;
   }
+
+  // Emit energy swirls during charging
+  emitChargingSwirls(x: number, y: number, intensity: number, color: string): void {
+    if (intensity < 0.2) return;
+
+    const count = Math.floor(intensity * 4);
+    this.emit('swirl', {
+      x,
+      y: y - 15, // Center on character
+      count,
+      spread: Math.PI * 2,
+      speed: 1 + intensity * 2,
+      speedVariance: 0.5,
+      life: 20 + intensity * 15,
+      size: 5 + intensity * 5,
+      color,
+      gravity: 0,
+    });
+  }
+
+  // Emit dust on landing impact
+  emitLandingDust(x: number, y: number, color: string): void {
+    this.emit('dust', {
+      x,
+      y,
+      count: 12,
+      spread: Math.PI,
+      baseAngle: -Math.PI / 2, // Upward burst
+      speed: 2,
+      speedVariance: 1.5,
+      life: 25,
+      lifeVariance: 8,
+      size: 4,
+      sizeVariance: 2,
+      color,
+      gravity: 0.02,
+    });
+  }
+
+  // Emit debris from impact
+  emitImpactDebris(x: number, y: number, color: string): void {
+    this.emit('debris', {
+      x,
+      y,
+      count: 8,
+      spread: Math.PI * 0.8,
+      baseAngle: -Math.PI / 2,
+      speed: 3,
+      speedVariance: 2,
+      life: 35,
+      lifeVariance: 10,
+      size: 4,
+      sizeVariance: 2,
+      color,
+      gravity: 0.15,
+    });
+  }
+
+  // Emit ground cracks
+  emitGroundCracks(x: number, y: number, color: string): void {
+    const crackCount = 6;
+    for (let i = 0; i < crackCount; i++) {
+      const angle = (i / crackCount) * Math.PI + Math.PI * 0.1;
+      this.emit('crack', {
+        x,
+        y,
+        count: 1,
+        spread: 0,
+        baseAngle: angle,
+        speed: 0,
+        life: 40,
+        size: 15 + Math.random() * 10,
+        color,
+        gravity: 0,
+      });
+    }
+  }
+
+  // Emit launch sparks
+  emitLaunchSparks(x: number, y: number, color: string): void {
+    this.emit('spark', {
+      x,
+      y,
+      count: 10,
+      spread: Math.PI * 0.6,
+      baseAngle: Math.PI, // Backward
+      speed: 4,
+      speedVariance: 2,
+      life: 15,
+      lifeVariance: 5,
+      size: 2,
+      sizeVariance: 1,
+      color,
+      gravity: 0.08,
+    });
+  }
 }
 
 export function renderParticles(
