@@ -1543,3 +1543,162 @@ export function drawZenoCoil(
     ctx.globalAlpha = 1;
   }
 }
+
+// Draw Zeno in "The Bolt" flight pose - dynamic mid-air motion
+export function drawZenoBolt(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string,
+  nowMs: number,
+  velocity: { vx: number; vy: number },
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  const scale = 0.5;
+  const lineWidth = themeKind === 'flipbook' ? 2.5 : 2;
+  const speed = Math.sqrt(velocity.vx ** 2 + velocity.vy ** 2);
+
+  // Determine flight phase
+  const rising = velocity.vy < -2;
+  const falling = velocity.vy > 2;
+  // const midFlight = !rising && !falling;
+
+  // Stretch effect based on speed
+  const stretchAmount = Math.min(0.3, speed * 0.02);
+  const scaleX = 1 - stretchAmount * 0.3;
+  const scaleY = 1 + stretchAmount;
+
+  // Body angle follows velocity
+  const bodyAngle = Math.atan2(velocity.vy, velocity.vx) * 0.3;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(bodyAngle);
+  ctx.scale(scaleX, scaleY);
+
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const headRadius = 7 * scale;
+
+  if (rising) {
+    // SUPERMAN POSE - stretched, one arm forward
+
+    // Head
+    drawHandCircle(ctx, 0, -8, headRadius, color, lineWidth, nowMs, false);
+
+    // Focused eyes
+    ctx.beginPath();
+    ctx.arc(-headRadius * 0.3, -9, 1.5, 0, Math.PI * 2);
+    ctx.arc(headRadius * 0.3, -9, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body - stretched horizontal
+    ctx.beginPath();
+    ctx.moveTo(0, -4);
+    ctx.lineTo(0, 12);
+    ctx.stroke();
+
+    // Forward arm (pointing ahead)
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(18 * scale, -5);
+    ctx.stroke();
+
+    // Back arm (along body)
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-12 * scale, 8);
+    ctx.stroke();
+
+    // Legs together, trailing
+    ctx.beginPath();
+    ctx.moveTo(0, 12);
+    ctx.lineTo(-3, 25 * scale);
+    ctx.moveTo(0, 12);
+    ctx.lineTo(3, 25 * scale);
+    ctx.stroke();
+
+  } else if (falling) {
+    // PREPARING TO LAND - arms spreading, legs separating
+
+    // Head
+    drawHandCircle(ctx, 0, -10, headRadius, color, lineWidth, nowMs, false);
+
+    // Eyes looking down
+    ctx.beginPath();
+    ctx.arc(-headRadius * 0.3, -8, 1.5, 0, Math.PI * 2);
+    ctx.arc(headRadius * 0.3, -8, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body
+    ctx.beginPath();
+    ctx.moveTo(0, -6);
+    ctx.lineTo(0, 8);
+    ctx.stroke();
+
+    // Arms spreading out for balance
+    const armWobble = Math.sin(nowMs * 0.015) * 0.2;
+    ctx.beginPath();
+    ctx.moveTo(0, -2);
+    ctx.lineTo(-15 * scale, 2 + armWobble * 5);
+    ctx.moveTo(0, -2);
+    ctx.lineTo(15 * scale, 2 - armWobble * 5);
+    ctx.stroke();
+
+    // Legs bending, preparing
+    ctx.beginPath();
+    ctx.moveTo(0, 8);
+    ctx.lineTo(-8 * scale, 18 * scale);
+    ctx.moveTo(0, 8);
+    ctx.lineTo(8 * scale, 18 * scale);
+    ctx.stroke();
+
+  } else {
+    // MID-FLIGHT - running stride through air
+    const stride = Math.sin(nowMs * 0.02) * 0.5;
+
+    // Head
+    drawHandCircle(ctx, 0, -10, headRadius, color, lineWidth, nowMs, false);
+
+    // Confident expression
+    ctx.beginPath();
+    ctx.arc(-headRadius * 0.3, -10, 1.5, 0, Math.PI * 2);
+    ctx.arc(headRadius * 0.3, -10, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    // Slight smirk
+    ctx.beginPath();
+    ctx.arc(0, -7, 3, 0.1, Math.PI - 0.1);
+    ctx.stroke();
+
+    // Body - forward lean
+    ctx.beginPath();
+    ctx.moveTo(0, -6);
+    ctx.lineTo(3, 8);
+    ctx.stroke();
+
+    // Arms pumping
+    ctx.beginPath();
+    ctx.moveTo(2, -2);
+    ctx.lineTo(12 * scale + stride * 8, -6 + stride * 5);
+    ctx.moveTo(2, -2);
+    ctx.lineTo(-8 * scale - stride * 8, 2 - stride * 5);
+    ctx.stroke();
+
+    // Legs in stride
+    ctx.beginPath();
+    ctx.moveTo(3, 8);
+    ctx.lineTo(8 * scale + stride * 10, 20 * scale);
+    ctx.moveTo(3, 8);
+    ctx.lineTo(-5 * scale - stride * 10, 18 * scale);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+
+  // Speed lines (drawn without rotation)
+  drawSpeedLines(ctx, x, y, velocity, color, nowMs, themeKind);
+}
