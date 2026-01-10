@@ -29,17 +29,17 @@ export const LINE_WEIGHTS = {
 
 // Character scale - controls overall character size
 export const CHARACTER_SCALE = {
-  normal: 2.5,    // 3x larger than original 0.85
-  ghost: 1.8,     // Ghost trail figures
-  mini: 1.2,      // Small UI previews
+  normal: 1.2,    // Slightly larger than original 0.85
+  ghost: 0.9,     // Ghost trail figures
+  mini: 0.7,      // Small UI previews
 };
 
 // Line widths for scaled characters
 export const SCALED_LINE_WEIGHTS = {
-  body: 6,        // Main body strokes
-  limbs: 5,       // Arms, legs
-  details: 4,     // Fingers, face
-  effects: 3,     // Energy spirals, etc.
+  body: 4.5,      // Main body strokes
+  limbs: 4,       // Arms, legs
+  details: 3,     // Fingers, face
+  effects: 2.5,   // Energy spirals, etc.
 };
 
 // Draw a layered hand-drawn line with primary ink + faint graphite + shadow offset
