@@ -33,6 +33,7 @@ import {
   drawCrossHatch,
   LINE_WEIGHTS,
 } from './sketchy';
+import { renderParticles } from './particles';
 
 export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, theme: Theme, nowMs: number) {
   const COLORS = theme;
@@ -296,7 +297,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   }
   ctx.globalAlpha = 1;
 
-  // Particles as small circles
+  // Particles as small circles (old system)
   for (const p of state.particles) {
     if (p.life < 3) continue;
     ctx.fillStyle = p.color || COLORS.accent1;
@@ -304,6 +305,9 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  // Render new particle system
+  renderParticles(ctx, state.particleSystem.getParticles(), nowMs, 'flipbook');
 
   // Player as stick figure
   let playerState: 'idle' | 'charging' | 'flying' | 'landing' = 'idle';
@@ -888,7 +892,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   }
   ctx.globalAlpha = 1;
 
-  // Particles
+  // Particles (old system)
   for (const p of state.particles) {
     if (p.life < 3) continue;
     ctx.fillStyle = p.color || COLORS.accent1;
@@ -896,6 +900,9 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  // Render new particle system
+  renderParticles(ctx, state.particleSystem.getParticles(), nowMs, 'noir');
 
   // Player stick figure
   let playerState: 'idle' | 'charging' | 'flying' | 'landing' = 'idle';
