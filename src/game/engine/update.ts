@@ -118,6 +118,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
     const dt = Math.min(nowMs - state.chargeStart, CHARGE_MS) / CHARGE_MS;
     state.chargePower = dt;
     audio.updateCharge(dt);
+
+    // Emit charging swirls every 4 frames
+    if (Math.floor(nowMs / 64) % 4 === 0) {
+      state.particleSystem.emitChargingSwirls(state.px, state.py, dt, theme.accent1);
+    }
   }
 
   // Launch
@@ -134,6 +139,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.chargePower = 0;
     state.nudgeUsed = false;
     state.launchFrame = 0; // Reset launch frame for burst effect
+
+    // Emit launch sparks
+    state.particleSystem.emitLaunchSparks(state.px, state.py, theme.accent3);
 
     audio.stopCharge();
     audio.whoosh();
@@ -206,6 +214,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
       const particleCount = Math.floor(4 + impactVelocity * 2);
       spawnParticles(state, state.px, state.py, particleCount, 1.5 + impactVelocity * 0.3, theme.accent4);
 
+      // New particle system landing effects
+      state.particleSystem.emitLandingDust(state.px, state.py, theme.accent3);
+      state.particleSystem.emitImpactDebris(state.px, state.py, theme.accent3);
+      state.particleSystem.emitGroundCracks(state.px, state.py, theme.accent3);
+
       state.vx *= 0.55;
       state.vy = 0;
 
@@ -217,7 +230,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
   for (const t of state.trail) t.age++;
   state.trail = state.trail.filter((t) => t.age < 40);
 
-  // Particles
+  // Particles (old system)
   state.particles = state.particles.filter((p) => {
     p.x += p.vx;
     p.y += p.vy;
@@ -225,6 +238,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
     p.life--;
     return p.life > 0;
   });
+
+  // New particle system update
+  state.particleSystem.update(1);
 
   // Failure animation update
   if (state.failureAnimating) {
