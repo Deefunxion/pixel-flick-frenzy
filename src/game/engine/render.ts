@@ -624,48 +624,59 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   ctx.fillStyle = bgGradient;
   ctx.fillRect(0, 0, W, H);
 
-  // Minimal horizon line
-  ctx.strokeStyle = COLORS.gridPrimary;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, H - 60);
-  ctx.lineTo(W, H - 60);
-  ctx.stroke();
-
-  // Ground line - clean, sharp
+  // Ground level reference
   const groundY = H - 20;
+
+  // Noir platforms - angular, dramatic
+  // Starting platform
   ctx.strokeStyle = COLORS.player;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(40, groundY);
-  ctx.lineTo(CLIFF_EDGE + 5, groundY);
+  ctx.moveTo(10, groundY);
+  ctx.lineTo(30, groundY - 25);
+  ctx.lineTo(110, groundY - 25);
+  ctx.lineTo(130, groundY);
   ctx.stroke();
 
-  // Subtle ground shadow
+  // Platform top surface glow
   ctx.strokeStyle = COLORS.gridPrimary;
   ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.5;
   ctx.beginPath();
-  ctx.moveTo(40, groundY + 3);
-  ctx.lineTo(CLIFF_EDGE - 20, groundY + 3);
+  ctx.moveTo(32, groundY - 27);
+  ctx.lineTo(108, groundY - 27);
   ctx.stroke();
+  ctx.globalAlpha = 1;
 
-  // Cliff edge - sharp vertical drop
-  const edgeX = CLIFF_EDGE;
-  ctx.strokeStyle = COLORS.player;
+  // Middle floating platform
+  ctx.strokeStyle = COLORS.accent3;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(edgeX, groundY);
-  ctx.lineTo(edgeX, H);
+  ctx.moveTo(180, groundY - 45);
+  ctx.lineTo(195, groundY - 60);
+  ctx.lineTo(255, groundY - 60);
+  ctx.lineTo(270, groundY - 45);
   ctx.stroke();
 
-  // Danger zone - subtle pulsing glow
-  const dangerPulse = Math.sin(nowMs / 300) * 0.3 + 0.7;
-  ctx.strokeStyle = `rgba(220, 53, 69, ${dangerPulse * 0.6})`;
-  ctx.lineWidth = 1;
+  // Landing platform
+  ctx.strokeStyle = COLORS.player;
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(edgeX - 15, groundY - 5);
-  ctx.lineTo(edgeX - 15, groundY - 25);
+  ctx.moveTo(330, groundY);
+  ctx.lineTo(350, groundY - 25);
+  ctx.lineTo(430, groundY - 25);
+  ctx.lineTo(450, groundY);
   ctx.stroke();
+
+  // Landing platform top glow
+  ctx.strokeStyle = COLORS.gridPrimary;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(352, groundY - 27);
+  ctx.lineTo(428, groundY - 27);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
 
   // Best marker - simple vertical line with dot
   if (state.best > 0 && state.best <= CLIFF_EDGE) {
