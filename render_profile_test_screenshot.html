@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ink Stroke Profile Test</title>
+    <style>
+        body { background: #333; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        canvas { background: #fff; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const H = canvas.height;
+
+        function seededRandom(seed) {
+            const x = Math.sin(seed * 12.9898 + seed * 78.233) * 43758.5453;
+            return x - Math.floor(x);
+        }
+
+        // The core algorithm to test
+        function drawInkStroke(ctx, points, color, width) {
+            if (points.length < 2) return;
+
+            ctx.fillStyle = color;
+            ctx.beginPath();
+
+            // Move to start
+            ctx.moveTo(points[0].x, points[0].y);
+
+            // Calculate normals for thickness
+            const leftSide = [];
+            const rightSide = [];
+
+            for (let i = 0; i < points.length - 1; i++) {
+                const p1 = points[i];
+                const p2 = points[i + 1];
+                
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                if (len === 0) continue;
+
+                const nx = -dy / len;
+                const ny = dx / len;
+
+                // Pressure simulation: thick in middle, thin at ends
+                // Parabolic profile: 1 at 0.5, 0 at 0 and 1
+                const t = i / (points.length - 1);
+                const pressure = 1 - Math.pow(2 * t - 1, 2); // 0 -> 1 -> 0
+                
+                // Add some noise
+                const noise = (Math.random() - 0.5) * 0.3;
+                
+                const effectiveWidth = width * (0.3 + pressure * 0.7 + noise);
+
+                leftSide.push({ x: p1.x + nx * effectiveWidth, y: p1.y + ny * effectiveWidth });
+                rightSide.push({ x: p1.x - nx * effectiveWidth, y: p1.y - ny * effectiveWidth });
+            }
+            
+            // Add last point
+            const last = points[points.length - 1];
+            leftSide.push({x: last.x, y: last.y});
+            rightSide.push({x: last.x, y: last.y});
+
+            // Draw polygon
+            ctx.moveTo(points[0].x, points[0].y);
+            
+            // Forward (left side)
+            for (const p of leftSide) ctx.lineTo(p.x, p.y);
+            
+            // Backward (right side)
+            for (let i = rightSide.length - 1; i >= 0; i--) {
+                const p = rightSide[i];
+                ctx.lineTo(p.x, p.y);
+            }
+            
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Test Cases
+        function test() {
+            ctx.clearRect(0, 0, W, H);
+            
+            // 1. Simple Curve
+            const points = [];
+            for(let i=0; i<20; i++) {
+                points.push({
+                    x: 100 + i * 15,
+                    y: 100 + Math.sin(i * 0.3) * 50
+                });
+            }
+            drawInkStroke(ctx, points, '#000', 8);
+
+            // 2. Loop
+            const circlePoints = [];
+            for(let i=0; i<=40; i++) {
+                const angle = (i/40) * Math.PI * 2;
+                circlePoints.push({
+                    x: 400 + Math.cos(angle) * 80 + (Math.random()-0.5)*5,
+                    y: 100 + Math.sin(angle) * 80 + (Math.random()-0.5)*5
+                });
+            }
+            drawInkStroke(ctx, circlePoints, '#d00', 12);
+            
+            // 3. Fast stroke (straight)
+            drawInkStroke(ctx, [
+                {x: 100, y: 300}, 
+                {x: 300, y: 320}, 
+                {x: 500, y: 280}
+            ], '#00d', 15);
+        }
+        
+        test();
+        setInterval(test, 2000); // Redraw to see noise
+    </script>
+</body>
+</html>

@@ -142,6 +142,96 @@ export function drawHandLine(
   ctx.stroke();
 }
 
+export function drawInkStroke(
+  ctx: CanvasRenderingContext2D,
+  points: { x: number; y: number }[],
+  color: string,
+  baseWidth: number,
+  nowMs: number = 0
+) {
+  if (!points || points.length < 2) return;
+  // Safety: fallback if baseWidth is invalid
+  if (!baseWidth || isNaN(baseWidth)) baseWidth = 2;
+
+  const frame = Math.floor(nowMs / 100);
+
+  ctx.fillStyle = color;
+  ctx.beginPath();
+
+  // Safety: check first point
+  if (isNaN(points[0].x) || isNaN(points[0].y)) return;
+  ctx.moveTo(points[0].x, points[0].y);
+
+  const leftSide: { x: number, y: number }[] = [];
+  const rightSide: { x: number, y: number }[] = [];
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i];
+    const p2 = points[i + 1];
+
+    // Direction vector
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+
+    // Safety check for NaN
+    if (isNaN(dx) || isNaN(dy)) continue;
+
+    const len = Math.sqrt(dx * dx + dy * dy);
+    // Skip tiny segments to avoid noise or div-by-zero issues
+    if (len < 0.1 || isNaN(len)) continue;
+
+    // Normal vector
+    const nx = -dy / len;
+    const ny = dx / len;
+
+    // Profile: Dramatic Taper (Japanese Calligraphy Style)
+    // t goes from 0 to 1 along the curve
+    const t = i / (points.length - 1);
+
+    // Aesthetic Tuning:
+    // pressure: 0 -> 1 -> 0 (sine wave)
+    // We want a more "blobby" center and very sharp tails.
+    // Power of 0.8 makes the peak wider.
+    const pressure = Math.pow(Math.sin(t * Math.PI), 0.8);
+
+    // Noise: "Paper tooth" or dry brush effect.
+    // Increased intensity (0.6) for rougher look.
+    const noise = (seededRandom(i * 10 + frame) - 0.5) * 0.6;
+
+    // Width Logic:
+    // Min width: 10% (was 20%) -> sharper tails
+    // Max width factor: 1.4 (was 0.8) -> much thicker strokes in middle
+    // Formula: base * (0.1 + pressure * 1.4 + noise * 0.3)
+    const currentWidth = baseWidth * (0.1 + pressure * 1.4 + noise * 0.3);
+
+    if (isNaN(currentWidth)) continue;
+
+    leftSide.push({ x: p1.x + nx * currentWidth, y: p1.y + ny * currentWidth });
+    rightSide.push({ x: p1.x - nx * currentWidth, y: p1.y - ny * currentWidth });
+  }
+
+  // End point converges to sharp tip
+  const last = points[points.length - 1];
+  if (!isNaN(last.x) && !isNaN(last.y)) {
+    leftSide.push({ x: last.x, y: last.y });
+    rightSide.push({ x: last.x, y: last.y });
+  }
+
+  // Construct polygon
+  if (leftSide.length > 0) {
+    ctx.moveTo(points[0].x, points[0].y);
+    for (const p of leftSide) ctx.lineTo(p.x, p.y);
+    // Tip
+    ctx.lineTo(last.x, last.y);
+    // Walk back
+    for (let i = rightSide.length - 1; i >= 0; i--) {
+      ctx.lineTo(rightSide[i].x, rightSide[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
 // Draw a dashed hand-drawn line (for trajectories)
 export function drawDashedLine(
   ctx: CanvasRenderingContext2D,
@@ -755,114 +845,6 @@ export function drawEnhancedFlag(
   ctx.stroke();
 }
 
-// Draw a cloud
-export function drawCloud(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  size: number,
-  color: string,
-  lineWidth: number = 2,
-  nowMs: number = 0,
-) {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = lineWidth;
-  ctx.lineCap = 'round';
-
-  const wobble = getWobble(x, y, nowMs, 1);
-
-  // Draw cloud as overlapping circles
-  const cloudParts = [
-    { dx: 0, dy: 0, r: size },
-    { dx: -size * 0.8, dy: size * 0.2, r: size * 0.7 },
-    { dx: size * 0.8, dy: size * 0.2, r: size * 0.7 },
-    { dx: -size * 0.4, dy: -size * 0.3, r: size * 0.6 },
-    { dx: size * 0.4, dy: -size * 0.3, r: size * 0.6 },
-  ];
-
-  for (const part of cloudParts) {
-    ctx.beginPath();
-    ctx.arc(x + part.dx + wobble.dx, y + part.dy + wobble.dy, part.r, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-}
-
-// Draw a large cloud platform (for ground replacement)
-export function drawCloudPlatform(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  color: string,
-  lineWidth: number = 3,
-  nowMs: number = 0,
-  filled: boolean = false,
-) {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = lineWidth;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-
-  const wobble = getWobble(x, y, nowMs, 0.5);
-
-  // Cloud platform made of overlapping bumps
-  const bumpCount = Math.floor(width / 25);
-  const bumpWidth = width / bumpCount;
-
-  ctx.beginPath();
-
-  // Start from bottom left
-  ctx.moveTo(x - width / 2, y + height / 2 + wobble.dy);
-
-  // Draw top bumps (the fluffy part)
-  for (let i = 0; i <= bumpCount; i++) {
-    const bumpX = x - width / 2 + i * bumpWidth;
-    const bumpY = y - height / 2;
-    const bumpHeight = height * (0.6 + Math.sin(i * 1.7) * 0.2);
-    const wobbleOffset = getWobble(bumpX, bumpY, nowMs, 0.3);
-
-    if (i === 0) {
-      ctx.lineTo(bumpX + wobbleOffset.dx, bumpY + wobbleOffset.dy);
-    } else {
-      // Quadratic curve for fluffy bump
-      const cpX = bumpX - bumpWidth / 2;
-      const cpY = bumpY - bumpHeight + wobbleOffset.dy;
-      ctx.quadraticCurveTo(cpX, cpY, bumpX + wobbleOffset.dx, bumpY + wobbleOffset.dy);
-    }
-  }
-
-  // Close bottom
-  ctx.lineTo(x + width / 2, y + height / 2 + wobble.dy);
-  ctx.lineTo(x - width / 2, y + height / 2 + wobble.dy);
-
-  if (filled) {
-    ctx.fillStyle = color;
-    ctx.globalAlpha = 0.1;
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-  ctx.stroke();
-
-  // Add internal scribble lines for depth
-  ctx.globalAlpha = 0.3;
-  ctx.lineWidth = lineWidth * 0.5;
-  for (let i = 1; i < bumpCount; i++) {
-    const lineX = x - width / 2 + i * bumpWidth;
-    const lineWobble = getWobble(lineX, y, nowMs, 0.2);
-    ctx.beginPath();
-    ctx.moveTo(lineX + lineWobble.dx, y - height * 0.3);
-    ctx.quadraticCurveTo(
-      lineX + lineWobble.dx + 5,
-      y,
-      lineX + lineWobble.dx,
-      y + height * 0.3
-    );
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-}
-
 // Draw a bird (simple V shape)
 export function drawBird(
   ctx: CanvasRenderingContext2D,
@@ -1462,7 +1444,8 @@ export function drawEnergySpirals(
   nowMs: number,
   themeKind: 'flipbook' | 'noir' = 'flipbook',
 ) {
-  if (intensity < 0.1) return;
+  if (intensity < 0.1 || isNaN(intensity)) return;
+  if (!isFinite(x) || !isFinite(y)) return;
 
   const spiralCount = 2 + Math.floor(intensity * 2); // 2-4 spirals
   const baseRadius = 18 + intensity * 10; // 18-28 pixels (fits character scale)
@@ -1564,7 +1547,7 @@ export function drawZenoCoil(
   themeKind: 'flipbook' | 'noir' = 'flipbook',
 ) {
   const scale = CHARACTER_SCALE.normal;
-  const lineWidth = themeKind === 'flipbook' ? SCALED_LINE_WEIGHTS.body : SCALED_LINE_WEIGHTS.limbs;
+  const lineWidth = themeKind === 'flipbook' ? SCALED_LINE_WEIGHTS.body : SCALED_LINE_WEIGHTS.body * 1.5; // Thicker ink
 
   // Squash effect - compress vertically, expand horizontally
   const squashAmount = chargePower * 0.3;
@@ -1594,100 +1577,222 @@ export function drawZenoCoil(
   const headX = x - chargePower * 3;
   const headY = baseY - 30 * scale + crouchDepth * 0.3;
 
-  // Draw head
-  drawHandCircle(ctx, headX, headY, headRadius, color, lineWidth, nowMs, false);
+  // Helper to generate points for ink strokes
+  const getLinePoints = (x1: number, y1: number, x2: number, y2: number, steps = 10) => {
+    const pts = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      pts.push({ x: x1 + (x2 - x1) * t, y: y1 + (y2 - y1) * t });
+    }
+    return pts;
+  };
 
-  // Determined expression - focused eyes, slight frown
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(headX - headRadius * 0.35, headY - 1, 2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(headX + headRadius * 0.35, headY - 1, 2, 0, Math.PI * 2);
-  ctx.fill();
+  const getQuadPoints = (x1: number, y1: number, cx: number, cy: number, x2: number, y2: number, steps = 12) => {
+    const pts = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const invT = 1 - t;
+      // Quadratic bezier formula
+      const px = invT * invT * x1 + 2 * invT * t * cx + t * t * x2;
+      const py = invT * invT * y1 + 2 * invT * t * cy + t * t * y2;
+      pts.push({ x: px, y: py });
+    }
+    return pts;
+  };
 
-  // Determined mouth - slight line
-  ctx.beginPath();
-  ctx.moveTo(headX - 3, headY + 3);
-  ctx.lineTo(headX + 2, headY + 3);
-  ctx.stroke();
+  if (themeKind === 'noir') {
+    // === NOIR INK RENDERING ===
 
-  // Torso - twisted, coiled
-  const torsoTopY = headY + headRadius + 2;
-  const torsoBottomY = baseY - 5 * scale;
-  const torsoTwist = chargePower * 4;
+    // Head (Circle approximation)
+    const headPoints = [];
+    for (let i = 0; i <= 24; i++) { // More points for smoother blob
+      const angle = (i / 24) * Math.PI * 2;
+      // Organic blob: 2-layer noise for "ink spread" feel
+      // Layer 1: General oval shape
+      // Layer 2: Surface roughness
+      const deform = (seededRandom(i) - 0.5) * 0.15 + (seededRandom(i + 100) - 0.5) * 0.05;
+      const r = headRadius * (1 + deform);
+      headPoints.push({
+        x: headX + Math.cos(angle) * r,
+        y: headY + Math.sin(angle) * r
+      });
+    }
+    // Boost width for head
+    drawInkStroke(ctx, headPoints, color, lineWidth * 1.2, nowMs);
 
-  ctx.beginPath();
-  ctx.moveTo(headX, torsoTopY);
-  ctx.quadraticCurveTo(x - torsoTwist, (torsoTopY + torsoBottomY) / 2, x, torsoBottomY);
-  ctx.stroke();
+    // Determined expression
+    ctx.beginPath();
+    ctx.arc(headX - headRadius * 0.35, headY - 1, 2.5, 0, Math.PI * 2);
+    ctx.arc(headX + headRadius * 0.35, headY - 1, 2.5, 0, Math.PI * 2);
+    ctx.fill();
 
-  // Arms - one pulled back (fist), other forward
-  const shoulderY = torsoTopY + 6 * scale;
-  const armLen = 16 * scale;
+    // Mouth
+    const mouthPoints = getQuadPoints(headX - 3, headY + 3, headX, headY + 4, headX + 2, headY + 3, 5);
+    drawInkStroke(ctx, mouthPoints, color, lineWidth * 0.5, nowMs);
 
-  // Back arm (pulled behind, fist clenched)
-  const backArmAngle = -0.8 - chargePower * 0.7;
-  const backArmX = x + Math.cos(backArmAngle + Math.PI) * armLen;
-  const backArmY = shoulderY + Math.sin(backArmAngle + Math.PI) * armLen;
+    // Torso - twisted, coiled
+    const torsoTopY = headY + headRadius + 2;
+    const torsoBottomY = baseY - 5 * scale;
+    const torsoTwist = chargePower * 4;
+    const torsoPoints = getQuadPoints(headX, torsoTopY, x - torsoTwist, (torsoTopY + torsoBottomY) / 2, x, torsoBottomY, 12);
+    drawInkStroke(ctx, torsoPoints, color, lineWidth * 1.2, nowMs);
 
-  ctx.beginPath();
-  ctx.moveTo(x - 2, shoulderY);
-  ctx.lineTo(backArmX, backArmY);
-  ctx.stroke();
+    // Arms
+    const shoulderY = torsoTopY + 6 * scale;
+    const armLen = 16 * scale;
 
-  // Fist on back arm
-  ctx.beginPath();
-  ctx.arc(backArmX, backArmY, 3, 0, Math.PI * 2);
-  ctx.fill();
+    // Back arm
+    const backArmAngle = -0.8 - chargePower * 0.7;
+    const backArmX = x + Math.cos(backArmAngle + Math.PI) * armLen;
+    const backArmY = shoulderY + Math.sin(backArmAngle + Math.PI) * armLen;
+    const backArmPts = getLinePoints(x - 2, shoulderY, backArmX, backArmY, 10);
+    drawInkStroke(ctx, backArmPts, color, lineWidth, nowMs);
 
-  // Front arm (forward for balance)
-  const frontArmAngle = -0.3 + chargePower * 0.2;
-  const frontArmX = x + Math.cos(frontArmAngle) * armLen * 0.8;
-  const frontArmY = shoulderY + Math.sin(frontArmAngle) * armLen * 0.8;
+    // Fist
+    ctx.beginPath(); ctx.arc(backArmX, backArmY, 4, 0, Math.PI * 2); ctx.fill();
 
-  ctx.beginPath();
-  ctx.moveTo(x + 2, shoulderY);
-  ctx.lineTo(frontArmX, frontArmY);
-  ctx.stroke();
+    // Front arm
+    const frontArmAngle = -0.3 + chargePower * 0.2;
+    const frontArmX = x + Math.cos(frontArmAngle) * armLen * 0.8;
+    const frontArmY = shoulderY + Math.sin(frontArmAngle) * armLen * 0.8;
+    const frontArmPts = getLinePoints(x + 2, shoulderY, frontArmX, frontArmY, 10);
+    drawInkStroke(ctx, frontArmPts, color, lineWidth, nowMs);
 
-  // Legs - front bent 90°, back extended FAR behind
-  const hipY = torsoBottomY;
-  const legLen = 18 * scale;
+    // Legs
+    const hipY = torsoBottomY;
 
-  // Front leg - bent, foot at edge
-  const frontKneeX = x + 5;
-  const frontKneeY = hipY + 8;
-  const frontFootX = x + 3;
-  const frontFootY = baseY;
+    // Front leg (Hip -> Knee -> Foot)
+    const frontKneeX = x + 5; const frontKneeY = hipY + 8;
+    const frontFootX = x + 3; const frontFootY = baseY;
+    const frontLegPts = [
+      ...getLinePoints(x, hipY, frontKneeX, frontKneeY, 6),
+      ...getLinePoints(frontKneeX, frontKneeY, frontFootX, frontFootY, 6)
+    ];
+    drawInkStroke(ctx, frontLegPts, color, lineWidth, nowMs);
 
-  ctx.beginPath();
-  ctx.moveTo(x, hipY);
-  ctx.lineTo(frontKneeX, frontKneeY);
-  ctx.lineTo(frontFootX, frontFootY);
-  ctx.stroke();
+    // Back leg
+    const backLegExtension = 15 + chargePower * 20;
+    const backFootX = x - backLegExtension; const backFootY = baseY + 2;
+    const backKneeX = x - backLegExtension * 0.5; const backKneeY = hipY + 4;
+    const backLegPts = [
+      ...getLinePoints(x, hipY, backKneeX, backKneeY, 6),
+      ...getLinePoints(backKneeX, backKneeY, backFootX, backFootY, 6)
+    ];
+    drawInkStroke(ctx, backLegPts, color, lineWidth, nowMs);
 
-  // Back leg - extended far behind (sprinter starting blocks)
-  const backLegExtension = 15 + chargePower * 20;
-  const backFootX = x - backLegExtension;
-  const backFootY = baseY + 2;
-  const backKneeX = x - backLegExtension * 0.5;
-  const backKneeY = hipY + 4;
+  } else {
+    // === FLIPBOOK ORIGINAL RENDERING ===
 
-  ctx.beginPath();
-  ctx.moveTo(x, hipY);
-  ctx.lineTo(backKneeX, backKneeY);
-  ctx.lineTo(backFootX, backFootY);
-  ctx.stroke();
+    // Draw head
+    drawHandCircle(ctx, headX, headY, headRadius, color, lineWidth, nowMs, false);
+
+    // Determined expression - focused eyes, slight frown
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(headX - headRadius * 0.35, headY - 1, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(headX + headRadius * 0.35, headY - 1, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Determined mouth - slight line
+    ctx.beginPath();
+    ctx.moveTo(headX - 3, headY + 3);
+    ctx.lineTo(headX + 2, headY + 3);
+    ctx.stroke();
+
+    // Torso - twisted, coiled
+    const torsoTopY = headY + headRadius + 2;
+    const torsoBottomY = baseY - 5 * scale;
+    const torsoTwist = chargePower * 4;
+
+    ctx.beginPath();
+    ctx.moveTo(headX, torsoTopY);
+    ctx.quadraticCurveTo(x - torsoTwist, (torsoTopY + torsoBottomY) / 2, x, torsoBottomY);
+    ctx.stroke();
+
+    // Arms - one pulled back (fist), other forward
+    const shoulderY = torsoTopY + 6 * scale;
+    const armLen = 16 * scale;
+
+    // Back arm (pulled behind, fist clenched)
+    const backArmAngle = -0.8 - chargePower * 0.7;
+    const backArmX = x + Math.cos(backArmAngle + Math.PI) * armLen;
+    const backArmY = shoulderY + Math.sin(backArmAngle + Math.PI) * armLen;
+
+    ctx.beginPath();
+    ctx.moveTo(x - 2, shoulderY);
+    ctx.lineTo(backArmX, backArmY);
+    ctx.stroke();
+
+    // Fist on back arm
+    ctx.beginPath();
+    ctx.arc(backArmX, backArmY, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Front arm (forward for balance)
+    const frontArmAngle = -0.3 + chargePower * 0.2;
+    const frontArmX = x + Math.cos(frontArmAngle) * armLen * 0.8;
+    const frontArmY = shoulderY + Math.sin(frontArmAngle) * armLen * 0.8;
+
+    ctx.beginPath();
+    ctx.moveTo(x + 2, shoulderY);
+    ctx.lineTo(frontArmX, frontArmY);
+    ctx.stroke();
+
+    // Legs - front bent 90°, back extended FAR behind
+    const hipY = torsoBottomY;
+
+    // Front leg - bent, foot at edge
+    const frontKneeX = x + 5;
+    const frontKneeY = hipY + 8;
+    const frontFootX = x + 3;
+    const frontFootY = baseY;
+
+    ctx.beginPath();
+    ctx.moveTo(x, hipY);
+    ctx.lineTo(frontKneeX, frontKneeY);
+    ctx.lineTo(frontFootX, frontFootY);
+    ctx.stroke();
+
+    // Back leg - extended far behind (sprinter starting blocks)
+    const backLegExtension = 15 + chargePower * 20;
+    const backFootX = x - backLegExtension;
+    const backFootY = baseY + 2;
+    const backKneeX = x - backLegExtension * 0.5;
+    const backKneeY = hipY + 4;
+
+    ctx.beginPath();
+    ctx.moveTo(x, hipY);
+    ctx.lineTo(backKneeX, backKneeY);
+    ctx.lineTo(backFootX, backFootY);
+    ctx.stroke();
+  }
 
   ctx.restore();
 
   // Energy effects (drawn without transform)
   // Spring tension on back leg
-  drawSpringLines(ctx, x - 5, hipY + 3, backFootX + 5, backFootY - 2, chargePower, color, nowMs, themeKind);
+  // Noir style: thicker, more chaotic spring lines
+  const effectIntensity = themeKind === 'noir' ? chargePower * 1.5 : chargePower;
+  const backLegExtension = 15 + chargePower * 20; // Re-calc for effects context (outside restore)
+  // Note: we need to transform these coordinates if we want them to attach to the squashed body? 
+  // The original code passed transformed coords? No, it passed `x-5`, `backFootX+5` etc.
+  // Wait, `backFootX` was calculated inside the transform block before.
+  // I need to re-calculate them here or pull them out.
+  // Simplified re-calc:
+  const backFootX = x - backLegExtension;
+  // Actually, spring lines are abstract, so approximate pos is fine.
+
+  // Scale correction for effects
+  // Clamp chargePower to avoid explosion
+  const safePower = Math.min(Math.max(chargePower, 0), 1.0);
+  const safeIntensity = Math.min(Math.max(effectIntensity, 0), 1.5);
+
+  drawSpringLines(ctx, x - 5, baseY - 5, backFootX + 5, baseY + 2, safeIntensity, color, nowMs, themeKind);
 
   // Orbiting energy spirals
-  drawEnergySpirals(ctx, x, baseY - 15, chargePower, color, nowMs, themeKind);
+  drawEnergySpirals(ctx, x, baseY - 15, safePower, color, nowMs, themeKind);
 
   // Ground dust at back foot
   if (chargePower > 0.3) {
@@ -1698,7 +1803,7 @@ export function drawZenoCoil(
 
     for (let i = 0; i < 3; i++) {
       const dustX = backFootX - 5 + i * 4;
-      const dustY = backFootY + 2;
+      const dustY = baseY + 2;
       const dustSize = 2 + dustIntensity * 2;
       drawHandCircle(ctx, dustX, dustY, dustSize, color, 1, nowMs + i * 100, false);
     }
@@ -2215,114 +2320,6 @@ export function drawDecorativeCurl(
   ctx.stroke();
 }
 
-// Draw an enhanced cloud platform with cross-hatching and decorative curls
-export function drawDetailedCloud(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  color: string,
-  nowMs: number,
-  filled: boolean = true,
-) {
-  const wobble = getWobble(x, y, nowMs, 0.5);
-
-  // Cloud made of overlapping circles for fluffy outline
-  const circleCount = Math.floor(width / 15) + 2;
-  const circleSpacing = width / (circleCount - 1);
-
-  // Store circle positions for cross-hatch clipping
-  const circles: { cx: number; cy: number; r: number }[] = [];
-
-  // Generate circle positions with varying heights
-  for (let i = 0; i < circleCount; i++) {
-    const cx = x - width / 2 + i * circleSpacing + wobble.dx;
-    const heightVariation = Math.sin(i * 1.5) * (height * 0.3);
-    const cy = y + heightVariation + wobble.dy;
-    const r = height * 0.5 + Math.sin(i * 2.1) * (height * 0.15);
-    circles.push({ cx, cy, r });
-  }
-
-  // If filled, draw cross-hatching first (will be clipped)
-  if (filled) {
-    ctx.save();
-
-    // Create clipping path from all circles
-    ctx.beginPath();
-    for (const c of circles) {
-      ctx.moveTo(c.cx + c.r, c.cy);
-      ctx.arc(c.cx, c.cy, c.r, 0, Math.PI * 2);
-    }
-    ctx.clip();
-
-    // Draw cross-hatching inside cloud
-    drawCrossHatch(
-      ctx,
-      x - width / 2 - 10,
-      y - height,
-      width + 20,
-      height * 2,
-      color,
-      nowMs,
-      3, // density
-      30, // angle1
-      -30, // angle2
-    );
-
-    ctx.restore();
-  }
-
-  // Draw cloud outlines (overlapping circles)
-  ctx.strokeStyle = color;
-  ctx.lineWidth = LINE_WEIGHTS.primary;
-
-  for (const c of circles) {
-    drawHandCircle(ctx, c.cx, c.cy, c.r, color, LINE_WEIGHTS.primary, nowMs, false);
-  }
-
-  // Add decorative curls at edges
-  const leftmostCircle = circles[0];
-  const rightmostCircle = circles[circles.length - 1];
-
-  // Left curl
-  drawDecorativeCurl(
-    ctx,
-    leftmostCircle.cx - leftmostCircle.r * 0.7,
-    leftmostCircle.cy + leftmostCircle.r * 0.3,
-    8,
-    color,
-    1.5,
-    nowMs,
-    -1, // counter-clockwise
-  );
-
-  // Right curl
-  drawDecorativeCurl(
-    ctx,
-    rightmostCircle.cx + rightmostCircle.r * 0.7,
-    rightmostCircle.cy + rightmostCircle.r * 0.3,
-    8,
-    color,
-    1.5,
-    nowMs,
-    1, // clockwise
-  );
-
-  // Top curls (decorative wisps)
-  const topCircle = circles[Math.floor(circles.length / 2)];
-  drawDecorativeCurl(
-    ctx,
-    topCircle.cx - 5,
-    topCircle.cy - topCircle.r * 0.8,
-    6,
-    color,
-    1,
-    nowMs,
-    1,
-  );
-}
-
 // Draw a styled trajectory arc with varying thickness and wobble
 export function drawStyledTrajectory(
   ctx: CanvasRenderingContext2D,
@@ -2369,4 +2366,239 @@ export function drawStyledTrajectory(
     ctx.arc(lastPoint.x, lastPoint.y, themeKind === 'flipbook' ? 4 : 3, 0, Math.PI * 2);
     ctx.fill();
   }
+}
+
+/**
+ * Draws the ground and cliff edge with a hand-drawn aesthetic.
+ * Ground line from left edge to cliff, with cross-hatching underneath and grass scribbles on top.
+ */
+export function drawGround(
+  ctx: CanvasRenderingContext2D,
+  groundY: number,
+  cliffEdgeX: number,
+  color: string,
+  nowMs: number,
+) {
+  const wobble = getWobble(0, groundY, nowMs, 0.3);
+
+  // Ground line from left to cliff edge
+  drawHandLine(ctx, 0, groundY + wobble.dy, cliffEdgeX, groundY + wobble.dy, color, LINE_WEIGHTS.primary, nowMs);
+
+  // Cliff drop-off line (vertical)
+  drawHandLine(ctx, cliffEdgeX, groundY + wobble.dy, cliffEdgeX, groundY + 40, color, LINE_WEIGHTS.primary, nowMs);
+
+  // Cross-hatching underneath the ground (earth texture)
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, groundY, cliffEdgeX, 40);
+  ctx.clip();
+
+  drawCrossHatch(
+    ctx,
+    0, groundY,
+    cliffEdgeX, 40,
+    color,
+    nowMs,
+    2.5,  // density
+    45,   // angle1
+    -45,  // angle2
+  );
+  ctx.restore();
+
+  // Sparse grass scribbles on top
+  ctx.strokeStyle = color;
+  ctx.lineWidth = LINE_WEIGHTS.secondary;
+  ctx.lineCap = 'round';
+
+  for (let x = 15; x < cliffEdgeX - 10; x += 35) {
+    const grassWobble = getWobble(x, groundY, nowMs, 0.5);
+    const grassHeight = 4 + Math.sin(x * 0.3) * 2;
+
+    ctx.beginPath();
+    ctx.moveTo(x + grassWobble.dx, groundY + wobble.dy);
+    ctx.lineTo(x + grassWobble.dx - 2, groundY + wobble.dy - grassHeight);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x + grassWobble.dx + 3, groundY + wobble.dy);
+    ctx.lineTo(x + grassWobble.dx + 5, groundY + wobble.dy - grassHeight * 0.8);
+    ctx.stroke();
+  }
+}
+
+/**
+ * Draws a clean decorative sky cloud with fixed, pleasing proportions.
+ * Outline only (no fill), with small decorative curls at edges.
+ */
+export function drawSkyCloud(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+  nowMs: number,
+) {
+  // Fixed circle proportions for consistent, pleasing shape
+  const puffs = [
+    { dx: -0.35, dy: 0, r: 0.3 },  // left
+    { dx: -0.1, dy: -0.2, r: 0.35 },  // top-left
+    { dx: 0.2, dy: -0.15, r: 0.32 },  // top-right
+    { dx: 0.4, dy: 0.05, r: 0.28 },  // right
+    { dx: 0.05, dy: 0.15, r: 0.25 },  // bottom-center
+  ];
+
+  // Minimal wobble to keep it clean
+  const wobble = getWobble(x, y, nowMs, 0.3);
+
+  // Draw each puff as outline only
+  for (const puff of puffs) {
+    const cx = x + puff.dx * size + wobble.dx;
+    const cy = y + puff.dy * size + wobble.dy;
+    const radius = puff.r * size;
+    drawHandCircle(ctx, cx, cy, radius, color, LINE_WEIGHTS.primary, nowMs, false);
+  }
+
+  // Small decorative curl on left edge
+  drawDecorativeCurl(
+    ctx,
+    x - size * 0.5,
+    y + size * 0.1,
+    size * 0.2,
+    color,
+    LINE_WEIGHTS.secondary,
+    nowMs,
+    -1,
+  );
+
+  // Small decorative curl on right edge
+  drawDecorativeCurl(
+    ctx,
+    x + size * 0.55,
+    y + size * 0.15,
+    size * 0.18,
+    color,
+    LINE_WEIGHTS.secondary,
+    nowMs,
+    1,
+  );
+}
+
+/**
+ * Draws a crescent moon for noir theme.
+ */
+export function drawMoon(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+  glowColor: string,
+  nowMs: number,
+) {
+  // Subtle glow behind moon
+  ctx.save();
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = glowColor;
+  ctx.beginPath();
+  ctx.arc(x, y, size * 1.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 0.08;
+  ctx.beginPath();
+  ctx.arc(x, y, size * 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Main moon circle
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y, size, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cut out crescent shape (darker circle offset to create crescent)
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = 'black';
+  ctx.beginPath();
+  ctx.arc(x + size * 0.4, y - size * 0.1, size * 0.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Subtle outline
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.5;
+  ctx.beginPath();
+  ctx.arc(x, y, size, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * Draws a night cloud (simpler, more ethereal than day clouds).
+ */
+export function drawNightCloud(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+  nowMs: number,
+) {
+  // Fewer, more spread out puffs for wispy night clouds
+  const puffs = [
+    { dx: -0.3, dy: 0, r: 0.28 },
+    { dx: 0.1, dy: -0.1, r: 0.32 },
+    { dx: 0.35, dy: 0.05, r: 0.25 },
+  ];
+
+  ctx.globalAlpha = 0.6;
+
+  for (const puff of puffs) {
+    const cx = x + puff.dx * size;
+    const cy = y + puff.dy * size;
+    const radius = puff.r * size;
+
+    // Soft filled circle
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * Draws a wind strength meter (visual bars showing intensity).
+ */
+export function drawWindStrengthMeter(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  strength: number, // 0 to 1
+  direction: number, // -1 or 1
+  color: string,
+  accentColor: string,
+) {
+  const barCount = 5;
+  const barWidth = 4;
+  const barSpacing = 6;
+  const maxBarHeight = 16;
+  const activeBars = Math.ceil(strength * barCount * 10); // 0-5 bars lit
+
+  // Draw bars from left to right (or right to left based on direction)
+  for (let i = 0; i < barCount; i++) {
+    const barIndex = direction > 0 ? i : (barCount - 1 - i);
+    const barX = x + barIndex * barSpacing;
+    const barHeight = 4 + (i * 2.5); // Increasing height
+    const barY = y + (maxBarHeight - barHeight);
+
+    const isActive = i < activeBars;
+
+    ctx.fillStyle = isActive ? accentColor : color;
+    ctx.globalAlpha = isActive ? 1 : 0.3;
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+  }
+
+  ctx.globalAlpha = 1;
 }

@@ -11,8 +11,11 @@ import {
   drawHandCircle,
   drawCheckeredFlag,
   drawEnhancedFlag,
-  drawCloud,
-  drawCloudPlatform,
+  drawGround,
+  drawSkyCloud,
+  drawMoon,
+  drawNightCloud,
+  drawWindStrengthMeter,
   drawBird,
   drawDashedCurve,
   drawFilmGrain,
@@ -28,21 +31,21 @@ import {
   drawZenoCoil,
   drawZenoBolt,
   drawZenoImpact,
-  drawDetailedCloud,
   drawDecorativeCurl,
-  drawCrossHatch,
   drawStyledTrajectory,
   LINE_WEIGHTS,
 } from './sketchy';
 import { renderParticles } from './particles';
 
-export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, theme: Theme, nowMs: number) {
+export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, theme: Theme, nowMs: number, dpr: number = 1) {
   const COLORS = theme;
 
   const shakeX = state.reduceFx ? 0 : (state.screenShake > 0.1 ? (Math.random() - 0.5) * state.screenShake : 0);
   const shakeY = state.reduceFx ? 0 : (state.screenShake > 0.1 ? (Math.random() - 0.5) * state.screenShake : 0);
 
   ctx.save();
+  // Scale logical coordinates (480x240) to physical pixels
+  ctx.scale(dpr, dpr);
 
   if (state.zoom > 1.01) {
     const zoomCenterX = state.zoomTargetX;
@@ -81,20 +84,14 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   // Ground level reference (for positioning)
   const groundY = H - 20;
 
-  // Cloud platforms - enhanced with cross-hatching
-  // Starting platform (where player launches from)
-  drawDetailedCloud(ctx, 70, groundY - 5, 120, 35, COLORS.player, nowMs, true);
+  // Ground and cliff edge
+  drawGround(ctx, groundY, CLIFF_EDGE, COLORS.player, nowMs);
 
-  // Middle floating cloud (decorative)
-  drawDetailedCloud(ctx, 220, groundY - 50, 80, 25, COLORS.accent3, nowMs, false);
-
-  // Landing platform (near target area)
-  drawDetailedCloud(ctx, 380, groundY - 5, 100, 35, COLORS.player, nowMs, true);
-
-  // Sky decorative clouds (smaller, higher)
-  drawCloud(ctx, 150, 60, 15, COLORS.accent3, 2, nowMs);
-  drawCloud(ctx, 320, 45, 12, COLORS.accent3, 1.5, nowMs);
-  drawCloud(ctx, 450, 70, 10, COLORS.accent3, 1.5, nowMs)
+  // Wind-drifting sky clouds
+  const windOffset = (nowMs / 50) * state.wind;
+  drawSkyCloud(ctx, 120 + (windOffset % W), 55, 25, COLORS.accent3, nowMs);
+  drawSkyCloud(ctx, 280 + (windOffset % W), 70, 20, COLORS.accent3, nowMs);
+  drawSkyCloud(ctx, 400 + (windOffset % W), 50, 18, COLORS.accent3, nowMs);
 
   // Best marker - enhanced checkered flag with star
   if (state.best > 0 && state.best <= CLIFF_EDGE) {
@@ -205,13 +202,8 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   ctx.closePath();
   ctx.fill();
 
-  // Wind strength dots (1-3 based on strength)
-  const dots = Math.max(1, Math.min(3, Math.ceil(windStrength * 30)));
-  for (let i = 0; i < dots; i++) {
-    ctx.beginPath();
-    ctx.arc(windBoxX + 8 + i * 8, windBoxY + 22, 3, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  // Wind strength meter (bars)
+  drawWindStrengthMeter(ctx, windBoxX + 5, windBoxY + 14, windStrength, windDir, COLORS.accent3, COLORS.accent1);
 
   // Animated wind lines in the sky showing direction
   ctx.strokeStyle = COLORS.accent3;
@@ -227,12 +219,6 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.lineTo(lineX + lineLen * windDir, lineY);
     ctx.stroke();
   }
-
-  // Decorative clouds (moving with wind)
-  const cloudOffset = (nowMs / 50) * windDir * windStrength;
-  drawCloud(ctx, 80 + (cloudOffset % 60), 70, 10, COLORS.accent3, 1.5, nowMs);
-  drawCloud(ctx, 200 + (cloudOffset % 80), 60, 8, COLORS.accent3, 1.5, nowMs);
-  drawCloud(ctx, 340 + (cloudOffset % 70), 75, 12, COLORS.accent3, 1.5, nowMs);
 
   // Decorative birds
   drawBird(ctx, 150 + Math.sin(nowMs / 2000) * 30, 90, 6, COLORS.accent3, 1.5, nowMs);
@@ -578,7 +564,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     const isFailing = state.fellOff || state.failureAnimating;
 
     // Vignette effect (darker edges)
-    const gradient = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W * 0.7);
+    const gradient = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * 0.7);
     gradient.addColorStop(0, 'rgba(0,0,0,0)');
     gradient.addColorStop(0.7, `rgba(0,0,0,${intensity * 0.2})`);
     gradient.addColorStop(1, `rgba(0,0,0,${intensity * 0.5})`);
@@ -678,56 +664,40 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   // Ground level reference
   const groundY = H - 20;
 
-  // Noir platforms - angular, dramatic
-  // Starting platform
+  // Moon in the sky
+  drawMoon(ctx, W - 60, 45, 18, COLORS.highlight, COLORS.player, nowMs);
+
+  // Ground and cliff edge (noir style - clean lines)
   ctx.strokeStyle = COLORS.player;
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.moveTo(10, groundY);
-  ctx.lineTo(30, groundY - 25);
-  ctx.lineTo(110, groundY - 25);
-  ctx.lineTo(130, groundY);
+  ctx.moveTo(0, groundY);
+  ctx.lineTo(CLIFF_EDGE, groundY);
   ctx.stroke();
 
-  // Platform top surface glow
+  // Cliff drop-off
+  ctx.beginPath();
+  ctx.moveTo(CLIFF_EDGE, groundY);
+  ctx.lineTo(CLIFF_EDGE, groundY + 40);
+  ctx.stroke();
+
+  // Ground glow effect
   ctx.strokeStyle = COLORS.gridPrimary;
   ctx.lineWidth = 1;
-  ctx.globalAlpha = 0.5;
+  ctx.globalAlpha = 0.3;
   ctx.beginPath();
-  ctx.moveTo(32, groundY - 27);
-  ctx.lineTo(108, groundY - 27);
+  ctx.moveTo(0, groundY - 2);
+  ctx.lineTo(CLIFF_EDGE, groundY - 2);
   ctx.stroke();
   ctx.globalAlpha = 1;
 
-  // Middle floating platform
-  ctx.strokeStyle = COLORS.accent3;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(180, groundY - 45);
-  ctx.lineTo(195, groundY - 60);
-  ctx.lineTo(255, groundY - 60);
-  ctx.lineTo(270, groundY - 45);
-  ctx.stroke();
-
-  // Landing platform
-  ctx.strokeStyle = COLORS.player;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(330, groundY);
-  ctx.lineTo(350, groundY - 25);
-  ctx.lineTo(430, groundY - 25);
-  ctx.lineTo(450, groundY);
-  ctx.stroke();
-
-  // Landing platform top glow
-  ctx.strokeStyle = COLORS.gridPrimary;
-  ctx.lineWidth = 1;
-  ctx.globalAlpha = 0.5;
-  ctx.beginPath();
-  ctx.moveTo(352, groundY - 27);
-  ctx.lineTo(428, groundY - 27);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
+  // Wind-drifting night clouds
+  const windDir = state.wind > 0 ? 1 : -1;
+  const windStrength = Math.abs(state.wind);
+  const cloudDrift = (nowMs / 40) * state.wind;
+  drawNightCloud(ctx, 100 + (cloudDrift % W), 50, 30, COLORS.accent3, nowMs);
+  drawNightCloud(ctx, 250 + (cloudDrift % W), 65, 22, COLORS.accent3, nowMs);
+  drawNightCloud(ctx, 380 + (cloudDrift % W), 45, 26, COLORS.accent3, nowMs);
 
   // Best marker - simple vertical line with dot
   if (state.best > 0 && state.best <= CLIFF_EDGE) {
@@ -772,37 +742,34 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.stroke();
   }
 
-  // Wind indicator - minimal box
-  const windDir = state.wind > 0 ? 1 : -1;
-  const windStrength = Math.abs(state.wind);
-
-  const windBoxX = W - 70;
+  // Wind indicator with strength meter
+  const windBoxX = 15;
   const windBoxY = 10;
-  const windBoxW = 60;
-  const windBoxH = 24;
 
-  ctx.strokeStyle = COLORS.accent3;
-  ctx.lineWidth = 1;
-  ctx.strokeRect(windBoxX, windBoxY, windBoxW, windBoxH);
-
-  // Arrow
-  const arrowY = windBoxY + 14;
-  const arrowLen = 10 + windStrength * 100;
+  // Direction arrow
   ctx.strokeStyle = COLORS.accent1;
   ctx.lineWidth = 2;
+  const arrowLen = 20;
+  const arrowY = windBoxY + 8;
+  const arrowStartX = windBoxX + (windDir > 0 ? 0 : arrowLen);
+  const arrowEndX = windBoxX + (windDir > 0 ? arrowLen : 0);
+
   ctx.beginPath();
-  ctx.moveTo(windBoxX + windBoxW/2 - arrowLen/2 * windDir, arrowY);
-  ctx.lineTo(windBoxX + windBoxW/2 + arrowLen/2 * windDir, arrowY);
+  ctx.moveTo(arrowStartX, arrowY);
+  ctx.lineTo(arrowEndX, arrowY);
   ctx.stroke();
 
   // Arrowhead
   ctx.fillStyle = COLORS.accent1;
   ctx.beginPath();
-  ctx.moveTo(windBoxX + windBoxW/2 + arrowLen/2 * windDir, arrowY);
-  ctx.lineTo(windBoxX + windBoxW/2 + (arrowLen/2 - 6) * windDir, arrowY - 4);
-  ctx.lineTo(windBoxX + windBoxW/2 + (arrowLen/2 - 6) * windDir, arrowY + 4);
+  ctx.moveTo(arrowEndX, arrowY);
+  ctx.lineTo(arrowEndX - 6 * windDir, arrowY - 4);
+  ctx.lineTo(arrowEndX - 6 * windDir, arrowY + 4);
   ctx.closePath();
   ctx.fill();
+
+  // Wind strength meter (bars)
+  drawWindStrengthMeter(ctx, windBoxX + 30, windBoxY, windStrength, windDir, COLORS.accent3, COLORS.accent1);
 
   // Ghost trail (best attempt) - prominent dashes for noir
   if (state.bestTrail.length > 4) {

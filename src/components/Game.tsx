@@ -65,6 +65,9 @@ const Game = () => {
   const pressedRef = useRef(false);
   const audioRefs = useRef<AudioRefs>({ ctx: null, chargeOsc: null, chargeGain: null, edgeOsc: null, edgeGain: null, unlocked: false, stateChangeHandler: null });
   const animFrameRef = useRef<number>(0);
+  const requestRef = useRef<number>();
+  const previousTimeRef = useRef<number>();
+  const errorRef = useRef<string | null>(null);
   const pointerIdRef = useRef<number | null>(null);
   const pointerStartYRef = useRef<number>(0);
   const angleStartRef = useRef<number>(OPTIMAL_ANGLE);
@@ -447,9 +450,22 @@ const Game = () => {
             scheduleReset,
             getDailyStats: () => dailyStatsRef.current,
           });
-          renderFrame(ctx, state, currentTheme, now);
-        } catch (err) {
+          // Pass devicePixelRatio for high-res rendering
+          if (!errorRef.current && state.phase !== 'gameover') {
+            renderFrame(ctx, state, currentTheme, now, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
+          }
+        } catch (err: any) {
           console.error('[Game] Loop error:', err);
+          errorRef.current = err.message;
+          // Render error to canvas for debugging
+          ctx.save();
+          ctx.fillStyle = '#000';
+          ctx.fillRect(0, 0, W, H);
+          ctx.fillStyle = '#f00';
+          ctx.font = '16px monospace';
+          ctx.fillText('CRASH: ' + err.message.slice(0, 40), 10, 30);
+          ctx.fillText(err.message.slice(40, 80), 10, 50);
+          ctx.restore();
         }
       }
       animFrameRef.current = requestAnimationFrame(loop);
@@ -502,81 +518,78 @@ const Game = () => {
       <div
         className={`w-full max-w-md flex flex-col items-center ${isMobileRef.current ? 'gap-1 p-1' : 'gap-2 p-2'}`}
       >
-      {/* Header - compact */}
-      <div className="flex items-center justify-between w-full max-w-md px-2">
-        <h1 className="text-sm font-bold" style={{ color: theme.accent1 }}>One-More-Flick</h1>
-        {profile && (
-          <span className="text-xs font-mono" style={{ color: theme.highlight }}>
-            {profile.nickname}
-          </span>
-        )}
-      </div>
-
-      {/* Controls microcopy - hidden in landscape to save space */}
-      <div className="w-full max-w-md px-2 text-xs landscape:hidden" style={{ color: theme.uiText, opacity: 0.8 }}>
-        <span>{controlsLabel}</span>
-      </div>
-
-      {/* Canvas - no flex-1, just natural size */}
-      <div className="relative w-full flex justify-center">
-        {/* Visual canvas - minimal padding */}
-        <div className="relative flex items-center justify-center" style={{ padding: isMobileRef.current ? '2px' : '6px' }}>
-          <canvas
-            ref={canvasRef}
-            width={W}
-            height={H}
-            className="game-canvas cursor-pointer touch-none select-none"
-            style={{
-              boxShadow: themeId === 'noir'
-                ? '0 2px 8px rgba(0,0,0,0.4)'
-                : '2px 3px 8px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.05)',
-              border: themeId === 'noir'
-                ? `1.5px solid ${theme.accent3}`  // Noir: thin, stark contrast
-                : `2.5px solid ${theme.accent3}`, // Flipbook: thicker, warmer
-              borderRadius: themeId === 'noir' ? '1px' : '3px',
-              width: isMobileRef.current ? 'min(calc(100vw - 0.5rem), 520px)' : 'min(calc(100vw - 1rem), 480px)',
-              height: 'auto',
-              aspectRatio: `${W} / ${H}`,
-              imageRendering: 'pixelated',
-              // @ts-expect-error - vendor prefixes for cross-browser crisp rendering
-              WebkitImageRendering: 'pixelated',
-              MozImageRendering: 'crisp-edges',
-              msInterpolationMode: 'nearest-neighbor',
-              // Ensure the input overlay receives the pointer events
-              pointerEvents: 'none',
-            }}
-          />
+        {/* Header - compact */}
+        <div className="flex items-center justify-between w-full max-w-md px-2">
+          <h1 className="text-sm font-bold" style={{ color: theme.accent1 }}>One-More-Flick</h1>
+          {profile && (
+            <span className="text-xs font-mono" style={{ color: theme.highlight }}>
+              {profile.nickname}
+            </span>
+          )}
         </div>
 
-        {/* Full-area input overlay so you can tap/hold outside the canvas on mobile */}
-        <div
-          ref={inputPadRef}
-          className="absolute inset-0 z-10"
-          style={{ touchAction: 'none', cursor: 'pointer' }}
-          aria-label="Game input area"
-        />
+        {/* Controls microcopy - hidden in landscape to save space */}
+        <div className="w-full max-w-md px-2 text-xs landscape:hidden" style={{ color: theme.uiText, opacity: 0.8 }}>
+          <span>{controlsLabel}</span>
+        </div>
 
-        {/* Mobile hint overlay */}
-        {showMobileHint && isMobileRef.current && (
-          <div
-            className="absolute inset-0 flex items-center justify-center pointer-events-none animate-pulse"
-            style={{ background: 'rgba(0,0,0,0.5)' }}
-          >
-            <div className="text-center">
-              <p className="text-lg font-bold" style={{ color: theme.accent2 }}>TAP & HOLD</p>
-              <p className="text-xs" style={{ color: theme.uiText }}>Release to launch</p>
-            </div>
+        {/* Canvas - no flex-1, just natural size */}
+        <div className="relative w-full flex justify-center">
+          {/* Visual canvas - minimal padding */}
+          <div className="relative flex items-center justify-center" style={{ padding: isMobileRef.current ? '2px' : '6px' }}>
+            <canvas
+              ref={canvasRef}
+              width={W * (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1)}
+              height={H * (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1)}
+              className="game-canvas cursor-pointer touch-none select-none"
+              style={{
+                boxShadow: themeId === 'noir'
+                  ? '0 2px 8px rgba(0,0,0,0.4)'
+                  : '2px 3px 8px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.05)',
+                border: themeId === 'noir'
+                  ? `1.5px solid ${theme.accent3}`  // Noir: thin, stark contrast
+                  : `2.5px solid ${theme.accent3}`, // Flipbook: thicker, warmer
+                borderRadius: themeId === 'noir' ? '1px' : '3px',
+                width: '100%',
+                maxWidth: isMobileRef.current ? '520px' : '480px',
+                aspectRatio: `${W} / ${H}`,
+                // Auto image rendering for smooth ink (Noir) AND smooth pencil (Flipbook)
+                imageRendering: 'auto',
+                // Ensure the input overlay receives the pointer events
+                pointerEvents: 'none',
+              }}
+            />
           </div>
-        )}
-      </div>
+
+          {/* Full-area input overlay so you can tap/hold outside the canvas on mobile */}
+          <div
+            ref={inputPadRef}
+            className="absolute inset-0 z-10"
+            style={{ touchAction: 'none', cursor: 'pointer' }}
+            aria-label="Game input area"
+          />
+
+          {/* Mobile hint overlay */}
+          {showMobileHint && isMobileRef.current && (
+            <div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none animate-pulse"
+              style={{ background: 'rgba(0,0,0,0.5)' }}
+            >
+              <div className="text-center">
+                <p className="text-lg font-bold" style={{ color: theme.accent2 }}>TAP & HOLD</p>
+                <p className="text-xs" style={{ color: theme.uiText }}>Release to launch</p>
+              </div>
+            </div>
+          )}
+        </div>
 
 
-      {/* Settings row - theme-aware styling */}
-      {(() => {
-        // Theme-specific button styles
-        const isNoir = themeId === 'noir';
-        const buttonStyle: React.CSSProperties = isNoir
-          ? {
+        {/* Settings row - theme-aware styling */}
+        {(() => {
+          // Theme-specific button styles
+          const isNoir = themeId === 'noir';
+          const buttonStyle: React.CSSProperties = isNoir
+            ? {
               // Noir: minimal ink UI - thin borders, stark contrast
               background: 'transparent',
               border: `1px solid ${theme.accent3}`,
@@ -584,7 +597,7 @@ const Game = () => {
               padding: '4px 8px',
               minHeight: '32px', // Touch-friendly minimum
             }
-          : {
+            : {
               // Flipbook: sticker label feel - rounded, paper-like
               background: theme.uiBg,
               border: `1.5px solid ${theme.accent3}`,
@@ -593,173 +606,173 @@ const Game = () => {
               boxShadow: '1px 1px 0 rgba(0,0,0,0.1)',
               minHeight: '32px', // Touch-friendly minimum
             };
-        const buttonClass = isNoir
-          ? 'rounded-sm focus-visible:outline-none focus-visible:ring-1 hover:opacity-80 active:opacity-70 transition-opacity'
-          : 'rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 hover:opacity-90 active:translate-y-px transition-all';
+          const buttonClass = isNoir
+            ? 'rounded-sm focus-visible:outline-none focus-visible:ring-1 hover:opacity-80 active:opacity-70 transition-opacity'
+            : 'rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 hover:opacity-90 active:translate-y-px transition-all';
 
-        return (
-          <div className="w-full max-w-md flex items-center justify-between gap-2 text-xs px-2" style={{ color: theme.uiText }}>
-            {/* Left: Theme picker */}
-            <button
-              className={buttonClass}
-              style={{
-                ...buttonStyle,
-                borderColor: theme.accent1,
-              }}
-              onClick={() => {
-                const currentIndex = THEME_IDS.indexOf(themeId);
-                const nextIndex = (currentIndex + 1) % THEME_IDS.length;
-                setThemeId(THEME_IDS[nextIndex]);
-              }}
-              aria-label="Switch theme"
-            >
-              {isNoir ? 'Noir' : 'Flipbook'}
-            </button>
-
-            {/* Center: Leaderboard */}
-            <button
-              className={buttonClass}
-              style={{
-                ...buttonStyle,
-                borderColor: theme.highlight,
-              }}
-              onClick={() => setShowLeaderboard(true)}
-              aria-label="View leaderboard"
-            >
-              Leaderboard
-            </button>
-
-            {/* Right: Stats + Sound */}
-            <div className="flex items-center gap-2">
+          return (
+            <div className="w-full max-w-md flex items-center justify-between gap-2 text-xs px-2" style={{ color: theme.uiText }}>
+              {/* Left: Theme picker */}
               <button
                 className={buttonClass}
-                style={buttonStyle}
-                onClick={() => setShowStats(true)}
-                aria-label="View stats"
-              >
-                Stats
-              </button>
-              <button
-                className={buttonClass}
-                style={buttonStyle}
-                onClick={async () => {
-                  ensureAudioContext(audioRefs.current);
-                  await resumeIfSuspended(audioRefs.current);
-                  setAudioSettings((s) => ({ ...s, muted: !s.muted }));
-                  // Also dismiss warning if user toggles sound
-                  setShowAudioWarning(false);
+                style={{
+                  ...buttonStyle,
+                  borderColor: theme.accent1,
                 }}
-                aria-label="Toggle sound"
+                onClick={() => {
+                  const currentIndex = THEME_IDS.indexOf(themeId);
+                  const nextIndex = (currentIndex + 1) % THEME_IDS.length;
+                  setThemeId(THEME_IDS[nextIndex]);
+                }}
+                aria-label="Switch theme"
               >
-                {audioSettings.muted ? '🔇' : '🔊'}
+                {isNoir ? 'Noir' : 'Flipbook'}
               </button>
-            </div>
-            {/* iOS audio warning */}
-            {showAudioWarning && (
-              <div
-                className="mt-2 px-3 py-2 rounded text-xs text-center"
-                style={{ backgroundColor: theme.danger + '33', color: theme.danger, maxWidth: '200px' }}
+
+              {/* Center: Leaderboard */}
+              <button
+                className={buttonClass}
+                style={{
+                  ...buttonStyle,
+                  borderColor: theme.highlight,
+                }}
+                onClick={() => setShowLeaderboard(true)}
+                aria-label="View leaderboard"
               >
-                No sound? Check your silent switch or tap 🔊 again
+                Leaderboard
+              </button>
+
+              {/* Right: Stats + Sound */}
+              <div className="flex items-center gap-2">
+                <button
+                  className={buttonClass}
+                  style={buttonStyle}
+                  onClick={() => setShowStats(true)}
+                  aria-label="View stats"
+                >
+                  Stats
+                </button>
+                <button
+                  className={buttonClass}
+                  style={buttonStyle}
+                  onClick={async () => {
+                    ensureAudioContext(audioRefs.current);
+                    await resumeIfSuspended(audioRefs.current);
+                    setAudioSettings((s) => ({ ...s, muted: !s.muted }));
+                    // Also dismiss warning if user toggles sound
+                    setShowAudioWarning(false);
+                  }}
+                  aria-label="Toggle sound"
+                >
+                  {audioSettings.muted ? '🔇' : '🔊'}
+                </button>
               </div>
+              {/* iOS audio warning */}
+              {showAudioWarning && (
+                <div
+                  className="mt-2 px-3 py-2 rounded text-xs text-center"
+                  style={{ backgroundColor: theme.danger + '33', color: theme.danger, maxWidth: '200px' }}
+                >
+                  No sound? Check your silent switch or tap 🔊 again
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Hero row: LAST, LV, TARGET - primary focus */}
+        <div className="w-full max-w-md flex justify-center items-end gap-6 text-center">
+          <div>
+            <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Last</p>
+            <p className="text-2xl font-bold font-mono">
+              {fellOff ? (
+                <span style={{ color: theme.danger }}>FELL</span>
+              ) : lastDist !== null ? (
+                <span style={{ color: theme.accent1 }}>
+                  {formatScore(lastDist).int}<span className="text-sm opacity-60">.{formatScore(lastDist).dec}</span>
+                  {perfectLanding && <span style={{ color: theme.highlight }}> ★</span>}
+                </span>
+              ) : (
+                <span style={{ color: theme.uiText, opacity: 0.4 }}>-</span>
+              )}
+            </p>
+            {lastDist !== null && !fellOff && (
+              <p className="text-xs font-mono" style={{ color: theme.accent2, opacity: 0.8 }}>
+                x{lastMultiplier.toFixed(1)}
+              </p>
             )}
           </div>
-        );
-      })()}
-
-      {/* Hero row: LAST, LV, TARGET - primary focus */}
-      <div className="w-full max-w-md flex justify-center items-end gap-6 text-center">
-        <div>
-          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Last</p>
-          <p className="text-2xl font-bold font-mono">
-            {fellOff ? (
-              <span style={{ color: theme.danger }}>FELL</span>
-            ) : lastDist !== null ? (
-              <span style={{ color: theme.accent1 }}>
-                {formatScore(lastDist).int}<span className="text-sm opacity-60">.{formatScore(lastDist).dec}</span>
-                {perfectLanding && <span style={{ color: theme.highlight }}> ★</span>}
-              </span>
-            ) : (
-              <span style={{ color: theme.uiText, opacity: 0.4 }}>-</span>
-            )}
-          </p>
-          {lastDist !== null && !fellOff && (
-            <p className="text-xs font-mono" style={{ color: theme.accent2, opacity: 0.8 }}>
-              x{lastMultiplier.toFixed(1)}
+          <div>
+            <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Lv</p>
+            <p className="text-2xl font-bold font-mono" style={{ color: theme.highlight }}>{zenoLevel}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Target</p>
+            <p className="text-xl font-bold font-mono" style={{ color: theme.accent2 }}>
+              {formatScore(zenoTarget).int}<span className="text-sm opacity-60">.{formatScore(zenoTarget).dec}</span>
             </p>
-          )}
+          </div>
         </div>
-        <div>
-          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Lv</p>
-          <p className="text-2xl font-bold font-mono" style={{ color: theme.highlight }}>{zenoLevel}</p>
-        </div>
-        <div>
-          <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Target</p>
-          <p className="text-xl font-bold font-mono" style={{ color: theme.accent2 }}>
-            {formatScore(zenoTarget).int}<span className="text-sm opacity-60">.{formatScore(zenoTarget).dec}</span>
-          </p>
-        </div>
-      </div>
 
-      {/* Secondary row: SCORE, BEST */}
-      <div className="w-full max-w-md flex justify-center gap-6 text-center">
-        <div>
-          <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Score</p>
-          <p className="text-base font-bold font-mono" style={{ color: theme.accent4 }}>{Math.floor(totalScore).toLocaleString()}</p>
+        {/* Secondary row: SCORE, BEST */}
+        <div className="w-full max-w-md flex justify-center gap-6 text-center">
+          <div>
+            <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Score</p>
+            <p className="text-base font-bold font-mono" style={{ color: theme.accent4 }}>{Math.floor(totalScore).toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Best</p>
+            <p className="text-base font-bold font-mono" style={{ color: theme.accent2 }}>
+              {formatScore(bestScore).int}<span className="text-xs opacity-60">.{formatScore(bestScore).dec}</span>
+            </p>
+          </div>
         </div>
-        <div>
-          <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Best</p>
-          <p className="text-base font-bold font-mono" style={{ color: theme.accent2 }}>
-            {formatScore(bestScore).int}<span className="text-xs opacity-60">.{formatScore(bestScore).dec}</span>
-          </p>
-        </div>
-      </div>
 
-      {/* Extra touch area for comfortable thumb reach on mobile */}
-      <div
-        ref={extraInputPadRef}
-        className="flex-1 w-full min-h-[100px] flex items-center justify-center"
-        style={{
-          touchAction: 'none',
-          cursor: 'pointer',
-          // Subtle visual hint
-          background: `radial-gradient(ellipse at center, ${theme.accent1}08 0%, transparent 70%)`,
-        }}
-        aria-label="Tap area - hold to charge, release to launch"
-      >
-        <p className="text-xs opacity-30 pointer-events-none select-none" style={{ color: theme.uiText }}>
-          TAP HERE
-        </p>
-      </div>
-
-      {/* Achievement popup */}
-      {newAchievement && (
+        {/* Extra touch area for comfortable thumb reach on mobile */}
         <div
-          className="fixed top-2 left-1/2 transform -translate-x-1/2 px-3 py-1 rounded animate-pulse"
+          ref={extraInputPadRef}
+          className="flex-1 w-full min-h-[100px] flex items-center justify-center"
           style={{
-            background: theme.background,
-            border: `1px solid ${theme.highlight}`,
-            boxShadow: `0 0 10px ${theme.highlight}80`,
+            touchAction: 'none',
+            cursor: 'pointer',
+            // Subtle visual hint
+            background: `radial-gradient(ellipse at center, ${theme.accent1}08 0%, transparent 70%)`,
           }}
+          aria-label="Tap area - hold to charge, release to launch"
         >
-          <p className="text-xs font-bold" style={{ color: theme.highlight }}>★ {newAchievement}</p>
+          <p className="text-xs opacity-30 pointer-events-none select-none" style={{ color: theme.uiText }}>
+            TAP HERE
+          </p>
         </div>
-      )}
 
-      {/* Stats overlay */}
-      {showStats && (
-        <StatsOverlay theme={theme} onClose={() => setShowStats(false)} />
-      )}
+        {/* Achievement popup */}
+        {newAchievement && (
+          <div
+            className="fixed top-2 left-1/2 transform -translate-x-1/2 px-3 py-1 rounded animate-pulse"
+            style={{
+              background: theme.background,
+              border: `1px solid ${theme.highlight}`,
+              boxShadow: `0 0 10px ${theme.highlight}80`,
+            }}
+          >
+            <p className="text-xs font-bold" style={{ color: theme.highlight }}>★ {newAchievement}</p>
+          </div>
+        )}
 
-      {/* Leaderboard screen */}
-      {showLeaderboard && (
-        <LeaderboardScreen theme={theme} onClose={() => setShowLeaderboard(false)} />
-      )}
+        {/* Stats overlay */}
+        {showStats && (
+          <StatsOverlay theme={theme} onClose={() => setShowStats(false)} />
+        )}
 
-      {/* Onboarding modal for first-time users */}
-      {needsOnboarding && (
-        <NicknameModal theme={theme} onComplete={completeOnboarding} />
-      )}
+        {/* Leaderboard screen */}
+        {showLeaderboard && (
+          <LeaderboardScreen theme={theme} onClose={() => setShowLeaderboard(false)} />
+        )}
+
+        {/* Onboarding modal for first-time users */}
+        {needsOnboarding && (
+          <NicknameModal theme={theme} onComplete={completeOnboarding} />
+        )}
       </div>
     </div>
   );

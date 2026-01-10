@@ -102,12 +102,8 @@
 .game-canvas {
   width: 640px;
   height: 320px;
-  /* Cross-browser crisp pixel rendering */
-  image-rendering: -moz-crisp-edges;
-  image-rendering: -webkit-crisp-edges;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  -ms-interpolation-mode: nearest-neighbor;
+  /* Cross-browser crisp pixel rendering disabled for HD update */
+  /* image-rendering: pixelated; - moved to inline style in Game.tsx (auto) */
   cursor: pointer;
   touch-action: none; /* Prevent scroll/zoom on touch */
   user-select: none;
