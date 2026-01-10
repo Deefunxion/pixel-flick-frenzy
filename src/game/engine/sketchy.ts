@@ -701,6 +701,82 @@ export function drawCloud(
   }
 }
 
+// Draw a large cloud platform (for ground replacement)
+export function drawCloudPlatform(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  color: string,
+  lineWidth: number = 3,
+  nowMs: number = 0,
+  filled: boolean = false,
+) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const wobble = getWobble(x, y, nowMs, 0.5);
+
+  // Cloud platform made of overlapping bumps
+  const bumpCount = Math.floor(width / 25);
+  const bumpWidth = width / bumpCount;
+
+  ctx.beginPath();
+
+  // Start from bottom left
+  ctx.moveTo(x - width / 2, y + height / 2 + wobble.dy);
+
+  // Draw top bumps (the fluffy part)
+  for (let i = 0; i <= bumpCount; i++) {
+    const bumpX = x - width / 2 + i * bumpWidth;
+    const bumpY = y - height / 2;
+    const bumpHeight = height * (0.6 + Math.sin(i * 1.7) * 0.2);
+    const wobbleOffset = getWobble(bumpX, bumpY, nowMs, 0.3);
+
+    if (i === 0) {
+      ctx.lineTo(bumpX + wobbleOffset.dx, bumpY + wobbleOffset.dy);
+    } else {
+      // Quadratic curve for fluffy bump
+      const cpX = bumpX - bumpWidth / 2;
+      const cpY = bumpY - bumpHeight + wobbleOffset.dy;
+      ctx.quadraticCurveTo(cpX, cpY, bumpX + wobbleOffset.dx, bumpY + wobbleOffset.dy);
+    }
+  }
+
+  // Close bottom
+  ctx.lineTo(x + width / 2, y + height / 2 + wobble.dy);
+  ctx.lineTo(x - width / 2, y + height / 2 + wobble.dy);
+
+  if (filled) {
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.1;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  ctx.stroke();
+
+  // Add internal scribble lines for depth
+  ctx.globalAlpha = 0.3;
+  ctx.lineWidth = lineWidth * 0.5;
+  for (let i = 1; i < bumpCount; i++) {
+    const lineX = x - width / 2 + i * bumpWidth;
+    const lineWobble = getWobble(lineX, y, nowMs, 0.2);
+    ctx.beginPath();
+    ctx.moveTo(lineX + lineWobble.dx, y - height * 0.3);
+    ctx.quadraticCurveTo(
+      lineX + lineWobble.dx + 5,
+      y,
+      lineX + lineWobble.dx,
+      y + height * 0.3
+    );
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
 // Draw a bird (simple V shape)
 export function drawBird(
   ctx: CanvasRenderingContext2D,
