@@ -2100,3 +2100,225 @@ export function drawZenoImpact(
   // Impact burst (existing function)
   drawImpactBurst(ctx, x, baseY, color, landingFrame, themeKind);
 }
+
+// Draw cross-hatching texture within a rectangular area
+export function drawCrossHatch(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  color: string,
+  nowMs: number,
+  density: number = 5,
+  angle1: number = 45,
+  angle2: number = -45,
+) {
+  const lineSpacing = Math.max(3, 20 / density);
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 0.8;
+  ctx.globalAlpha = 0.3;
+
+  // First set of parallel lines at angle1
+  const rad1 = (angle1 * Math.PI) / 180;
+  const cos1 = Math.cos(rad1);
+  const sin1 = Math.sin(rad1);
+
+  // Calculate number of lines needed to cover the area
+  const diagonal = Math.sqrt(width * width + height * height);
+  const lineCount = Math.ceil(diagonal / lineSpacing);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, width, height);
+  ctx.clip();
+
+  // Draw first set of lines
+  for (let i = -lineCount; i <= lineCount; i++) {
+    const offset = i * lineSpacing;
+    const startX = x + width / 2 + offset * cos1 - diagonal * sin1;
+    const startY = y + height / 2 + offset * sin1 + diagonal * cos1;
+    const endX = x + width / 2 + offset * cos1 + diagonal * sin1;
+    const endY = y + height / 2 + offset * sin1 - diagonal * cos1;
+
+    // Add wobble for hand-drawn feel
+    const wobble1 = getWobble(startX, startY, nowMs, 0.5);
+    const wobble2 = getWobble(endX, endY, nowMs, 0.5);
+
+    ctx.moveTo(startX + wobble1.dx, startY + wobble1.dy);
+    ctx.lineTo(endX + wobble2.dx, endY + wobble2.dy);
+  }
+  ctx.stroke();
+
+  // Draw second set of lines at angle2
+  ctx.beginPath();
+  const rad2 = (angle2 * Math.PI) / 180;
+  const cos2 = Math.cos(rad2);
+  const sin2 = Math.sin(rad2);
+
+  for (let i = -lineCount; i <= lineCount; i++) {
+    const offset = i * lineSpacing;
+    const startX = x + width / 2 + offset * cos2 - diagonal * sin2;
+    const startY = y + height / 2 + offset * sin2 + diagonal * cos2;
+    const endX = x + width / 2 + offset * cos2 + diagonal * sin2;
+    const endY = y + height / 2 + offset * sin2 - diagonal * cos2;
+
+    const wobble1 = getWobble(startX + 50, startY + 50, nowMs, 0.5);
+    const wobble2 = getWobble(endX + 50, endY + 50, nowMs, 0.5);
+
+    ctx.moveTo(startX + wobble1.dx, startY + wobble1.dy);
+    ctx.lineTo(endX + wobble2.dx, endY + wobble2.dy);
+  }
+  ctx.stroke();
+
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+// Draw a decorative spiral curl (for cloud edges, UI embellishments)
+export function drawDecorativeCurl(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+  lineWidth: number = 1.5,
+  nowMs: number = 0,
+  direction: 1 | -1 = 1, // 1 = clockwise, -1 = counter-clockwise
+) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+
+  const wobble = getWobble(x, y, nowMs, 0.5);
+
+  ctx.beginPath();
+
+  // Draw spiral from outside in
+  const turns = 1.2;
+  const steps = 20;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const angle = t * turns * Math.PI * 2 * direction;
+    const r = size * (1 - t * 0.8); // Spiral inward
+    const px = x + Math.cos(angle) * r + wobble.dx * (1 - t);
+    const py = y + Math.sin(angle) * r + wobble.dy * (1 - t);
+
+    if (i === 0) {
+      ctx.moveTo(px, py);
+    } else {
+      ctx.lineTo(px, py);
+    }
+  }
+
+  ctx.stroke();
+}
+
+// Draw an enhanced cloud platform with cross-hatching and decorative curls
+export function drawDetailedCloud(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  color: string,
+  nowMs: number,
+  filled: boolean = true,
+) {
+  const wobble = getWobble(x, y, nowMs, 0.5);
+
+  // Cloud made of overlapping circles for fluffy outline
+  const circleCount = Math.floor(width / 15) + 2;
+  const circleSpacing = width / (circleCount - 1);
+
+  // Store circle positions for cross-hatch clipping
+  const circles: { cx: number; cy: number; r: number }[] = [];
+
+  // Generate circle positions with varying heights
+  for (let i = 0; i < circleCount; i++) {
+    const cx = x - width / 2 + i * circleSpacing + wobble.dx;
+    const heightVariation = Math.sin(i * 1.5) * (height * 0.3);
+    const cy = y + heightVariation + wobble.dy;
+    const r = height * 0.5 + Math.sin(i * 2.1) * (height * 0.15);
+    circles.push({ cx, cy, r });
+  }
+
+  // If filled, draw cross-hatching first (will be clipped)
+  if (filled) {
+    ctx.save();
+
+    // Create clipping path from all circles
+    ctx.beginPath();
+    for (const c of circles) {
+      ctx.moveTo(c.cx + c.r, c.cy);
+      ctx.arc(c.cx, c.cy, c.r, 0, Math.PI * 2);
+    }
+    ctx.clip();
+
+    // Draw cross-hatching inside cloud
+    drawCrossHatch(
+      ctx,
+      x - width / 2 - 10,
+      y - height,
+      width + 20,
+      height * 2,
+      color,
+      nowMs,
+      3, // density
+      30, // angle1
+      -30, // angle2
+    );
+
+    ctx.restore();
+  }
+
+  // Draw cloud outlines (overlapping circles)
+  ctx.strokeStyle = color;
+  ctx.lineWidth = LINE_WEIGHTS.primary;
+
+  for (const c of circles) {
+    drawHandCircle(ctx, c.cx, c.cy, c.r, color, LINE_WEIGHTS.primary, nowMs, false);
+  }
+
+  // Add decorative curls at edges
+  const leftmostCircle = circles[0];
+  const rightmostCircle = circles[circles.length - 1];
+
+  // Left curl
+  drawDecorativeCurl(
+    ctx,
+    leftmostCircle.cx - leftmostCircle.r * 0.7,
+    leftmostCircle.cy + leftmostCircle.r * 0.3,
+    8,
+    color,
+    1.5,
+    nowMs,
+    -1, // counter-clockwise
+  );
+
+  // Right curl
+  drawDecorativeCurl(
+    ctx,
+    rightmostCircle.cx + rightmostCircle.r * 0.7,
+    rightmostCircle.cy + rightmostCircle.r * 0.3,
+    8,
+    color,
+    1.5,
+    nowMs,
+    1, // clockwise
+  );
+
+  // Top curls (decorative wisps)
+  const topCircle = circles[Math.floor(circles.length / 2)];
+  drawDecorativeCurl(
+    ctx,
+    topCircle.cx - 5,
+    topCircle.cy - topCircle.r * 0.8,
+    6,
+    color,
+    1,
+    nowMs,
+    1,
+  );
+}
