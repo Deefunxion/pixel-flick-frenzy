@@ -1020,7 +1020,7 @@ export function drawImpactBurst(
 
   if (themeKind === 'flipbook') {
     // Flipbook: graphite dust puffs - small circular bursts
-    const puffCount = 5;
+    const puffCount = 8;
     for (let i = 0; i < puffCount; i++) {
       const angle = (i / puffCount) * Math.PI + Math.PI; // Bottom half arc
       const dist = 8 + progress * 15;
@@ -1030,18 +1030,18 @@ export function drawImpactBurst(
       ctx.globalAlpha = baseAlpha * 0.4;
       ctx.fillStyle = color;
       ctx.beginPath();
-      ctx.arc(puffX, puffY, 2 + progress * 2, 0, Math.PI * 2);
+      ctx.arc(puffX, puffY, 4 + progress * 4, 0, Math.PI * 2);
       ctx.fill();
     }
 
     // Small radial lines
     ctx.globalAlpha = baseAlpha * 0.5;
     ctx.strokeStyle = color;
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2.5;
     for (let i = 0; i < 4; i++) {
       const angle = (i / 4) * Math.PI + Math.PI * 0.1;
       const innerR = 5;
-      const outerR = 10 + progress * 8;
+      const outerR = 18 + progress * 12;
       ctx.beginPath();
       ctx.moveTo(x + Math.cos(angle) * innerR, y + Math.sin(angle) * innerR * 0.5);
       ctx.lineTo(x + Math.cos(angle) * outerR, y + Math.sin(angle) * outerR * 0.5);
@@ -1049,7 +1049,7 @@ export function drawImpactBurst(
     }
   } else {
     // Noir: ink blot burst - higher contrast, fewer drops
-    const dropCount = 4;
+    const dropCount = 6;
     for (let i = 0; i < dropCount; i++) {
       const angle = (i / dropCount) * Math.PI + Math.PI;
       const dist = 6 + progress * 12;
