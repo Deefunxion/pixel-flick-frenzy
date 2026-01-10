@@ -23,6 +23,9 @@ import {
   drawScribbleEnergy,
   drawLaunchBurst,
   drawSpeedLines,
+  drawZenoCoil,
+  drawZenoBolt,
+  drawZenoImpact,
   LINE_WEIGHTS,
 } from './sketchy';
 
@@ -346,18 +349,15 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       state.failureType,
       state.failureFrame,
     );
+  } else if (state.charging) {
+    drawZenoCoil(ctx, state.px, state.py, playerColor, nowMs, state.chargePower, 'flipbook');
+  } else if (state.flying && !state.failureAnimating) {
+    drawZenoBolt(ctx, state.px, state.py, playerColor, nowMs, { vx: state.vx, vy: state.vy }, 'flipbook');
+  } else if (state.landingFrame > 0 && state.landingFrame < 15 && !state.fellOff) {
+    drawZenoImpact(ctx, state.px, state.py, playerColor, nowMs, state.landingFrame, 'flipbook');
   } else {
-    drawStickFigure(
-      ctx,
-      state.px,
-      state.py,
-      playerColor,
-      nowMs,
-      playerState,
-      state.angle,
-      { vx: state.vx, vy: state.vy },
-      state.chargePower,
-    );
+    // Idle or other states
+    drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
   }
 
   // Scribble energy during charging
@@ -872,7 +872,14 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
 
   if (state.failureAnimating && state.failureType && (state.failureType === 'tumble' || state.failureType === 'dive')) {
     drawFailingStickFigure(ctx, state.px, state.py, playerColor, nowMs, state.failureType, state.failureFrame);
+  } else if (state.charging) {
+    drawZenoCoil(ctx, state.px, state.py, playerColor, nowMs, state.chargePower, 'noir');
+  } else if (state.flying && !state.failureAnimating) {
+    drawZenoBolt(ctx, state.px, state.py, playerColor, nowMs, { vx: state.vx, vy: state.vy }, 'noir');
+  } else if (state.landingFrame > 0 && state.landingFrame < 15 && !state.fellOff) {
+    drawZenoImpact(ctx, state.px, state.py, playerColor, nowMs, state.landingFrame, 'noir');
   } else {
+    // Idle or other states
     drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
   }
 
