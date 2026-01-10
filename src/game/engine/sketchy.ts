@@ -1878,11 +1878,11 @@ export function drawGroundCracks(
 
   const progress = frame / 15;
   const alpha = 1 - progress * 0.8;
-  const crackCount = 10;
-  const maxLen = 45 + (1 - progress) * 25;
+  const crackCount = 12;
+  const maxLen = 55 + (1 - progress) * 35;
 
   ctx.strokeStyle = color;
-  ctx.lineWidth = themeKind === 'flipbook' ? 3 : 2.5;
+  ctx.lineWidth = themeKind === 'flipbook' ? SCALED_LINE_WEIGHTS.effects : SCALED_LINE_WEIGHTS.details;
   ctx.lineCap = 'round';
   ctx.globalAlpha = alpha * 0.9;
 
