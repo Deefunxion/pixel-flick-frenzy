@@ -276,11 +276,11 @@ export function drawStickFigure(
 
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  ctx.lineWidth = 4;
+  ctx.lineWidth = SCALED_LINE_WEIGHTS.body;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  const scale = 0.85;
+  const scale = CHARACTER_SCALE.normal;
   const headRadius = 8 * scale;
 
   // Animation offsets based on state
