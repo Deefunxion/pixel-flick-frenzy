@@ -1909,8 +1909,8 @@ export function drawZenoImpact(
   landingFrame: number,
   themeKind: 'flipbook' | 'noir' = 'flipbook',
 ) {
-  const scale = 0.85;
-  const lineWidth = themeKind === 'flipbook' ? 4 : 3;
+  const scale = CHARACTER_SCALE.normal;
+  const lineWidth = themeKind === 'flipbook' ? SCALED_LINE_WEIGHTS.body : SCALED_LINE_WEIGHTS.limbs;
 
   // Impact squash - maximum at frame 0, recovers over time
   const impactProgress = Math.min(1, landingFrame / 10);
