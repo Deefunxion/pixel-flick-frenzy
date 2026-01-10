@@ -1492,8 +1492,8 @@ export function drawZenoCoil(
   chargePower: number, // 0-1
   themeKind: 'flipbook' | 'noir' = 'flipbook',
 ) {
-  const scale = 0.85;
-  const lineWidth = themeKind === 'flipbook' ? 4 : 3;
+  const scale = CHARACTER_SCALE.normal;
+  const lineWidth = themeKind === 'flipbook' ? SCALED_LINE_WEIGHTS.body : SCALED_LINE_WEIGHTS.limbs;
 
   // Squash effect - compress vertically, expand horizontally
   const squashAmount = chargePower * 0.3;
