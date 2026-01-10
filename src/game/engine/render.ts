@@ -229,10 +229,15 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   drawBird(ctx, 150 + Math.sin(nowMs / 2000) * 30, 90, 6, COLORS.accent3, 1.5, nowMs);
   drawBird(ctx, 320 + Math.cos(nowMs / 2500) * 25, 85, 5, COLORS.accent3, 1.5, nowMs + 500);
 
-  // Ghost trail (best attempt) - dashed curve
+  // Ghost trail (best attempt) - prominent dashed arc
   if (state.bestTrail.length > 4) {
-    const ghostPoints = state.bestTrail.filter((_, i) => i % 3 === 0);
-    drawDashedCurve(ctx, ghostPoints, COLORS.accent3, 1.5, 6, 8);
+    const ghostPoints = state.bestTrail.filter((_, i) => i % 2 === 0);
+    // Draw thicker, more visible arc
+    drawDashedCurve(ctx, ghostPoints, COLORS.accent3, 3, 8, 6);
+    // Add glow effect
+    ctx.globalAlpha = 0.3;
+    drawDashedCurve(ctx, ghostPoints, COLORS.player, 5, 8, 6);
+    ctx.globalAlpha = 1;
   }
 
   // Ghost trail - fading echo figures during flight
@@ -791,18 +796,30 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   ctx.closePath();
   ctx.fill();
 
-  // Ghost trail (best attempt) - faint dashes
+  // Ghost trail (best attempt) - prominent dashes for noir
   if (state.bestTrail.length > 4) {
+    const ghostPoints = state.bestTrail.filter((_, i) => i % 2 === 0);
+    // Primary trail
     ctx.strokeStyle = COLORS.star;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 6]);
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([6, 4]);
     ctx.beginPath();
-    const ghostPoints = state.bestTrail.filter((_, i) => i % 4 === 0);
     for (let i = 0; i < ghostPoints.length; i++) {
       if (i === 0) ctx.moveTo(ghostPoints[i].x, ghostPoints[i].y);
       else ctx.lineTo(ghostPoints[i].x, ghostPoints[i].y);
     }
     ctx.stroke();
+    // Glow effect
+    ctx.strokeStyle = COLORS.player;
+    ctx.lineWidth = 4;
+    ctx.globalAlpha = 0.2;
+    ctx.beginPath();
+    for (let i = 0; i < ghostPoints.length; i++) {
+      if (i === 0) ctx.moveTo(ghostPoints[i].x, ghostPoints[i].y);
+      else ctx.lineTo(ghostPoints[i].x, ghostPoints[i].y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
     ctx.setLineDash([]);
   }
 
