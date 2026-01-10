@@ -977,6 +977,43 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.beginPath();
     ctx.arc(arcX + Math.cos(angleRad) * lineLen, arcY - Math.sin(angleRad) * lineLen, 3, 0, Math.PI * 2);
     ctx.fill();
+
+    // Trajectory preview arc (noir style)
+    if (state.chargePower > 0.2) {
+      const power = MIN_POWER + state.chargePower * (MAX_POWER - MIN_POWER);
+      const vx = Math.cos(angleRad) * power;
+      const vy = -Math.sin(angleRad) * power;
+
+      // Generate preview points
+      const previewPoints: { x: number; y: number }[] = [];
+      let px = state.px;
+      let py = state.py;
+      let pvx = vx;
+      let pvy = vy;
+
+      for (let i = 0; i < 40; i++) {
+        previewPoints.push({ x: px, y: py });
+        px += pvx;
+        pvy += BASE_GRAV;
+        py += pvy;
+        if (py > groundY || px > W) break;
+      }
+
+      // Draw dashed preview arc (noir style - subtle)
+      ctx.strokeStyle = COLORS.gridPrimary;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.globalAlpha = 0.4 + state.chargePower * 0.3;
+      ctx.beginPath();
+      for (let i = 0; i < previewPoints.length; i++) {
+        const p = previewPoints[i];
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
   }
 
   // Nudge indicator
