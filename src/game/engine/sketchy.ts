@@ -684,6 +684,77 @@ export function drawCheckeredFlag(
   }
 }
 
+// Draw enhanced checkered flag with star (matches mockup)
+export function drawEnhancedFlag(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  flagWidth: number,
+  flagHeight: number,
+  poleHeight: number,
+  flagColor: string,
+  starColor: string,
+  lineWidth: number = 3,
+  nowMs: number = 0,
+) {
+  const wobble = getWobble(x, y, nowMs, 0.3);
+
+  // Flag pole
+  ctx.strokeStyle = flagColor;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x + wobble.dx, y);
+  ctx.lineTo(x + wobble.dx, y - poleHeight);
+  ctx.stroke();
+
+  // Checkered flag
+  const flagTop = y - poleHeight;
+  const cellsX = 4;
+  const cellsY = 3;
+  const cellW = flagWidth / cellsX;
+  const cellH = flagHeight / cellsY;
+
+  // Wave effect
+  const wave = Math.sin(nowMs / 200) * 3;
+
+  for (let row = 0; row < cellsY; row++) {
+    for (let col = 0; col < cellsX; col++) {
+      const isBlack = (row + col) % 2 === 0;
+      const cellX = x + col * cellW + wave * (col / cellsX);
+      const cellY = flagTop + row * cellH;
+
+      if (isBlack) {
+        ctx.fillStyle = flagColor;
+        ctx.fillRect(cellX, cellY, cellW + 1, cellH + 1);
+      }
+    }
+  }
+
+  // Flag outline
+  ctx.strokeStyle = flagColor;
+  ctx.lineWidth = lineWidth * 0.8;
+  ctx.strokeRect(x + wave * 0.3, flagTop, flagWidth + wave, flagHeight);
+
+  // Star above flag
+  const starY = flagTop - 15;
+  const starSize = 10;
+  ctx.fillStyle = starColor;
+  ctx.strokeStyle = starColor;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const angle = (i * 144 - 90) * Math.PI / 180;
+    const px = x + flagWidth / 2 + Math.cos(angle) * starSize + wave * 0.5;
+    const py = starY + Math.sin(angle) * starSize;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+}
+
 // Draw a cloud
 export function drawCloud(
   ctx: CanvasRenderingContext2D,
