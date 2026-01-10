@@ -1,5 +1,5 @@
 import type { Theme } from '@/game/themes';
-import { CLIFF_EDGE, H, MAX_ANGLE, MIN_ANGLE, OPTIMAL_ANGLE, W } from '@/game/constants';
+import { CLIFF_EDGE, H, MAX_ANGLE, MIN_ANGLE, OPTIMAL_ANGLE, W, BASE_GRAV, MIN_POWER, MAX_POWER } from '@/game/constants';
 import type { GameState } from './types';
 import {
   drawStickFigure,
@@ -428,6 +428,43 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       const optX = arcX + Math.cos(optRad) * (arcRadius + 8);
       const optY = arcY - Math.sin(optRad) * (arcRadius + 8);
       drawHandCircle(ctx, optX, optY, 5, COLORS.highlight, 2, nowMs, false);
+    }
+
+    // Trajectory preview arc (dashed curve showing predicted path)
+    if (state.chargePower > 0.2) {
+      const power = MIN_POWER + state.chargePower * (MAX_POWER - MIN_POWER);
+      const vx = Math.cos(angleRad) * power;
+      const vy = -Math.sin(angleRad) * power;
+
+      // Generate preview points
+      const previewPoints: { x: number; y: number }[] = [];
+      let px = state.px;
+      let py = state.py;
+      let pvx = vx;
+      let pvy = vy;
+
+      for (let i = 0; i < 40; i++) {
+        previewPoints.push({ x: px, y: py });
+        px += pvx;
+        pvy += BASE_GRAV;
+        py += pvy;
+        if (py > groundY || px > W) break;
+      }
+
+      // Draw dashed preview arc
+      ctx.strokeStyle = COLORS.accent3;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.globalAlpha = 0.5 + state.chargePower * 0.3;
+      ctx.beginPath();
+      for (let i = 0; i < previewPoints.length; i++) {
+        const p = previewPoints[i];
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
     }
   }
 
