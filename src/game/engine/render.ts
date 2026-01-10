@@ -169,6 +169,10 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   ctx.lineWidth = 1.5;
   ctx.strokeRect(windBoxX, windBoxY, windBoxW, windBoxH);
 
+  // Decorative corner curls
+  drawDecorativeCurl(ctx, windBoxX - 2, windBoxY - 2, 6, COLORS.accent3, 1, nowMs, -1);
+  drawDecorativeCurl(ctx, windBoxX + windBoxW + 2, windBoxY - 2, 6, COLORS.accent3, 1, nowMs, 1);
+
   // "WIND" label
   ctx.fillStyle = COLORS.accent3;
   ctx.font = '9px "Comic Sans MS", cursive, sans-serif';
@@ -394,6 +398,10 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.beginPath();
     ctx.rect(barX, barY, barW, barH);
     ctx.stroke();
+
+    // Decorative curls at bar ends
+    drawDecorativeCurl(ctx, barX - 3, barY + barH / 2, 5, COLORS.accent3, 1, nowMs, -1);
+    drawDecorativeCurl(ctx, barX + barW + 3, barY + barH / 2, 5, COLORS.accent3, 1, nowMs, 1);
 
     // Fill based on power
     const fillW = state.chargePower * (barW - 4);
