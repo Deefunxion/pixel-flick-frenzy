@@ -1932,12 +1932,12 @@ export function drawDustPuffs(
 
   const progress = frame / 12;
   const alpha = 1 - progress;
-  const puffCount = 10;
-  const spread = 15 + progress * 35;
-  const rise = progress * 15;
+  const puffCount = 14;
+  const spread = 25 + progress * 45;
+  const rise = progress * 20;
 
   ctx.strokeStyle = color;
-  ctx.lineWidth = themeKind === 'flipbook' ? 2.5 : 2;
+  ctx.lineWidth = themeKind === 'flipbook' ? SCALED_LINE_WEIGHTS.effects : SCALED_LINE_WEIGHTS.details;
   ctx.globalAlpha = alpha * 0.7;
 
   for (let i = 0; i < puffCount; i++) {
@@ -1945,7 +1945,7 @@ export function drawDustPuffs(
     const dist = spread * (0.7 + seededRandom(i * 13) * 0.3);
     const puffX = x + Math.cos(angle) * dist;
     const puffY = y - rise + Math.sin(angle) * dist * 0.3;
-    const puffSize = 6 + (1 - progress) * 6 + seededRandom(i * 19) * 4;
+    const puffSize = 8 + (1 - progress) * 8 + seededRandom(i * 19) * 6;
 
     // Draw wobbly cloud shape
     drawHandCircle(ctx, puffX, puffY, puffSize, color, 1, nowMs + i * 50, false);
