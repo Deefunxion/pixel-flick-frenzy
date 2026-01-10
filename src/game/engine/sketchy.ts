@@ -2322,3 +2322,51 @@ export function drawDetailedCloud(
     1,
   );
 }
+
+// Draw a styled trajectory arc with varying thickness and wobble
+export function drawStyledTrajectory(
+  ctx: CanvasRenderingContext2D,
+  points: { x: number; y: number }[],
+  color: string,
+  nowMs: number,
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+) {
+  if (points.length < 2) return;
+
+  ctx.strokeStyle = color;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // Draw with varying line width (thicker at start, thinner at end)
+  for (let i = 0; i < points.length - 1; i++) {
+    const t = i / points.length;
+    const width = themeKind === 'flipbook'
+      ? 3 - t * 2 // 3px to 1px
+      : 2 - t * 1.5; // 2px to 0.5px
+
+    // Skip every other segment for dashed effect
+    if (i % 2 === 1) continue;
+
+    const p1 = points[i];
+    const p2 = points[i + 1];
+
+    // Add wobble
+    const w1 = getWobble(p1.x, p1.y, nowMs, 0.8);
+    const w2 = getWobble(p2.x, p2.y, nowMs, 0.8);
+
+    ctx.lineWidth = Math.max(0.5, width);
+    ctx.beginPath();
+    ctx.moveTo(p1.x + w1.dx, p1.y + w1.dy);
+    ctx.lineTo(p2.x + w2.dx, p2.y + w2.dy);
+    ctx.stroke();
+  }
+
+  // Add endpoint marker
+  if (points.length > 0) {
+    const lastPoint = points[points.length - 1];
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(lastPoint.x, lastPoint.y, themeKind === 'flipbook' ? 4 : 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
