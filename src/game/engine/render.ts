@@ -274,7 +274,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     for (let i = 0; i < trailLen; i++) {
       const ghost = state.ghostTrail[i];
       // Progressive fade: older = fainter
-      const opacity = (0.6 - (trailLen - i - 1) * 0.15) * (1 - i / trailLen);
+      const opacity = (0.8 - (trailLen - i - 1) * 0.12) * (1 - i / trailLen);
       if (opacity > 0.05) {
         drawGhostFigure(
           ctx,
@@ -796,7 +796,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     const trailLen = state.ghostTrail.length;
     for (let i = Math.max(0, trailLen - 6); i < trailLen; i++) {
       const ghost = state.ghostTrail[i];
-      const opacity = 0.5 - (trailLen - i - 1) * 0.15;
+      const opacity = 0.7 - (trailLen - i - 1) * 0.12;
       if (opacity > 0.1) {
         drawGhostFigure(
           ctx,
