@@ -142,6 +142,96 @@ export function drawHandLine(
   ctx.stroke();
 }
 
+export function drawInkStroke(
+  ctx: CanvasRenderingContext2D,
+  points: { x: number; y: number }[],
+  color: string,
+  baseWidth: number,
+  nowMs: number = 0
+) {
+  if (!points || points.length < 2) return;
+  // Safety: fallback if baseWidth is invalid
+  if (!baseWidth || isNaN(baseWidth)) baseWidth = 2;
+
+  const frame = Math.floor(nowMs / 100);
+
+  ctx.fillStyle = color;
+  ctx.beginPath();
+
+  // Safety: check first point
+  if (isNaN(points[0].x) || isNaN(points[0].y)) return;
+  ctx.moveTo(points[0].x, points[0].y);
+
+  const leftSide: { x: number, y: number }[] = [];
+  const rightSide: { x: number, y: number }[] = [];
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i];
+    const p2 = points[i + 1];
+
+    // Direction vector
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+
+    // Safety check for NaN
+    if (isNaN(dx) || isNaN(dy)) continue;
+
+    const len = Math.sqrt(dx * dx + dy * dy);
+    // Skip tiny segments to avoid noise or div-by-zero issues
+    if (len < 0.1 || isNaN(len)) continue;
+
+    // Normal vector
+    const nx = -dy / len;
+    const ny = dx / len;
+
+    // Profile: Dramatic Taper (Japanese Calligraphy Style)
+    // t goes from 0 to 1 along the curve
+    const t = i / (points.length - 1);
+
+    // Aesthetic Tuning:
+    // pressure: 0 -> 1 -> 0 (sine wave)
+    // We want a more "blobby" center and very sharp tails.
+    // Power of 0.8 makes the peak wider.
+    const pressure = Math.pow(Math.sin(t * Math.PI), 0.8);
+
+    // Noise: "Paper tooth" or dry brush effect.
+    // Increased intensity (0.6) for rougher look.
+    const noise = (seededRandom(i * 10 + frame) - 0.5) * 0.6;
+
+    // Width Logic:
+    // Min width: 10% (was 20%) -> sharper tails
+    // Max width factor: 1.4 (was 0.8) -> much thicker strokes in middle
+    // Formula: base * (0.1 + pressure * 1.4 + noise * 0.3)
+    const currentWidth = baseWidth * (0.1 + pressure * 1.4 + noise * 0.3);
+
+    if (isNaN(currentWidth)) continue;
+
+    leftSide.push({ x: p1.x + nx * currentWidth, y: p1.y + ny * currentWidth });
+    rightSide.push({ x: p1.x - nx * currentWidth, y: p1.y - ny * currentWidth });
+  }
+
+  // End point converges to sharp tip
+  const last = points[points.length - 1];
+  if (!isNaN(last.x) && !isNaN(last.y)) {
+    leftSide.push({ x: last.x, y: last.y });
+    rightSide.push({ x: last.x, y: last.y });
+  }
+
+  // Construct polygon
+  if (leftSide.length > 0) {
+    ctx.moveTo(points[0].x, points[0].y);
+    for (const p of leftSide) ctx.lineTo(p.x, p.y);
+    // Tip
+    ctx.lineTo(last.x, last.y);
+    // Walk back
+    for (let i = rightSide.length - 1; i >= 0; i--) {
+      ctx.lineTo(rightSide[i].x, rightSide[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
 // Draw a dashed hand-drawn line (for trajectories)
 export function drawDashedLine(
   ctx: CanvasRenderingContext2D,
@@ -1354,7 +1444,8 @@ export function drawEnergySpirals(
   nowMs: number,
   themeKind: 'flipbook' | 'noir' = 'flipbook',
 ) {
-  if (intensity < 0.1) return;
+  if (intensity < 0.1 || isNaN(intensity)) return;
+  if (!isFinite(x) || !isFinite(y)) return;
 
   const spiralCount = 2 + Math.floor(intensity * 2); // 2-4 spirals
   const baseRadius = 18 + intensity * 10; // 18-28 pixels (fits character scale)
@@ -1456,7 +1547,7 @@ export function drawZenoCoil(
   themeKind: 'flipbook' | 'noir' = 'flipbook',
 ) {
   const scale = CHARACTER_SCALE.normal;
-  const lineWidth = themeKind === 'flipbook' ? SCALED_LINE_WEIGHTS.body : SCALED_LINE_WEIGHTS.limbs;
+  const lineWidth = themeKind === 'flipbook' ? SCALED_LINE_WEIGHTS.body : SCALED_LINE_WEIGHTS.body * 1.5; // Thicker ink
 
   // Squash effect - compress vertically, expand horizontally
   const squashAmount = chargePower * 0.3;
@@ -1486,100 +1577,222 @@ export function drawZenoCoil(
   const headX = x - chargePower * 3;
   const headY = baseY - 30 * scale + crouchDepth * 0.3;
 
-  // Draw head
-  drawHandCircle(ctx, headX, headY, headRadius, color, lineWidth, nowMs, false);
+  // Helper to generate points for ink strokes
+  const getLinePoints = (x1: number, y1: number, x2: number, y2: number, steps = 10) => {
+    const pts = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      pts.push({ x: x1 + (x2 - x1) * t, y: y1 + (y2 - y1) * t });
+    }
+    return pts;
+  };
 
-  // Determined expression - focused eyes, slight frown
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(headX - headRadius * 0.35, headY - 1, 2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(headX + headRadius * 0.35, headY - 1, 2, 0, Math.PI * 2);
-  ctx.fill();
+  const getQuadPoints = (x1: number, y1: number, cx: number, cy: number, x2: number, y2: number, steps = 12) => {
+    const pts = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const invT = 1 - t;
+      // Quadratic bezier formula
+      const px = invT * invT * x1 + 2 * invT * t * cx + t * t * x2;
+      const py = invT * invT * y1 + 2 * invT * t * cy + t * t * y2;
+      pts.push({ x: px, y: py });
+    }
+    return pts;
+  };
 
-  // Determined mouth - slight line
-  ctx.beginPath();
-  ctx.moveTo(headX - 3, headY + 3);
-  ctx.lineTo(headX + 2, headY + 3);
-  ctx.stroke();
+  if (themeKind === 'noir') {
+    // === NOIR INK RENDERING ===
 
-  // Torso - twisted, coiled
-  const torsoTopY = headY + headRadius + 2;
-  const torsoBottomY = baseY - 5 * scale;
-  const torsoTwist = chargePower * 4;
+    // Head (Circle approximation)
+    const headPoints = [];
+    for (let i = 0; i <= 24; i++) { // More points for smoother blob
+      const angle = (i / 24) * Math.PI * 2;
+      // Organic blob: 2-layer noise for "ink spread" feel
+      // Layer 1: General oval shape
+      // Layer 2: Surface roughness
+      const deform = (seededRandom(i) - 0.5) * 0.15 + (seededRandom(i + 100) - 0.5) * 0.05;
+      const r = headRadius * (1 + deform);
+      headPoints.push({
+        x: headX + Math.cos(angle) * r,
+        y: headY + Math.sin(angle) * r
+      });
+    }
+    // Boost width for head
+    drawInkStroke(ctx, headPoints, color, lineWidth * 1.2, nowMs);
 
-  ctx.beginPath();
-  ctx.moveTo(headX, torsoTopY);
-  ctx.quadraticCurveTo(x - torsoTwist, (torsoTopY + torsoBottomY) / 2, x, torsoBottomY);
-  ctx.stroke();
+    // Determined expression
+    ctx.beginPath();
+    ctx.arc(headX - headRadius * 0.35, headY - 1, 2.5, 0, Math.PI * 2);
+    ctx.arc(headX + headRadius * 0.35, headY - 1, 2.5, 0, Math.PI * 2);
+    ctx.fill();
 
-  // Arms - one pulled back (fist), other forward
-  const shoulderY = torsoTopY + 6 * scale;
-  const armLen = 16 * scale;
+    // Mouth
+    const mouthPoints = getQuadPoints(headX - 3, headY + 3, headX, headY + 4, headX + 2, headY + 3, 5);
+    drawInkStroke(ctx, mouthPoints, color, lineWidth * 0.5, nowMs);
 
-  // Back arm (pulled behind, fist clenched)
-  const backArmAngle = -0.8 - chargePower * 0.7;
-  const backArmX = x + Math.cos(backArmAngle + Math.PI) * armLen;
-  const backArmY = shoulderY + Math.sin(backArmAngle + Math.PI) * armLen;
+    // Torso - twisted, coiled
+    const torsoTopY = headY + headRadius + 2;
+    const torsoBottomY = baseY - 5 * scale;
+    const torsoTwist = chargePower * 4;
+    const torsoPoints = getQuadPoints(headX, torsoTopY, x - torsoTwist, (torsoTopY + torsoBottomY) / 2, x, torsoBottomY, 12);
+    drawInkStroke(ctx, torsoPoints, color, lineWidth * 1.2, nowMs);
 
-  ctx.beginPath();
-  ctx.moveTo(x - 2, shoulderY);
-  ctx.lineTo(backArmX, backArmY);
-  ctx.stroke();
+    // Arms
+    const shoulderY = torsoTopY + 6 * scale;
+    const armLen = 16 * scale;
 
-  // Fist on back arm
-  ctx.beginPath();
-  ctx.arc(backArmX, backArmY, 3, 0, Math.PI * 2);
-  ctx.fill();
+    // Back arm
+    const backArmAngle = -0.8 - chargePower * 0.7;
+    const backArmX = x + Math.cos(backArmAngle + Math.PI) * armLen;
+    const backArmY = shoulderY + Math.sin(backArmAngle + Math.PI) * armLen;
+    const backArmPts = getLinePoints(x - 2, shoulderY, backArmX, backArmY, 10);
+    drawInkStroke(ctx, backArmPts, color, lineWidth, nowMs);
 
-  // Front arm (forward for balance)
-  const frontArmAngle = -0.3 + chargePower * 0.2;
-  const frontArmX = x + Math.cos(frontArmAngle) * armLen * 0.8;
-  const frontArmY = shoulderY + Math.sin(frontArmAngle) * armLen * 0.8;
+    // Fist
+    ctx.beginPath(); ctx.arc(backArmX, backArmY, 4, 0, Math.PI * 2); ctx.fill();
 
-  ctx.beginPath();
-  ctx.moveTo(x + 2, shoulderY);
-  ctx.lineTo(frontArmX, frontArmY);
-  ctx.stroke();
+    // Front arm
+    const frontArmAngle = -0.3 + chargePower * 0.2;
+    const frontArmX = x + Math.cos(frontArmAngle) * armLen * 0.8;
+    const frontArmY = shoulderY + Math.sin(frontArmAngle) * armLen * 0.8;
+    const frontArmPts = getLinePoints(x + 2, shoulderY, frontArmX, frontArmY, 10);
+    drawInkStroke(ctx, frontArmPts, color, lineWidth, nowMs);
 
-  // Legs - front bent 90°, back extended FAR behind
-  const hipY = torsoBottomY;
-  const legLen = 18 * scale;
+    // Legs
+    const hipY = torsoBottomY;
 
-  // Front leg - bent, foot at edge
-  const frontKneeX = x + 5;
-  const frontKneeY = hipY + 8;
-  const frontFootX = x + 3;
-  const frontFootY = baseY;
+    // Front leg (Hip -> Knee -> Foot)
+    const frontKneeX = x + 5; const frontKneeY = hipY + 8;
+    const frontFootX = x + 3; const frontFootY = baseY;
+    const frontLegPts = [
+      ...getLinePoints(x, hipY, frontKneeX, frontKneeY, 6),
+      ...getLinePoints(frontKneeX, frontKneeY, frontFootX, frontFootY, 6)
+    ];
+    drawInkStroke(ctx, frontLegPts, color, lineWidth, nowMs);
 
-  ctx.beginPath();
-  ctx.moveTo(x, hipY);
-  ctx.lineTo(frontKneeX, frontKneeY);
-  ctx.lineTo(frontFootX, frontFootY);
-  ctx.stroke();
+    // Back leg
+    const backLegExtension = 15 + chargePower * 20;
+    const backFootX = x - backLegExtension; const backFootY = baseY + 2;
+    const backKneeX = x - backLegExtension * 0.5; const backKneeY = hipY + 4;
+    const backLegPts = [
+      ...getLinePoints(x, hipY, backKneeX, backKneeY, 6),
+      ...getLinePoints(backKneeX, backKneeY, backFootX, backFootY, 6)
+    ];
+    drawInkStroke(ctx, backLegPts, color, lineWidth, nowMs);
 
-  // Back leg - extended far behind (sprinter starting blocks)
-  const backLegExtension = 15 + chargePower * 20;
-  const backFootX = x - backLegExtension;
-  const backFootY = baseY + 2;
-  const backKneeX = x - backLegExtension * 0.5;
-  const backKneeY = hipY + 4;
+  } else {
+    // === FLIPBOOK ORIGINAL RENDERING ===
 
-  ctx.beginPath();
-  ctx.moveTo(x, hipY);
-  ctx.lineTo(backKneeX, backKneeY);
-  ctx.lineTo(backFootX, backFootY);
-  ctx.stroke();
+    // Draw head
+    drawHandCircle(ctx, headX, headY, headRadius, color, lineWidth, nowMs, false);
+
+    // Determined expression - focused eyes, slight frown
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(headX - headRadius * 0.35, headY - 1, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(headX + headRadius * 0.35, headY - 1, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Determined mouth - slight line
+    ctx.beginPath();
+    ctx.moveTo(headX - 3, headY + 3);
+    ctx.lineTo(headX + 2, headY + 3);
+    ctx.stroke();
+
+    // Torso - twisted, coiled
+    const torsoTopY = headY + headRadius + 2;
+    const torsoBottomY = baseY - 5 * scale;
+    const torsoTwist = chargePower * 4;
+
+    ctx.beginPath();
+    ctx.moveTo(headX, torsoTopY);
+    ctx.quadraticCurveTo(x - torsoTwist, (torsoTopY + torsoBottomY) / 2, x, torsoBottomY);
+    ctx.stroke();
+
+    // Arms - one pulled back (fist), other forward
+    const shoulderY = torsoTopY + 6 * scale;
+    const armLen = 16 * scale;
+
+    // Back arm (pulled behind, fist clenched)
+    const backArmAngle = -0.8 - chargePower * 0.7;
+    const backArmX = x + Math.cos(backArmAngle + Math.PI) * armLen;
+    const backArmY = shoulderY + Math.sin(backArmAngle + Math.PI) * armLen;
+
+    ctx.beginPath();
+    ctx.moveTo(x - 2, shoulderY);
+    ctx.lineTo(backArmX, backArmY);
+    ctx.stroke();
+
+    // Fist on back arm
+    ctx.beginPath();
+    ctx.arc(backArmX, backArmY, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Front arm (forward for balance)
+    const frontArmAngle = -0.3 + chargePower * 0.2;
+    const frontArmX = x + Math.cos(frontArmAngle) * armLen * 0.8;
+    const frontArmY = shoulderY + Math.sin(frontArmAngle) * armLen * 0.8;
+
+    ctx.beginPath();
+    ctx.moveTo(x + 2, shoulderY);
+    ctx.lineTo(frontArmX, frontArmY);
+    ctx.stroke();
+
+    // Legs - front bent 90°, back extended FAR behind
+    const hipY = torsoBottomY;
+
+    // Front leg - bent, foot at edge
+    const frontKneeX = x + 5;
+    const frontKneeY = hipY + 8;
+    const frontFootX = x + 3;
+    const frontFootY = baseY;
+
+    ctx.beginPath();
+    ctx.moveTo(x, hipY);
+    ctx.lineTo(frontKneeX, frontKneeY);
+    ctx.lineTo(frontFootX, frontFootY);
+    ctx.stroke();
+
+    // Back leg - extended far behind (sprinter starting blocks)
+    const backLegExtension = 15 + chargePower * 20;
+    const backFootX = x - backLegExtension;
+    const backFootY = baseY + 2;
+    const backKneeX = x - backLegExtension * 0.5;
+    const backKneeY = hipY + 4;
+
+    ctx.beginPath();
+    ctx.moveTo(x, hipY);
+    ctx.lineTo(backKneeX, backKneeY);
+    ctx.lineTo(backFootX, backFootY);
+    ctx.stroke();
+  }
 
   ctx.restore();
 
   // Energy effects (drawn without transform)
   // Spring tension on back leg
-  drawSpringLines(ctx, x - 5, hipY + 3, backFootX + 5, backFootY - 2, chargePower, color, nowMs, themeKind);
+  // Noir style: thicker, more chaotic spring lines
+  const effectIntensity = themeKind === 'noir' ? chargePower * 1.5 : chargePower;
+  const backLegExtension = 15 + chargePower * 20; // Re-calc for effects context (outside restore)
+  // Note: we need to transform these coordinates if we want them to attach to the squashed body? 
+  // The original code passed transformed coords? No, it passed `x-5`, `backFootX+5` etc.
+  // Wait, `backFootX` was calculated inside the transform block before.
+  // I need to re-calculate them here or pull them out.
+  // Simplified re-calc:
+  const backFootX = x - backLegExtension;
+  // Actually, spring lines are abstract, so approximate pos is fine.
+
+  // Scale correction for effects
+  // Clamp chargePower to avoid explosion
+  const safePower = Math.min(Math.max(chargePower, 0), 1.0);
+  const safeIntensity = Math.min(Math.max(effectIntensity, 0), 1.5);
+
+  drawSpringLines(ctx, x - 5, baseY - 5, backFootX + 5, baseY + 2, safeIntensity, color, nowMs, themeKind);
 
   // Orbiting energy spirals
-  drawEnergySpirals(ctx, x, baseY - 15, chargePower, color, nowMs, themeKind);
+  drawEnergySpirals(ctx, x, baseY - 15, safePower, color, nowMs, themeKind);
 
   // Ground dust at back foot
   if (chargePower > 0.3) {
@@ -1590,7 +1803,7 @@ export function drawZenoCoil(
 
     for (let i = 0; i < 3; i++) {
       const dustX = backFootX - 5 + i * 4;
-      const dustY = backFootY + 2;
+      const dustY = baseY + 2;
       const dustSize = 2 + dustIntensity * 2;
       drawHandCircle(ctx, dustX, dustY, dustSize, color, 1, nowMs + i * 100, false);
     }
@@ -2227,11 +2440,11 @@ export function drawSkyCloud(
 ) {
   // Fixed circle proportions for consistent, pleasing shape
   const puffs = [
-    { dx: -0.35, dy: 0,     r: 0.3  },  // left
-    { dx: -0.1,  dy: -0.2,  r: 0.35 },  // top-left
-    { dx: 0.2,   dy: -0.15, r: 0.32 },  // top-right
-    { dx: 0.4,   dy: 0.05,  r: 0.28 },  // right
-    { dx: 0.05,  dy: 0.15,  r: 0.25 },  // bottom-center
+    { dx: -0.35, dy: 0, r: 0.3 },  // left
+    { dx: -0.1, dy: -0.2, r: 0.35 },  // top-left
+    { dx: 0.2, dy: -0.15, r: 0.32 },  // top-right
+    { dx: 0.4, dy: 0.05, r: 0.28 },  // right
+    { dx: 0.05, dy: 0.15, r: 0.25 },  // bottom-center
   ];
 
   // Minimal wobble to keep it clean
@@ -2333,8 +2546,8 @@ export function drawNightCloud(
 ) {
   // Fewer, more spread out puffs for wispy night clouds
   const puffs = [
-    { dx: -0.3, dy: 0,    r: 0.28 },
-    { dx: 0.1,  dy: -0.1, r: 0.32 },
+    { dx: -0.3, dy: 0, r: 0.28 },
+    { dx: 0.1, dy: -0.1, r: 0.32 },
     { dx: 0.35, dy: 0.05, r: 0.25 },
   ];
 

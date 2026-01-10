@@ -37,13 +37,15 @@ import {
 } from './sketchy';
 import { renderParticles } from './particles';
 
-export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, theme: Theme, nowMs: number) {
+export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, theme: Theme, nowMs: number, dpr: number = 1) {
   const COLORS = theme;
 
   const shakeX = state.reduceFx ? 0 : (state.screenShake > 0.1 ? (Math.random() - 0.5) * state.screenShake : 0);
   const shakeY = state.reduceFx ? 0 : (state.screenShake > 0.1 ? (Math.random() - 0.5) * state.screenShake : 0);
 
   ctx.save();
+  // Scale logical coordinates (480x240) to physical pixels
+  ctx.scale(dpr, dpr);
 
   if (state.zoom > 1.01) {
     const zoomCenterX = state.zoomTargetX;
@@ -562,7 +564,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     const isFailing = state.fellOff || state.failureAnimating;
 
     // Vignette effect (darker edges)
-    const gradient = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W * 0.7);
+    const gradient = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * 0.7);
     gradient.addColorStop(0, 'rgba(0,0,0,0)');
     gradient.addColorStop(0.7, `rgba(0,0,0,${intensity * 0.2})`);
     gradient.addColorStop(1, `rgba(0,0,0,${intensity * 0.5})`);
