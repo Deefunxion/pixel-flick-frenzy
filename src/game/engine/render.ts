@@ -10,6 +10,7 @@ import {
   drawHandLine,
   drawHandCircle,
   drawCheckeredFlag,
+  drawEnhancedFlag,
   drawCloud,
   drawCloudPlatform,
   drawBird,
@@ -90,10 +91,10 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   drawCloud(ctx, 320, 45, 12, COLORS.accent3, 1.5, nowMs);
   drawCloud(ctx, 450, 70, 10, COLORS.accent3, 1.5, nowMs)
 
-  // Best marker - checkered flag
+  // Best marker - enhanced checkered flag with star
   if (state.best > 0 && state.best <= CLIFF_EDGE) {
     const flagX = Math.floor(state.best);
-    drawCheckeredFlag(ctx, flagX, groundY, 18, 14, COLORS.accent2, 1.5, nowMs);
+    drawEnhancedFlag(ctx, flagX, groundY, 28, 20, 50, COLORS.accent2, COLORS.highlight, 2.5, nowMs);
   }
 
   // Zeno target marker - hand-drawn star with line (consistent LINE_WEIGHTS)
@@ -120,7 +121,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.beginPath();
     for (let i = 0; i < 5; i++) {
       const angle = (i * 144 - 90) * Math.PI / 180;
-      const r = 8;
+      const r = 12;
       const px = targetX + Math.cos(angle) * r + 0.5;
       const py = starY + Math.sin(angle) * r + 0.5;
       if (i === 0) ctx.moveTo(px, py);
@@ -134,7 +135,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.beginPath();
     for (let i = 0; i < 5; i++) {
       const angle = (i * 144 - 90) * Math.PI / 180;
-      const r = 8;
+      const r = 12;
       const px = targetX + Math.cos(angle) * r;
       const py = starY + Math.sin(angle) * r;
       if (i === 0) ctx.moveTo(px, py);
