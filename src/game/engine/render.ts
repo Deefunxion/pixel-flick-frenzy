@@ -312,7 +312,9 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   }
 
   // Render new particle system
-  renderParticles(ctx, state.particleSystem.getParticles(), nowMs, 'flipbook');
+  if (state.particleSystem) {
+    renderParticles(ctx, state.particleSystem.getParticles(), nowMs, 'flipbook');
+  }
 
   // Player as stick figure
   let playerState: 'idle' | 'charging' | 'flying' | 'landing' = 'idle';
@@ -901,7 +903,9 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   }
 
   // Render new particle system
-  renderParticles(ctx, state.particleSystem.getParticles(), nowMs, 'noir');
+  if (state.particleSystem) {
+    renderParticles(ctx, state.particleSystem.getParticles(), nowMs, 'noir');
+  }
 
   // Player stick figure
   let playerState: 'idle' | 'charging' | 'flying' | 'landing' = 'idle';
