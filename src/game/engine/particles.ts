@@ -1,6 +1,8 @@
 // Particle system for visual effects
 // Types: swirl (charging energy), dust (landing), debris (impact), crack (ground impact)
 
+import { drawHandCircle } from './sketchy';
+
 export type ParticleType = 'swirl' | 'dust' | 'debris' | 'crack' | 'spark';
 
 export interface Particle {
@@ -131,4 +133,74 @@ export class ParticleSystem {
   get count(): number {
     return this.particles.length;
   }
+}
+
+export function renderParticles(
+  ctx: CanvasRenderingContext2D,
+  particles: readonly Particle[],
+  nowMs: number,
+  themeKind: 'flipbook' | 'noir' = 'flipbook',
+): void {
+  for (const p of particles) {
+    const alpha = Math.max(0, p.life / p.maxLife);
+    ctx.globalAlpha = alpha;
+
+    switch (p.type) {
+      case 'swirl':
+        // Energy swirl - small spiral arc
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = themeKind === 'flipbook' ? 2 : 1.5;
+        ctx.beginPath();
+        for (let i = 0; i <= 8; i++) {
+          const t = i / 8;
+          const angle = p.rotation + t * Math.PI;
+          const r = p.size * (1 - t * 0.5);
+          const px = p.x + Math.cos(angle) * r;
+          const py = p.y + Math.sin(angle) * r;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        break;
+
+      case 'dust':
+        // Dust cloud - wobbly circle
+        drawHandCircle(ctx, p.x, p.y, p.size, p.color, 1, nowMs, false);
+        break;
+
+      case 'debris':
+        // Debris - small rotated line or triangle
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-p.size, 0);
+        ctx.lineTo(p.size, 0);
+        ctx.stroke();
+        ctx.restore();
+        break;
+
+      case 'crack':
+        // Crack - stays in place, fades out
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = themeKind === 'flipbook' ? 2 : 1.5;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + Math.cos(p.rotation) * p.size, p.y + Math.sin(p.rotation) * p.size);
+        ctx.stroke();
+        break;
+
+      case 'spark':
+        // Spark - tiny bright dot
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+    }
+  }
+
+  ctx.globalAlpha = 1;
 }
