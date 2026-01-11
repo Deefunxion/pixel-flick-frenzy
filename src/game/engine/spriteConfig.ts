@@ -46,8 +46,8 @@ export const ANIMATIONS: AnimationConfig[] = [
   },
   {
     name: 'coil',
-    frames: [9, 8, 7, 6],  // Start hands up (9), end bent knees (6)
-    frameRate: 6,  // Slower wind-up for better hold feel
+    frames: [4],  // Temporarily single frame - noir sprite sheet needs fixing
+    frameRate: 1.4,  // ~0.7 sec per frame for slow charging feel
     loop: false,
   },
   {
