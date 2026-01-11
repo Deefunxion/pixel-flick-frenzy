@@ -38,7 +38,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
 
   return {
     px: LAUNCH_PAD_X,
-    py: H - 40,
+    py: H - 20,
     vx: 0,
     vy: 0,
     flying: false,
@@ -102,7 +102,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
 
 export function resetPhysics(state: GameState) {
   state.px = LAUNCH_PAD_X;
-  state.py = H - 40;
+  state.py = H - 20;
   state.vx = 0;
   state.vy = 0;
   state.flying = false;

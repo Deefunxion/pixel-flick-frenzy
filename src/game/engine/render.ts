@@ -81,8 +81,8 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
 }
 
 function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS: Theme, nowMs: number) {
-  // Ground level reference (for positioning) - raised for better centering
-  const groundY = H - 40;
+  // Ground level reference (for positioning)
+  const groundY = H - 20;
 
   // Update and render background layers using asset-based renderer
   backgroundRenderer.update(state.wind, nowMs);
@@ -660,8 +660,8 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   ctx.fillStyle = bgGradient;
   ctx.fillRect(0, 0, W, H);
 
-  // Ground level reference - raised for better centering
-  const groundY = H - 40;
+  // Ground level reference
+  const groundY = H - 20;
 
   // Moon in the sky
   drawMoon(ctx, W - 60, 45, 18, COLORS.highlight, COLORS.player, nowMs);
