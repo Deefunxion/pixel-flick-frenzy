@@ -13,12 +13,6 @@ import {
   drawDashedCurve,
   drawFilmGrain,
   drawVignette,
-  drawImpactBurst,
-  drawInkSplatter,
-  drawGhostFigure,
-  drawScribbleEnergy,
-  drawLaunchBurst,
-  drawSpeedLines,
   drawZenoCoil,
   drawZenoBolt,
   drawZenoImpact,
@@ -26,7 +20,8 @@ import {
   drawStyledTrajectory,
   LINE_WEIGHTS,
 } from './sketchy';
-import { renderParticles } from './particles';
+// TODO: Import sprite-based effects when assets are ready
+// import { renderParticles } from './particles';
 
 /**
  * Draw Zeno using sprite animation if available, otherwise fall back to procedural.
@@ -234,72 +229,8 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.globalAlpha = 1;
   }
 
-  // Ghost trail - fading echo figures during flight
-  if (state.flying && state.ghostTrail.length > 0) {
-    const trailLen = state.ghostTrail.length;
-    for (let i = 0; i < trailLen; i++) {
-      const ghost = state.ghostTrail[i];
-      // Progressive fade: older = fainter
-      const opacity = (0.8 - (trailLen - i - 1) * 0.12) * (1 - i / trailLen);
-      if (opacity > 0.05) {
-        drawGhostFigure(
-          ctx,
-          ghost.x,
-          ghost.y,
-          COLORS.pencilGray,
-          opacity,
-          nowMs,
-          ghost.angle,
-          'flipbook',
-        );
-      }
-    }
-  }
-
-  // Current trail - graphite/chalk dots with variation
-  for (let i = 0; i < state.trail.length; i++) {
-    const tr = state.trail[i];
-    if (tr.age > 30) continue;
-
-    // Varied alpha - older dots fade more
-    const baseAlpha = Math.max(0.15, 1 - tr.age / 30);
-    // Add slight variation based on position
-    const alphaJitter = (Math.sin(tr.x * 0.5 + tr.y * 0.3) * 0.1);
-    ctx.globalAlpha = Math.max(0.1, baseAlpha + alphaJitter);
-
-    ctx.fillStyle = tr.pastTarget ? COLORS.trailPastTarget : COLORS.trailNormal;
-
-    if (tr.x >= 0 && tr.x < W && tr.y >= 0 && tr.y < H) {
-      // Varied radius - slight irregularity like chalk/graphite
-      const baseRadius = 2;
-      const radiusJitter = Math.sin(i * 1.7 + tr.x * 0.2) * 0.6;
-      const radius = baseRadius + radiusJitter;
-
-      // Slight position jitter for hand-drawn feel
-      const posJitter = 0.5;
-      const jitterX = Math.sin(i * 2.3) * posJitter;
-      const jitterY = Math.cos(i * 3.1) * posJitter;
-
-      ctx.beginPath();
-      ctx.arc(tr.x + jitterX, tr.y + jitterY, Math.max(1, radius), 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  ctx.globalAlpha = 1;
-
-  // Particles as small circles (old system)
-  for (const p of state.particles) {
-    if (p.life < 3) continue;
-    ctx.fillStyle = p.color || COLORS.accent1;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Render new particle system
-  if (state.particleSystem) {
-    renderParticles(ctx, state.particleSystem.getParticles(), nowMs, 'flipbook');
-  }
+  // TODO: Replace with sprite-based trail effects
+  // Ghost trail and current trail removed - awaiting new assets
 
   // Player rendering - prefer sprites, fallback to procedural (using zenoX/zenoY for visual offset)
   const spriteDrawn = drawZenoSprite(ctx, state, zenoX, zenoY);
@@ -336,33 +267,8 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     }
   }
 
-  // Scribble energy during charging
-  if (state.charging && state.chargePower > 0.1) {
-    drawScribbleEnergy(
-      ctx,
-      zenoX,
-      zenoY,
-      state.chargePower,
-      COLORS.accent1,
-      nowMs,
-      'flipbook',
-    );
-  }
-
-  // Launch burst effect
-  if (state.flying && state.launchFrame < 12) {
-    drawLaunchBurst(ctx, zenoX - 20, zenoY, state.launchFrame, COLORS.accent3, 'flipbook');
-  }
-
-  // Speed lines during high-velocity flight
-  if (state.flying && !state.reduceFx) {
-    drawSpeedLines(ctx, zenoX, zenoY, { vx: state.vx, vy: state.vy }, COLORS.accent3, nowMs, 'flipbook');
-  }
-
-  // Impact burst on landing (flipbook style)
-  if (state.landingFrame > 0 && state.landingFrame < 10 && !state.reduceFx) {
-    drawImpactBurst(ctx, zenoX, zenoY, COLORS.accent3, state.landingFrame, 'flipbook');
-  }
+  // TODO: Replace with sprite-based effects
+  // Scribble energy, launch burst, speed lines, impact burst removed - awaiting new assets
 
   // Funny failure text
   if (state.failureAnimating && state.failureFrame < 30) {
@@ -755,81 +661,8 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.setLineDash([]);
   }
 
-  // Ghost trail - sharper, fewer figures
-  if (state.flying && state.ghostTrail.length > 0) {
-    const trailLen = state.ghostTrail.length;
-    for (let i = Math.max(0, trailLen - 6); i < trailLen; i++) {
-      const ghost = state.ghostTrail[i];
-      const opacity = 0.7 - (trailLen - i - 1) * 0.12;
-      if (opacity > 0.1) {
-        drawGhostFigure(
-          ctx,
-          ghost.x,
-          ghost.y,
-          COLORS.accent3,
-          opacity,
-          nowMs,
-          ghost.angle,
-          'noir',
-        );
-      }
-    }
-  }
-
-  // Current trail - ink droplets with occasional splatter
-  for (let i = 0; i < state.trail.length; i++) {
-    const tr = state.trail[i];
-    if (tr.age > 25) continue;
-
-    const alpha = Math.max(0.35, 1 - tr.age / 25);
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = tr.pastTarget ? COLORS.trailPastTarget : COLORS.trailNormal;
-
-    if (tr.x >= 0 && tr.x < W && tr.y >= 0 && tr.y < H) {
-      // Main droplet
-      ctx.beginPath();
-      ctx.arc(tr.x, tr.y, 1.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Occasional ink splatter (every ~5th point, when fresh)
-      if (i % 5 === 0 && tr.age < 10) {
-        drawInkSplatter(ctx, tr.x, tr.y, ctx.fillStyle as string, 1.5, nowMs + i);
-      }
-
-      // Elongated smear in velocity direction (for faster points)
-      if (i > 0 && i < state.trail.length - 1 && tr.age < 5) {
-        const prev = state.trail[i - 1];
-        const dx = tr.x - prev.x;
-        const dy = tr.y - prev.y;
-        const speed = Math.sqrt(dx * dx + dy * dy);
-
-        if (speed > 3) {
-          ctx.globalAlpha = alpha * 0.4;
-          ctx.beginPath();
-          ctx.moveTo(tr.x, tr.y);
-          ctx.lineTo(tr.x - dx * 0.3, tr.y - dy * 0.3);
-          ctx.lineWidth = 1;
-          ctx.strokeStyle = ctx.fillStyle as string;
-          ctx.stroke();
-        }
-      }
-    }
-  }
-  ctx.globalAlpha = 1;
-
-  // Particles (old system)
-  for (const p of state.particles) {
-    if (p.life < 3) continue;
-    ctx.fillStyle = p.color || COLORS.accent1;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Render new particle system
-  if (state.particleSystem) {
-    renderParticles(ctx, state.particleSystem.getParticles(), nowMs, 'noir');
-  }
+  // TODO: Replace with sprite-based trail effects (noir)
+  // Ghost trail and current trail removed - awaiting new assets
 
   // Player rendering - prefer sprites, fallback to procedural (using zenoY for visual offset)
   const spriteDrawnNoir = drawZenoSprite(ctx, state, state.px, zenoY);
@@ -857,25 +690,8 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     }
   }
 
-  // Scribble energy during charging
-  if (state.charging && state.chargePower > 0.2) {
-    drawScribbleEnergy(ctx, state.px, zenoY, state.chargePower * 0.7, COLORS.accent1, nowMs, 'noir');
-  }
-
-  // Launch burst (more subtle for noir)
-  if (state.flying && state.launchFrame < 8) {
-    drawLaunchBurst(ctx, state.px - 15, zenoY, state.launchFrame, COLORS.accent3, 'noir');
-  }
-
-  // Speed lines (sharper for noir)
-  if (state.flying && !state.reduceFx) {
-    drawSpeedLines(ctx, state.px, zenoY, { vx: state.vx, vy: state.vy }, COLORS.accent3, nowMs, 'noir');
-  }
-
-  // Impact burst on landing (noir style)
-  if (state.landingFrame > 0 && state.landingFrame < 10 && !state.reduceFx) {
-    drawImpactBurst(ctx, state.px, zenoY, COLORS.accent3, state.landingFrame, 'noir');
-  }
+  // TODO: Replace with sprite-based effects (noir)
+  // Scribble energy, launch burst, speed lines, impact burst removed - awaiting new assets
 
   // Failure text
   if (state.failureAnimating && state.failureFrame < 30) {
