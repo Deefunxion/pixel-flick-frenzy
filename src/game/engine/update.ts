@@ -336,11 +336,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
       targetZoom = 2.5;
     }
 
-    // CINEMATIC ZONE - 4x zoom and 4x slowdown when passing threshold
-    // This overrides all other effects for maximum dramatic impact
+    // CINEMATIC ZONE - 2x zoom and 2x slowdown when passing threshold
+    // This overrides all other effects for dramatic impact
     if (state.px > CINEMATIC_THRESHOLD && !state.reduceFx) {
-      targetZoom = 4;
-      targetSlowMo = 0.75; // 4x slower (effectiveTimeScale = 0.75 * 0.25 = 0.1875)
+      targetZoom = 2;
+      targetSlowMo = 0.5; // 2x slower (effectiveTimeScale = 0.75 * 0.5 = 0.375)
       // Focus on the finish area instead of Zeno
       state.zoomTargetX = CLIFF_EDGE - 30; // Slightly before cliff edge
       state.zoomTargetY = H - 60; // Ground level area
