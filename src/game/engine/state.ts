@@ -135,6 +135,9 @@ export function resetPhysics(state: GameState) {
   if (state.particleSystem) {
     state.particleSystem.clear();
   }
+  if (state.fxAnimator) {
+    state.fxAnimator.stopAllEffects();
+  }
 }
 
 export function nextWind(state: GameState) {
