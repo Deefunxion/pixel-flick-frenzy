@@ -659,6 +659,10 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   // Ground level reference
   const groundY = H - 20;
 
+  // Visual offset to raise Zeno higher on screen (doesn't affect physics)
+  const ZENO_Y_OFFSET = -35;
+  const zenoY = state.py + ZENO_Y_OFFSET;
+
   // Update and render noir background layers using asset-based renderer
   noirBackgroundRenderer.update(state.wind, nowMs);
   noirBackgroundRenderer.render(ctx);
@@ -825,8 +829,8 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     renderParticles(ctx, state.particleSystem.getParticles(), nowMs, 'noir');
   }
 
-  // Player rendering - prefer sprites, fallback to procedural
-  const spriteDrawnNoir = drawZenoSprite(ctx, state, state.px, state.py);
+  // Player rendering - prefer sprites, fallback to procedural (using zenoY for visual offset)
+  const spriteDrawnNoir = drawZenoSprite(ctx, state, state.px, zenoY);
 
   if (!spriteDrawnNoir) {
     // Fallback to procedural rendering
@@ -838,37 +842,37 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     const playerColor = state.fellOff ? COLORS.danger : COLORS.player;
 
     if (state.failureAnimating && state.failureType && (state.failureType === 'tumble' || state.failureType === 'dive')) {
-      drawFailingStickFigure(ctx, state.px, state.py, playerColor, nowMs, state.failureType, state.failureFrame);
+      drawFailingStickFigure(ctx, state.px, zenoY, playerColor, nowMs, state.failureType, state.failureFrame);
     } else if (state.charging) {
-      drawZenoCoil(ctx, state.px, state.py, playerColor, nowMs, state.chargePower, 'noir');
+      drawZenoCoil(ctx, state.px, zenoY, playerColor, nowMs, state.chargePower, 'noir');
     } else if (state.flying && !state.failureAnimating) {
-      drawZenoBolt(ctx, state.px, state.py, playerColor, nowMs, { vx: state.vx, vy: state.vy }, 'noir');
+      drawZenoBolt(ctx, state.px, zenoY, playerColor, nowMs, { vx: state.vx, vy: state.vy }, 'noir');
     } else if (state.landingFrame > 0 && state.landingFrame < 15 && !state.fellOff) {
-      drawZenoImpact(ctx, state.px, state.py, playerColor, nowMs, state.landingFrame, 'noir');
+      drawZenoImpact(ctx, state.px, zenoY, playerColor, nowMs, state.landingFrame, 'noir');
     } else {
       // Idle or other states
-      drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
+      drawStickFigure(ctx, state.px, zenoY, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
     }
   }
 
   // Scribble energy during charging
   if (state.charging && state.chargePower > 0.2) {
-    drawScribbleEnergy(ctx, state.px, state.py, state.chargePower * 0.7, COLORS.accent1, nowMs, 'noir');
+    drawScribbleEnergy(ctx, state.px, zenoY, state.chargePower * 0.7, COLORS.accent1, nowMs, 'noir');
   }
 
   // Launch burst (more subtle for noir)
   if (state.flying && state.launchFrame < 8) {
-    drawLaunchBurst(ctx, state.px - 15, state.py, state.launchFrame, COLORS.accent3, 'noir');
+    drawLaunchBurst(ctx, state.px - 15, zenoY, state.launchFrame, COLORS.accent3, 'noir');
   }
 
   // Speed lines (sharper for noir)
   if (state.flying && !state.reduceFx) {
-    drawSpeedLines(ctx, state.px, state.py, { vx: state.vx, vy: state.vy }, COLORS.accent3, nowMs, 'noir');
+    drawSpeedLines(ctx, state.px, zenoY, { vx: state.vx, vy: state.vy }, COLORS.accent3, nowMs, 'noir');
   }
 
   // Impact burst on landing (noir style)
   if (state.landingFrame > 0 && state.landingFrame < 10 && !state.reduceFx) {
-    drawImpactBurst(ctx, state.px, state.py, COLORS.accent3, state.landingFrame, 'noir');
+    drawImpactBurst(ctx, state.px, zenoY, COLORS.accent3, state.landingFrame, 'noir');
   }
 
   // Failure text
@@ -876,7 +880,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.fillStyle = COLORS.danger;
     ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('!', state.px, state.py - 25);
+    ctx.fillText('!', state.px, zenoY - 25);
   }
 
   // Charging UI - minimal power bar
@@ -895,9 +899,9 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.fillStyle = powerColor;
     ctx.fillRect(barX + 1, barY + 1, fillW, barH - 2);
 
-    // Angle line
+    // Angle line (using zenoY for visual offset)
     const arcX = state.px;
-    const arcY = state.py;
+    const arcY = zenoY;
     const angleRad = (state.angle * Math.PI) / 180;
     const lineLen = 15 + state.chargePower * 20;
 
@@ -914,7 +918,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.arc(arcX + Math.cos(angleRad) * lineLen, arcY - Math.sin(angleRad) * lineLen, 3, 0, Math.PI * 2);
     ctx.fill();
 
-    // Trajectory preview arc (noir style)
+    // Trajectory preview arc (noir style, using zenoY for visual offset)
     if (state.chargePower > 0.2) {
       const power = MIN_POWER + state.chargePower * (MAX_POWER - MIN_POWER);
       const vx = Math.cos(angleRad) * power;
@@ -923,7 +927,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
       // Generate preview points
       const previewPoints: { x: number; y: number }[] = [];
       let px = state.px;
-      let py = state.py;
+      let py = zenoY;
       const pvx = vx;
       let pvy = vy;
 
@@ -932,7 +936,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
         px += pvx;
         pvy += BASE_GRAV;
         py += pvy;
-        if (py > groundY || px > W) break;
+        if (py > groundY + ZENO_Y_OFFSET || px > W) break;
       }
 
       // Draw styled preview arc (noir style)
