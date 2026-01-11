@@ -1,6 +1,5 @@
 import type { ParticleSystem } from './particles';
 import type { Animator } from './animator';
-import type { FXAnimator } from './fxAnimator';
 
 export interface Star {
   x: number;
@@ -114,6 +113,4 @@ export interface GameState {
   particleSystem: ParticleSystem;
   // Sprite-based character animation
   zenoAnimator: Animator | null;
-  // Sprite-based special effects
-  fxAnimator: FXAnimator | null;
 }

@@ -97,7 +97,6 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     launchFrame: 0,
     particleSystem: new ParticleSystem(),
     zenoAnimator: null,
-    fxAnimator: null,
   };
 }
 
@@ -134,9 +133,6 @@ export function resetPhysics(state: GameState) {
   state.launchFrame = 0;
   if (state.particleSystem) {
     state.particleSystem.clear();
-  }
-  if (state.fxAnimator) {
-    state.fxAnimator.stopAllEffects();
   }
 }
 

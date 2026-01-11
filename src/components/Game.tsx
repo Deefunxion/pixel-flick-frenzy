@@ -54,8 +54,6 @@ import { Animator } from '@/game/engine/animator';
 import { SPRITE_SHEETS } from '@/game/engine/spriteConfig';
 import { backgroundRenderer } from '@/game/engine/backgroundRenderer';
 import { noirBackgroundRenderer } from '@/game/engine/noirBackgroundRenderer';
-import { FXAnimator } from '@/game/engine/fxAnimator';
-import { getAllFXPaths } from '@/game/engine/fxConfig';
 import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
@@ -151,16 +149,9 @@ const Game = () => {
     saveString('theme_id', themeId);
     themeRef.current = getTheme(themeId);
 
-    const newTheme = themeId === 'noir' ? 'noir' : 'flipbook';
-
     // Update animator theme when theme changes
     if (stateRef.current?.zenoAnimator) {
-      stateRef.current.zenoAnimator.setTheme(newTheme);
-    }
-
-    // Update FX animator theme when theme changes
-    if (stateRef.current?.fxAnimator) {
-      stateRef.current.fxAnimator.setTheme(newTheme);
+      stateRef.current.zenoAnimator.setTheme(themeId === 'noir' ? 'noir' : 'flipbook');
     }
   }, [themeId]);
 
@@ -270,16 +261,11 @@ const Game = () => {
     ctx.imageSmoothingEnabled = false;
     stateRef.current = initState();
 
-    // Preload sprite sheets, background assets, FX assets, and initialize animators
+    // Preload sprite sheets, background assets, and initialize animator
     const loadSprites = async () => {
       try {
-        // Determine current theme for asset loading
-        const currentTheme = themeId === 'noir' ? 'noir' : 'flipbook';
-
-        // Preload sprite sheets and FX assets
-        const fxPaths = getAllFXPaths(currentTheme);
-        await assetLoader.preloadAll([...Object.values(SPRITE_SHEETS), ...fxPaths]);
-        console.log('[Game] Sprite sheets and FX assets loaded');
+        await assetLoader.preloadAll(Object.values(SPRITE_SHEETS));
+        console.log('[Game] Sprite sheets loaded');
 
         // Preload background assets for both themes
         await Promise.all([
@@ -289,25 +275,16 @@ const Game = () => {
         console.log('[Game] Background assets loaded (flipbook + noir)');
 
         // Create animator based on current theme
-        const animator = new Animator(currentTheme);
+        const theme = themeId === 'noir' ? 'noir' : 'flipbook';
+        const animator = new Animator(theme);
 
         if (animator.initialize()) {
           animator.play('idle');
           if (stateRef.current) {
             stateRef.current.zenoAnimator = animator;
           }
-          console.log('[Game] Animator initialized for theme:', currentTheme);
+          console.log('[Game] Animator initialized for theme:', theme);
         }
-
-        // Initialize FX animator
-        const fxAnimator = new FXAnimator(currentTheme);
-        if (fxAnimator.initialize()) {
-          if (stateRef.current) {
-            stateRef.current.fxAnimator = fxAnimator;
-          }
-          console.log('[Game] FXAnimator initialized for theme:', currentTheme);
-        }
-
         setSpritesLoaded(true);
       } catch (error) {
         console.warn('[Game] Sprite loading failed, using procedural fallback:', error);
@@ -517,12 +494,6 @@ const Game = () => {
             scheduleReset,
             getDailyStats: () => dailyStatsRef.current,
           });
-
-          // Update FX animations (1/60 second per frame)
-          if (state.fxAnimator) {
-            state.fxAnimator.update(1 / 60);
-          }
-
           // Pass devicePixelRatio for high-res rendering
           if (!errorRef.current && state.phase !== 'gameover') {
             renderFrame(ctx, state, currentTheme, now, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);

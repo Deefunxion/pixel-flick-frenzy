@@ -118,13 +118,6 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.chargeStart = nowMs;
     ui.setFellOff(false);
     audio.startCharge(0);
-
-    // Start charging FX
-    if (state.fxAnimator && !state.fxAnimator.isPlaying('chargeSwirl')) {
-      const zenoPos = { x: state.px, y: state.py };
-      state.fxAnimator.playLooping('chargeSwirl', zenoPos, 0, -10);
-      state.fxAnimator.playLooping('chargeDust', zenoPos, 0, 20);
-    }
   }
 
   // Charging update (power only)
@@ -153,14 +146,6 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.chargePower = 0;
     state.nudgeUsed = false;
     state.launchFrame = 0; // Reset launch frame for burst effect
-
-    // Stop charging FX and play launch FX
-    if (state.fxAnimator) {
-      state.fxAnimator.stopAll('chargeSwirl');
-      state.fxAnimator.stopAll('chargeDust');
-      state.fxAnimator.play('launchBurst', state.px, state.py);
-      state.fxAnimator.play('launchSparks', state.px - 20, state.py);
-    }
 
     // Emit launch sparks
     if (state.particleSystem) {
@@ -205,26 +190,6 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.px += state.vx * effectiveTimeScale;
     state.py += state.vy * effectiveTimeScale;
 
-    // Flight FX based on speed
-    if (state.fxAnimator) {
-      const speed = Math.sqrt(state.vx * state.vx + state.vy * state.vy);
-      const zenoPos = { x: state.px, y: state.py };
-
-      // Speed lines at high velocity
-      if (speed > 6 && !state.fxAnimator.isPlaying('speedLines')) {
-        state.fxAnimator.playLooping('speedLines', zenoPos, -30, 0);
-      } else if (speed <= 6) {
-        state.fxAnimator.stopAll('speedLines');
-      }
-
-      // Whoosh marks at very high speed
-      if (speed > 8 && !state.fxAnimator.isPlaying('whoosh')) {
-        state.fxAnimator.playLooping('whoosh', zenoPos, 0, 0);
-      } else if (speed <= 8) {
-        state.fxAnimator.stopAll('whoosh');
-      }
-    }
-
     const pastTarget = state.px >= state.zenoTarget;
     state.trail.push({ x: state.px, y: state.py, age: 0, pastTarget });
 
@@ -266,17 +231,6 @@ export function updateFrame(state: GameState, svc: GameServices) {
         state.particleSystem.emitLandingDust(state.px, state.py, theme.accent3);
         state.particleSystem.emitImpactDebris(state.px, state.py, theme.accent3);
         state.particleSystem.emitGroundCracks(state.px, state.py, theme.accent3);
-      }
-
-      // Landing FX - stop flight effects and play impact effects
-      if (state.fxAnimator) {
-        state.fxAnimator.stopAll('speedLines');
-        state.fxAnimator.stopAll('whoosh');
-        const groundY = H - 20;
-        state.fxAnimator.play('impactBurst', state.px, groundY);
-        state.fxAnimator.play('landingDust', state.px, groundY);
-        state.fxAnimator.play('groundCracks', state.px, groundY);
-        state.fxAnimator.play('impactDebris', state.px, groundY - 10);
       }
 
       state.vx *= 0.55;
@@ -460,13 +414,6 @@ export function updateFrame(state: GameState, svc: GameServices) {
         state.failureFrame = 0;
         state.failureType = Math.random() > 0.5 ? 'tumble' : 'dive';
 
-        // Play failure FX
-        if (state.fxAnimator) {
-          const zenoPos = { x: state.px, y: state.py };
-          state.fxAnimator.playLooping('fallSwirl', zenoPos, 0, 0);
-          state.fxAnimator.playLooping('panicMarks', zenoPos, 0, -30);
-        }
-
         // 10% chance of Wilhelm scream easter egg
         if (Math.random() < 0.1) {
           audio.wilhelmScream();
@@ -625,13 +572,6 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.failureAnimating = true;
       state.failureFrame = 0;
       state.failureType = state.vx > 2 ? 'dive' : 'tumble';
-
-      // Play failure FX
-      if (state.fxAnimator) {
-        const zenoPos = { x: state.px, y: state.py };
-        state.fxAnimator.playLooping('fallSwirl', zenoPos, 0, 0);
-        state.fxAnimator.playLooping('panicMarks', zenoPos, 0, -30);
-      }
 
       // 10% chance of Wilhelm scream easter egg
       if (Math.random() < 0.1) {

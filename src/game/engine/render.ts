@@ -229,11 +229,6 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.globalAlpha = 1;
   }
 
-  // Render sprite-based FX effects (behind player)
-  if (state.fxAnimator && state.fxAnimator.isReady()) {
-    state.fxAnimator.render(ctx);
-  }
-
   // Player rendering - prefer sprites, fallback to procedural (using zenoX/zenoY for visual offset)
   const spriteDrawn = drawZenoSprite(ctx, state, zenoX, zenoY);
 
@@ -658,11 +653,6 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.stroke();
     ctx.globalAlpha = 1;
     ctx.setLineDash([]);
-  }
-
-  // Render sprite-based FX effects (behind player)
-  if (state.fxAnimator && state.fxAnimator.isReady()) {
-    state.fxAnimator.render(ctx);
   }
 
   // Player rendering - prefer sprites, fallback to procedural (using zenoY for visual offset)
