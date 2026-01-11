@@ -1,4 +1,5 @@
 import type { ParticleSystem } from './particles';
+import type { Animator } from './animator';
 
 export interface Star {
   x: number;
@@ -110,4 +111,6 @@ export interface GameState {
   launchFrame: number;  // Frames since last launch (for burst effect)
   // New particle system
   particleSystem: ParticleSystem;
+  // Sprite-based character animation
+  zenoAnimator: Animator | null;
 }

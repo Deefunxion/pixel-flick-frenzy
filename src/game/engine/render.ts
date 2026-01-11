@@ -1,6 +1,7 @@
 import type { Theme } from '@/game/themes';
 import { CLIFF_EDGE, H, MAX_ANGLE, MIN_ANGLE, OPTIMAL_ANGLE, W, BASE_GRAV, MIN_POWER, MAX_POWER } from '@/game/constants';
 import type { GameState } from './types';
+import { ZENO_DISPLAY_WIDTH, ZENO_DISPLAY_HEIGHT } from './spriteConfig';
 import {
   drawStickFigure,
   drawFailingStickFigure,
@@ -39,6 +40,27 @@ import {
   WOBBLE_INTENSITY,
 } from './sketchy';
 import { renderParticles } from './particles';
+
+/**
+ * Draw Zeno using sprite animation if available, otherwise fall back to procedural.
+ * Returns true if sprite was drawn, false if fallback is needed.
+ */
+function drawZenoSprite(
+  ctx: CanvasRenderingContext2D,
+  state: GameState,
+  x: number,
+  y: number
+): boolean {
+  if (!state.zenoAnimator || !state.zenoAnimator.isReady()) {
+    return false;
+  }
+
+  // Determine if we need to flip based on velocity
+  const flipH = state.vx < -0.5;
+
+  state.zenoAnimator.draw(ctx, x, y, flipH);
+  return true;
+}
 
 export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, theme: Theme, nowMs: number, dpr: number = 1) {
   const COLORS = theme;
@@ -305,34 +327,39 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     renderParticles(ctx, state.particleSystem.getParticles(), nowMs, 'flipbook');
   }
 
-  // Player as stick figure
-  let playerState: 'idle' | 'charging' | 'flying' | 'landing' = 'idle';
-  if (state.charging) playerState = 'charging';
-  else if (state.flying || state.sliding) playerState = 'flying';
-  else if (state.landingFrame > 0) playerState = 'landing';
+  // Player rendering - prefer sprites, fallback to procedural
+  const spriteDrawn = drawZenoSprite(ctx, state, state.px, state.py);
 
-  const playerColor = state.fellOff ? COLORS.danger : COLORS.player;
+  if (!spriteDrawn) {
+    // Fallback to procedural rendering
+    let playerState: 'idle' | 'charging' | 'flying' | 'landing' = 'idle';
+    if (state.charging) playerState = 'charging';
+    else if (state.flying || state.sliding) playerState = 'flying';
+    else if (state.landingFrame > 0) playerState = 'landing';
 
-  // Check for failure animation
-  if (state.failureAnimating && state.failureType && (state.failureType === 'tumble' || state.failureType === 'dive')) {
-    drawFailingStickFigure(
-      ctx,
-      state.px,
-      state.py,
-      playerColor,
-      nowMs,
-      state.failureType,
-      state.failureFrame,
-    );
-  } else if (state.charging) {
-    drawZenoCoil(ctx, state.px, state.py, playerColor, nowMs, state.chargePower, 'flipbook');
-  } else if (state.flying && !state.failureAnimating) {
-    drawZenoBolt(ctx, state.px, state.py, playerColor, nowMs, { vx: state.vx, vy: state.vy }, 'flipbook');
-  } else if (state.landingFrame > 0 && state.landingFrame < 15 && !state.fellOff) {
-    drawZenoImpact(ctx, state.px, state.py, playerColor, nowMs, state.landingFrame, 'flipbook');
-  } else {
-    // Idle or other states
-    drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
+    const playerColor = state.fellOff ? COLORS.danger : COLORS.player;
+
+    // Check for failure animation
+    if (state.failureAnimating && state.failureType && (state.failureType === 'tumble' || state.failureType === 'dive')) {
+      drawFailingStickFigure(
+        ctx,
+        state.px,
+        state.py,
+        playerColor,
+        nowMs,
+        state.failureType,
+        state.failureFrame,
+      );
+    } else if (state.charging) {
+      drawZenoCoil(ctx, state.px, state.py, playerColor, nowMs, state.chargePower, 'flipbook');
+    } else if (state.flying && !state.failureAnimating) {
+      drawZenoBolt(ctx, state.px, state.py, playerColor, nowMs, { vx: state.vx, vy: state.vy }, 'flipbook');
+    } else if (state.landingFrame > 0 && state.landingFrame < 15 && !state.fellOff) {
+      drawZenoImpact(ctx, state.px, state.py, playerColor, nowMs, state.landingFrame, 'flipbook');
+    } else {
+      // Idle or other states
+      drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
+    }
   }
 
   // Scribble energy during charging
@@ -877,25 +904,30 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     renderParticles(ctx, state.particleSystem.getParticles(), nowMs, 'noir');
   }
 
-  // Player stick figure
-  let playerState: 'idle' | 'charging' | 'flying' | 'landing' = 'idle';
-  if (state.charging) playerState = 'charging';
-  else if (state.flying || state.sliding) playerState = 'flying';
-  else if (state.landingFrame > 0) playerState = 'landing';
+  // Player rendering - prefer sprites, fallback to procedural
+  const spriteDrawnNoir = drawZenoSprite(ctx, state, state.px, state.py);
 
-  const playerColor = state.fellOff ? COLORS.danger : COLORS.player;
+  if (!spriteDrawnNoir) {
+    // Fallback to procedural rendering
+    let playerState: 'idle' | 'charging' | 'flying' | 'landing' = 'idle';
+    if (state.charging) playerState = 'charging';
+    else if (state.flying || state.sliding) playerState = 'flying';
+    else if (state.landingFrame > 0) playerState = 'landing';
 
-  if (state.failureAnimating && state.failureType && (state.failureType === 'tumble' || state.failureType === 'dive')) {
-    drawFailingStickFigure(ctx, state.px, state.py, playerColor, nowMs, state.failureType, state.failureFrame);
-  } else if (state.charging) {
-    drawZenoCoil(ctx, state.px, state.py, playerColor, nowMs, state.chargePower, 'noir');
-  } else if (state.flying && !state.failureAnimating) {
-    drawZenoBolt(ctx, state.px, state.py, playerColor, nowMs, { vx: state.vx, vy: state.vy }, 'noir');
-  } else if (state.landingFrame > 0 && state.landingFrame < 15 && !state.fellOff) {
-    drawZenoImpact(ctx, state.px, state.py, playerColor, nowMs, state.landingFrame, 'noir');
-  } else {
-    // Idle or other states
-    drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
+    const playerColor = state.fellOff ? COLORS.danger : COLORS.player;
+
+    if (state.failureAnimating && state.failureType && (state.failureType === 'tumble' || state.failureType === 'dive')) {
+      drawFailingStickFigure(ctx, state.px, state.py, playerColor, nowMs, state.failureType, state.failureFrame);
+    } else if (state.charging) {
+      drawZenoCoil(ctx, state.px, state.py, playerColor, nowMs, state.chargePower, 'noir');
+    } else if (state.flying && !state.failureAnimating) {
+      drawZenoBolt(ctx, state.px, state.py, playerColor, nowMs, { vx: state.vx, vy: state.vy }, 'noir');
+    } else if (state.landingFrame > 0 && state.landingFrame < 15 && !state.fellOff) {
+      drawZenoImpact(ctx, state.px, state.py, playerColor, nowMs, state.landingFrame, 'noir');
+    } else {
+      // Idle or other states
+      drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
+    }
   }
 
   // Scribble energy during charging
