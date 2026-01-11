@@ -46,13 +46,13 @@ export const ANIMATIONS: AnimationConfig[] = [
   },
   {
     name: 'coil',
-    frames: [4],  // Temporarily single frame - noir sprite sheet needs fixing
-    frameRate: 1.4,  // ~0.7 sec per frame for slow charging feel
+    frames: [4, 5, 6, 7],  // Charging sequence: stance -> prepare -> crouch -> lunge
+    frameRate: 2.5,  // ~0.4 sec per frame for charging feel
     loop: false,
   },
   {
     name: 'bolt',
-    frames: [10],  // Single frame - removed 11 (empty) and 12 (reversed)
+    frames: [10, 11, 12],  // Flying animation with 3 frames
     frameRate: 8,
     loop: true,
   },

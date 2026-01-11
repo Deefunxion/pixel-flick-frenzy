@@ -229,9 +229,6 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.globalAlpha = 1;
   }
 
-  // TODO: Replace with sprite-based trail effects
-  // Ghost trail and current trail removed - awaiting new assets
-
   // Player rendering - prefer sprites, fallback to procedural (using zenoX/zenoY for visual offset)
   const spriteDrawn = drawZenoSprite(ctx, state, zenoX, zenoY);
 
@@ -266,9 +263,6 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       drawStickFigure(ctx, zenoX, zenoY, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
     }
   }
-
-  // TODO: Replace with sprite-based effects
-  // Scribble energy, launch burst, speed lines, impact burst removed - awaiting new assets
 
   // Funny failure text
   if (state.failureAnimating && state.failureFrame < 30) {
@@ -661,9 +655,6 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.setLineDash([]);
   }
 
-  // TODO: Replace with sprite-based trail effects (noir)
-  // Ghost trail and current trail removed - awaiting new assets
-
   // Player rendering - prefer sprites, fallback to procedural (using zenoY for visual offset)
   const spriteDrawnNoir = drawZenoSprite(ctx, state, state.px, zenoY);
 
@@ -689,9 +680,6 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
       drawStickFigure(ctx, state.px, zenoY, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
     }
   }
-
-  // TODO: Replace with sprite-based effects (noir)
-  // Scribble energy, launch burst, speed lines, impact burst removed - awaiting new assets
 
   // Failure text
   if (state.failureAnimating && state.failureFrame < 30) {
