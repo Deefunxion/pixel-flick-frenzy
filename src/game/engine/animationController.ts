@@ -18,8 +18,14 @@ export function getDesiredAnimation(state: GameState): AnimationName {
     return 'coil';
   }
 
-  if (state.flying || state.sliding) {
+  // During flight (not yet landed), show bolt/flying animation
+  if (state.flying && !state.sliding) {
     return 'bolt';
+  }
+
+  // During landing/sliding, show impact animation
+  if (state.sliding) {
+    return 'impact';
   }
 
   // Show impact animation after landing, and let it finish before switching to idle
