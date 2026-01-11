@@ -2,6 +2,7 @@ import type { Theme } from '@/game/themes';
 import { CLIFF_EDGE, H, MAX_ANGLE, MIN_ANGLE, OPTIMAL_ANGLE, W, BASE_GRAV, MIN_POWER, MAX_POWER } from '@/game/constants';
 import type { GameState } from './types';
 import { ZENO_DISPLAY_WIDTH, ZENO_DISPLAY_HEIGHT } from './spriteConfig';
+import { backgroundRenderer } from './backgroundRenderer';
 import {
   drawStickFigure,
   drawFailingStickFigure,
@@ -93,35 +94,17 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
 }
 
 function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS: Theme, nowMs: number) {
-  // Paper background
-  ctx.fillStyle = COLORS.background;
-  ctx.fillRect(0, 0, W, H);
-
-  // Paper texture with smudge/eraser marks
-  drawPaperTexture(ctx, W, H, nowMs, state.reduceFx);
-
-  // Ruled lines (notebook paper)
-  drawRuledLines(ctx, W, H, COLORS.gridSecondary, COLORS.accent4, nowMs);
-
-  // Spiral holes on left margin
-  drawSpiralHoles(ctx, H, COLORS.accent3, nowMs);
-
   // Ground level reference (for positioning)
   const groundY = H - 20;
 
-  // Ground and cliff edge
-  drawGround(ctx, groundY, CLIFF_EDGE, COLORS.player, nowMs);
+  // Update and render background layers using asset-based renderer
+  backgroundRenderer.update(state.wind, nowMs);
+  backgroundRenderer.render(ctx);
 
-  // Wind-drifting sky clouds
-  const windOffset = (nowMs / 50) * state.wind;
-  drawSkyCloud(ctx, 120 + (windOffset % W), 55, 25, COLORS.accent3, nowMs);
-  drawSkyCloud(ctx, 280 + (windOffset % W), 70, 20, COLORS.accent3, nowMs);
-  drawSkyCloud(ctx, 400 + (windOffset % W), 50, 18, COLORS.accent3, nowMs);
-
-  // Best marker - enhanced checkered flag with star
+  // Best marker - animated flag using background assets
   if (state.best > 0 && state.best <= CLIFF_EDGE) {
     const flagX = Math.floor(state.best);
-    drawEnhancedFlag(ctx, flagX, groundY, 28, 20, 50, COLORS.accent2, COLORS.highlight, 2.5, nowMs);
+    backgroundRenderer.drawFlag(ctx, flagX, groundY);
   }
 
   // Zeno target marker - hand-drawn star with line (consistent LINE_WEIGHTS)
