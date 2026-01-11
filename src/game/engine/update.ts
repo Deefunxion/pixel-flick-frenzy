@@ -24,6 +24,7 @@ import type { DailyStats } from '@/game/storage';
 import type { GameState } from './types';
 import { nextWind, spawnCelebration, spawnParticles } from './state';
 import { ACHIEVEMENTS } from './achievements';
+import { updateAnimator } from './animationController';
 
 export type GameAudio = {
   startCharge: (power01: number) => void;
@@ -569,4 +570,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
       svc.scheduleReset(1200); // Slightly longer for failure animation
     }
   }
+
+  // Update sprite animation (deltaTime ~16.67ms at 60fps)
+  updateAnimator(state, 1 / 60);
 }
