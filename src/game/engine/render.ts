@@ -8,8 +8,6 @@ import {
   drawFailingStickFigure,
   drawHandLine,
   drawHandCircle,
-  drawMoon,
-  drawNightCloud,
   drawWindStrengthMeter,
   drawBird,
   drawDashedCurve,
