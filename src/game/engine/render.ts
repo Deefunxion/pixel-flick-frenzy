@@ -9,6 +9,8 @@ import {
   drawSpiralHoles,
   drawHandLine,
   drawHandCircle,
+  drawSketchyLine,
+  drawSketchyCircle,
   drawCheckeredFlag,
   drawEnhancedFlag,
   drawGround,
@@ -34,6 +36,7 @@ import {
   drawDecorativeCurl,
   drawStyledTrajectory,
   LINE_WEIGHTS,
+  WOBBLE_INTENSITY,
 } from './sketchy';
 import { renderParticles } from './particles';
 
