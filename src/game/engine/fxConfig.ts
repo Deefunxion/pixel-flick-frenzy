@@ -3,6 +3,9 @@
 /**
  * Special Effects sprite sheet configuration
  * Defines paths, frame sizes, and animation metadata for all FX
+ *
+ * NOTE: Display sizes are scaled down ~4x from source assets
+ * to fit the 480x240 game canvas where characters are ~20-30px tall
  */
 
 export type FXName =
@@ -32,7 +35,7 @@ export interface FXConfig {
   frameCount: number;
   frameRate: number;
   loop: boolean;
-  // Display size (can differ from frame size for scaling)
+  // Display size (scaled down from source for game canvas)
   displayWidth: number;
   displayHeight: number;
   // Anchor point (0-1, where 0.5 = center)
@@ -55,8 +58,8 @@ export const FX_CONFIGS: FXConfig[] = [
     frameCount: 8,
     frameRate: 12,
     loop: true,
-    displayWidth: 64,
-    displayHeight: 64,
+    displayWidth: 16,
+    displayHeight: 16,
     anchorX: 0.5,
     anchorY: 0.5,
   },
@@ -71,8 +74,8 @@ export const FX_CONFIGS: FXConfig[] = [
     frameCount: 8,
     frameRate: 10,
     loop: true,
-    displayWidth: 32,
-    displayHeight: 32,
+    displayWidth: 8,
+    displayHeight: 8,
     anchorX: 0.5,
     anchorY: 1.0, // Bottom-anchored (dust rises from ground)
   },
@@ -89,8 +92,8 @@ export const FX_CONFIGS: FXConfig[] = [
     frameCount: 8,
     frameRate: 15,
     loop: false,
-    displayWidth: 64,
-    displayHeight: 64,
+    displayWidth: 16,
+    displayHeight: 16,
     anchorX: 0.5,
     anchorY: 0.5,
   },
@@ -105,8 +108,8 @@ export const FX_CONFIGS: FXConfig[] = [
     frameCount: 8,
     frameRate: 20,
     loop: false,
-    displayWidth: 48,
-    displayHeight: 48,
+    displayWidth: 12,
+    displayHeight: 12,
     anchorX: 0.5,
     anchorY: 0.5,
   },
@@ -123,8 +126,8 @@ export const FX_CONFIGS: FXConfig[] = [
     frameCount: 4,
     frameRate: 16,
     loop: true,
-    displayWidth: 128,
-    displayHeight: 64,
+    displayWidth: 32,
+    displayHeight: 16,
     anchorX: 0.7, // Offset right so lines trail behind
     anchorY: 0.5,
   },
@@ -137,10 +140,10 @@ export const FX_CONFIGS: FXConfig[] = [
     frameWidth: 50,
     frameHeight: 50,
     frameCount: 4,
-    frameRate: 8, // Slower - these are opacity levels, not animation
+    frameRate: 8,
     loop: false,
-    displayWidth: 50,
-    displayHeight: 50,
+    displayWidth: 12,
+    displayHeight: 12,
     anchorX: 0.5,
     anchorY: 0.5,
   },
@@ -155,8 +158,8 @@ export const FX_CONFIGS: FXConfig[] = [
     frameCount: 4,
     frameRate: 12,
     loop: true,
-    displayWidth: 64,
-    displayHeight: 64,
+    displayWidth: 16,
+    displayHeight: 16,
     anchorX: 0.5,
     anchorY: 0.5,
   },
@@ -173,8 +176,8 @@ export const FX_CONFIGS: FXConfig[] = [
     frameCount: 8,
     frameRate: 15,
     loop: false,
-    displayWidth: 80,
-    displayHeight: 80,
+    displayWidth: 20,
+    displayHeight: 20,
     anchorX: 0.5,
     anchorY: 0.5,
   },
@@ -189,8 +192,8 @@ export const FX_CONFIGS: FXConfig[] = [
     frameCount: 8,
     frameRate: 12,
     loop: false,
-    displayWidth: 80,
-    displayHeight: 64,
+    displayWidth: 20,
+    displayHeight: 16,
     anchorX: 0.5,
     anchorY: 1.0, // Bottom-anchored
   },
@@ -205,8 +208,8 @@ export const FX_CONFIGS: FXConfig[] = [
     frameCount: 6,
     frameRate: 10,
     loop: false,
-    displayWidth: 80,
-    displayHeight: 60,
+    displayWidth: 20,
+    displayHeight: 15,
     anchorX: 0.5,
     anchorY: 0.0, // Top-anchored (cracks spread down from impact)
   },
@@ -221,8 +224,8 @@ export const FX_CONFIGS: FXConfig[] = [
     frameCount: 8,
     frameRate: 15,
     loop: false,
-    displayWidth: 48,
-    displayHeight: 48,
+    displayWidth: 12,
+    displayHeight: 12,
     anchorX: 0.5,
     anchorY: 1.0, // Bottom-anchored
   },
@@ -239,8 +242,8 @@ export const FX_CONFIGS: FXConfig[] = [
     frameCount: 4,
     frameRate: 8,
     loop: true,
-    displayWidth: 64,
-    displayHeight: 64,
+    displayWidth: 16,
+    displayHeight: 16,
     anchorX: 0.5,
     anchorY: 0.5,
   },
@@ -255,8 +258,8 @@ export const FX_CONFIGS: FXConfig[] = [
     frameCount: 4,
     frameRate: 6,
     loop: true,
-    displayWidth: 32,
-    displayHeight: 32,
+    displayWidth: 8,
+    displayHeight: 8,
     anchorX: 0.5,
     anchorY: 1.0, // Appears above head
   },
@@ -273,8 +276,8 @@ export const FX_CONFIGS: FXConfig[] = [
     frameCount: 4,
     frameRate: 6,
     loop: true,
-    displayWidth: 32,
-    displayHeight: 32,
+    displayWidth: 8,
+    displayHeight: 8,
     anchorX: 0.5,
     anchorY: 0.5,
   },
