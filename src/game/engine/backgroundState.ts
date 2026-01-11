@@ -1,0 +1,82 @@
+// src/game/engine/backgroundState.ts
+
+/**
+ * State for animated background elements
+ * Updated each frame based on wind and time
+ */
+
+export interface CloudState {
+  x: number;        // Current x position
+  y: number;        // Fixed y position
+  baseX: number;    // Starting x position (for drift calculation)
+  size: 'large' | 'medium' | 'small';
+  stretchX: number; // Wind stretch factor (1.0 = normal)
+}
+
+export interface VoidLayerState {
+  offsetX: number;  // Parallax scroll offset (loops at image width)
+  speed: number;    // Base scroll speed multiplier
+}
+
+export interface WindParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  asset: 'paper' | 'leaf' | 'dust1' | 'dust2';
+  rotation: number;
+  rotationSpeed: number;
+}
+
+export interface WindSwoosh {
+  x: number;
+  y: number;
+  opacity: number;
+  fadeState: 'in' | 'visible' | 'out';
+  asset: 'swoosh1' | 'swoosh2' | 'swoosh3';
+  lifetime: number;
+}
+
+export interface BackgroundState {
+  // Clouds drift with wind
+  clouds: CloudState[];
+
+  // Void parallax layers
+  voidLayers: [VoidLayerState, VoidLayerState, VoidLayerState];
+
+  // Wind particles
+  windParticles: WindParticle[];
+
+  // Wind swoosh effects
+  windSwooshes: WindSwoosh[];
+
+  // Flag animation
+  flagFrame: number;          // Current frame 0-3
+  flagFrameTimer: number;     // Ms since last frame change
+
+  // Timing
+  lastUpdateTime: number;
+}
+
+/** Create initial background state */
+export function createBackgroundState(): BackgroundState {
+  return {
+    clouds: [
+      { x: 120, y: 55, baseX: 120, size: 'medium', stretchX: 1.0 },
+      { x: 280, y: 70, baseX: 280, size: 'large', stretchX: 1.0 },
+      { x: 400, y: 50, baseX: 400, size: 'small', stretchX: 1.0 },
+    ],
+    voidLayers: [
+      { offsetX: 0, speed: 1.0 },    // Layer 1: fastest
+      { offsetX: 0, speed: 0.6 },    // Layer 2: medium
+      { offsetX: 0, speed: 0.3 },    // Layer 3: slowest
+    ],
+    windParticles: [],
+    windSwooshes: [],
+    flagFrame: 0,
+    flagFrameTimer: 0,
+    lastUpdateTime: 0,
+  };
+}

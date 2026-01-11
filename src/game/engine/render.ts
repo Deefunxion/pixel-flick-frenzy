@@ -1,30 +1,18 @@
 import type { Theme } from '@/game/themes';
 import { CLIFF_EDGE, H, MAX_ANGLE, MIN_ANGLE, OPTIMAL_ANGLE, W, BASE_GRAV, MIN_POWER, MAX_POWER } from '@/game/constants';
 import type { GameState } from './types';
-import { ZENO_DISPLAY_WIDTH, ZENO_DISPLAY_HEIGHT } from './spriteConfig';
+import { backgroundRenderer } from './backgroundRenderer';
+import { noirBackgroundRenderer } from './noirBackgroundRenderer';
 import {
   drawStickFigure,
   drawFailingStickFigure,
-  drawRuledLines,
-  drawPaperTexture,
-  drawSpiralHoles,
   drawHandLine,
   drawHandCircle,
-  drawSketchyLine,
-  drawSketchyCircle,
-  drawCheckeredFlag,
-  drawEnhancedFlag,
-  drawGround,
-  drawSkyCloud,
-  drawMoon,
-  drawNightCloud,
   drawWindStrengthMeter,
   drawBird,
   drawDashedCurve,
   drawFilmGrain,
   drawVignette,
-  drawLayeredHandLine,
-  drawLayeredHandCircle,
   drawImpactBurst,
   drawInkSplatter,
   drawGhostFigure,
@@ -37,7 +25,6 @@ import {
   drawDecorativeCurl,
   drawStyledTrajectory,
   LINE_WEIGHTS,
-  WOBBLE_INTENSITY,
 } from './sketchy';
 import { renderParticles } from './particles';
 
@@ -93,35 +80,21 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
 }
 
 function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS: Theme, nowMs: number) {
-  // Paper background
-  ctx.fillStyle = COLORS.background;
-  ctx.fillRect(0, 0, W, H);
-
-  // Paper texture with smudge/eraser marks
-  drawPaperTexture(ctx, W, H, nowMs, state.reduceFx);
-
-  // Ruled lines (notebook paper)
-  drawRuledLines(ctx, W, H, COLORS.gridSecondary, COLORS.accent4, nowMs);
-
-  // Spiral holes on left margin
-  drawSpiralHoles(ctx, H, COLORS.accent3, nowMs);
-
   // Ground level reference (for positioning)
   const groundY = H - 20;
 
-  // Ground and cliff edge
-  drawGround(ctx, groundY, CLIFF_EDGE, COLORS.player, nowMs);
+  // Visual offset to raise Zeno higher on screen (doesn't affect physics)
+  const ZENO_Y_OFFSET = -20;
+  const zenoY = state.py + ZENO_Y_OFFSET;
 
-  // Wind-drifting sky clouds
-  const windOffset = (nowMs / 50) * state.wind;
-  drawSkyCloud(ctx, 120 + (windOffset % W), 55, 25, COLORS.accent3, nowMs);
-  drawSkyCloud(ctx, 280 + (windOffset % W), 70, 20, COLORS.accent3, nowMs);
-  drawSkyCloud(ctx, 400 + (windOffset % W), 50, 18, COLORS.accent3, nowMs);
+  // Update and render background layers using asset-based renderer
+  backgroundRenderer.update(state.wind, nowMs);
+  backgroundRenderer.render(ctx);
 
-  // Best marker - enhanced checkered flag with star
+  // Best marker - animated flag using background assets
   if (state.best > 0 && state.best <= CLIFF_EDGE) {
     const flagX = Math.floor(state.best);
-    drawEnhancedFlag(ctx, flagX, groundY, 28, 20, 50, COLORS.accent2, COLORS.highlight, 2.5, nowMs);
+    backgroundRenderer.drawFlag(ctx, flagX, groundY);
   }
 
   // Zeno target marker - hand-drawn star with line (consistent LINE_WEIGHTS)
@@ -139,8 +112,9 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Star shape with layered effect
-    const starY = groundY - 42 + pulse;
+    // Star shape with layered effect (smaller size)
+    const starY = groundY - 32 + pulse;
+    const starRadius = 7;
     // Layer 2: faint offset
     ctx.strokeStyle = COLORS.highlight;
     ctx.lineWidth = LINE_WEIGHTS.shadow;
@@ -148,9 +122,8 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.beginPath();
     for (let i = 0; i < 5; i++) {
       const angle = (i * 144 - 90) * Math.PI / 180;
-      const r = 12;
-      const px = targetX + Math.cos(angle) * r + 0.5;
-      const py = starY + Math.sin(angle) * r + 0.5;
+      const px = targetX + Math.cos(angle) * starRadius + 0.5;
+      const py = starY + Math.sin(angle) * starRadius + 0.5;
       if (i === 0) ctx.moveTo(px, py);
       else ctx.lineTo(px, py);
     }
@@ -162,9 +135,8 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.beginPath();
     for (let i = 0; i < 5; i++) {
       const angle = (i * 144 - 90) * Math.PI / 180;
-      const r = 12;
-      const px = targetX + Math.cos(angle) * r;
-      const py = starY + Math.sin(angle) * r;
+      const px = targetX + Math.cos(angle) * starRadius;
+      const py = starY + Math.sin(angle) * starRadius;
       if (i === 0) ctx.moveTo(px, py);
       else ctx.lineTo(px, py);
     }
@@ -327,8 +299,8 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     renderParticles(ctx, state.particleSystem.getParticles(), nowMs, 'flipbook');
   }
 
-  // Player rendering - prefer sprites, fallback to procedural
-  const spriteDrawn = drawZenoSprite(ctx, state, state.px, state.py);
+  // Player rendering - prefer sprites, fallback to procedural (using zenoY for visual offset)
+  const spriteDrawn = drawZenoSprite(ctx, state, state.px, zenoY);
 
   if (!spriteDrawn) {
     // Fallback to procedural rendering
@@ -344,21 +316,21 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       drawFailingStickFigure(
         ctx,
         state.px,
-        state.py,
+        zenoY,
         playerColor,
         nowMs,
         state.failureType,
         state.failureFrame,
       );
     } else if (state.charging) {
-      drawZenoCoil(ctx, state.px, state.py, playerColor, nowMs, state.chargePower, 'flipbook');
+      drawZenoCoil(ctx, state.px, zenoY, playerColor, nowMs, state.chargePower, 'flipbook');
     } else if (state.flying && !state.failureAnimating) {
-      drawZenoBolt(ctx, state.px, state.py, playerColor, nowMs, { vx: state.vx, vy: state.vy }, 'flipbook');
+      drawZenoBolt(ctx, state.px, zenoY, playerColor, nowMs, { vx: state.vx, vy: state.vy }, 'flipbook');
     } else if (state.landingFrame > 0 && state.landingFrame < 15 && !state.fellOff) {
-      drawZenoImpact(ctx, state.px, state.py, playerColor, nowMs, state.landingFrame, 'flipbook');
+      drawZenoImpact(ctx, state.px, zenoY, playerColor, nowMs, state.landingFrame, 'flipbook');
     } else {
       // Idle or other states
-      drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
+      drawStickFigure(ctx, state.px, zenoY, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
     }
   }
 
@@ -367,7 +339,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     drawScribbleEnergy(
       ctx,
       state.px,
-      state.py,
+      zenoY,
       state.chargePower,
       COLORS.accent1,
       nowMs,
@@ -377,17 +349,17 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
 
   // Launch burst effect
   if (state.flying && state.launchFrame < 12) {
-    drawLaunchBurst(ctx, state.px - 20, state.py, state.launchFrame, COLORS.accent3, 'flipbook');
+    drawLaunchBurst(ctx, state.px - 20, zenoY, state.launchFrame, COLORS.accent3, 'flipbook');
   }
 
   // Speed lines during high-velocity flight
   if (state.flying && !state.reduceFx) {
-    drawSpeedLines(ctx, state.px, state.py, { vx: state.vx, vy: state.vy }, COLORS.accent3, nowMs, 'flipbook');
+    drawSpeedLines(ctx, state.px, zenoY, { vx: state.vx, vy: state.vy }, COLORS.accent3, nowMs, 'flipbook');
   }
 
   // Impact burst on landing (flipbook style)
   if (state.landingFrame > 0 && state.landingFrame < 10 && !state.reduceFx) {
-    drawImpactBurst(ctx, state.px, state.py, COLORS.accent3, state.landingFrame, 'flipbook');
+    drawImpactBurst(ctx, state.px, zenoY, COLORS.accent3, state.landingFrame, 'flipbook');
   }
 
   // Funny failure text
@@ -400,7 +372,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.textAlign = 'center';
 
     const bounce = Math.sin(state.failureFrame * 0.3) * 3;
-    ctx.fillText(text, state.px, state.py - 30 + bounce);
+    ctx.fillText(text, state.px, zenoY - 30 + bounce);
   }
 
   // Charging UI - hand-drawn power bar
@@ -429,9 +401,9 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.fillStyle = powerColor;
     ctx.fillRect(barX + 2, barY + 2, fillW, barH - 4);
 
-    // Angle indicator arc
+    // Angle indicator arc (using zenoY for visual offset)
     const arcX = state.px;
-    const arcY = state.py;
+    const arcY = zenoY;
     const arcRadius = 25;
 
     // Draw arc
@@ -475,10 +447,10 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       const vx = Math.cos(angleRad) * power;
       const vy = -Math.sin(angleRad) * power;
 
-      // Generate preview points
+      // Generate preview points (using zenoY for visual offset)
       const previewPoints: { x: number; y: number }[] = [];
       let px = state.px;
-      let py = state.py;
+      let py = zenoY;
       const pvx = vx;
       let pvy = vy;
 
@@ -487,7 +459,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
         px += pvx;
         pvy += BASE_GRAV;
         py += pvy;
-        if (py > groundY || px > W) break;
+        if (py > groundY + ZENO_Y_OFFSET || px > W) break;
       }
 
       // Draw styled preview arc
@@ -684,70 +656,21 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
 
 // Noir Ink theme renderer - high contrast, minimal, film noir aesthetic
 function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS: Theme, nowMs: number) {
-  // Dark background with subtle gradient
-  const bgGradient = ctx.createLinearGradient(0, 0, 0, H);
-  bgGradient.addColorStop(0, COLORS.background);
-  bgGradient.addColorStop(1, COLORS.backgroundGradientEnd);
-  ctx.fillStyle = bgGradient;
-  ctx.fillRect(0, 0, W, H);
-
   // Ground level reference
   const groundY = H - 20;
 
-  // Moon in the sky
-  drawMoon(ctx, W - 60, 45, 18, COLORS.highlight, COLORS.player, nowMs);
+  // Visual offset to raise Zeno higher on screen (doesn't affect physics)
+  const ZENO_Y_OFFSET = -24;
+  const zenoY = state.py + ZENO_Y_OFFSET;
 
-  // Ground and cliff edge (noir style - clean lines)
-  ctx.strokeStyle = COLORS.player;
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.moveTo(0, groundY);
-  ctx.lineTo(CLIFF_EDGE, groundY);
-  ctx.stroke();
+  // Update and render noir background layers using asset-based renderer
+  noirBackgroundRenderer.update(state.wind, nowMs);
+  noirBackgroundRenderer.render(ctx);
 
-  // Cliff drop-off
-  ctx.beginPath();
-  ctx.moveTo(CLIFF_EDGE, groundY);
-  ctx.lineTo(CLIFF_EDGE, groundY + 40);
-  ctx.stroke();
-
-  // Ground glow effect
-  ctx.strokeStyle = COLORS.gridPrimary;
-  ctx.lineWidth = 1;
-  ctx.globalAlpha = 0.3;
-  ctx.beginPath();
-  ctx.moveTo(0, groundY - 2);
-  ctx.lineTo(CLIFF_EDGE, groundY - 2);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-
-  // Wind-drifting night clouds
-  const windDir = state.wind > 0 ? 1 : -1;
-  const windStrength = Math.abs(state.wind);
-  const cloudDrift = (nowMs / 40) * state.wind;
-  drawNightCloud(ctx, 100 + (cloudDrift % W), 50, 30, COLORS.accent3, nowMs);
-  drawNightCloud(ctx, 250 + (cloudDrift % W), 65, 22, COLORS.accent3, nowMs);
-  drawNightCloud(ctx, 380 + (cloudDrift % W), 45, 26, COLORS.accent3, nowMs);
-
-  // Best marker - simple vertical line with dot
+  // Best marker - animated flag using noir assets
   if (state.best > 0 && state.best <= CLIFF_EDGE) {
     const flagX = Math.floor(state.best);
-    ctx.strokeStyle = COLORS.accent2;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(flagX, groundY);
-    ctx.lineTo(flagX, groundY - 25);
-    ctx.stroke();
-
-    // Small diamond at top
-    ctx.fillStyle = COLORS.accent2;
-    ctx.beginPath();
-    ctx.moveTo(flagX, groundY - 30);
-    ctx.lineTo(flagX + 4, groundY - 25);
-    ctx.lineTo(flagX, groundY - 20);
-    ctx.lineTo(flagX - 4, groundY - 25);
-    ctx.closePath();
-    ctx.fill();
+    noirBackgroundRenderer.drawFlag(ctx, flagX, groundY);
   }
 
   // Zeno target marker - glowing line
@@ -773,6 +696,8 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   }
 
   // Wind indicator with strength meter
+  const windDir = state.wind > 0 ? 1 : -1;
+  const windStrength = Math.abs(state.wind);
   const windBoxX = 15;
   const windBoxY = 10;
 
@@ -904,8 +829,8 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     renderParticles(ctx, state.particleSystem.getParticles(), nowMs, 'noir');
   }
 
-  // Player rendering - prefer sprites, fallback to procedural
-  const spriteDrawnNoir = drawZenoSprite(ctx, state, state.px, state.py);
+  // Player rendering - prefer sprites, fallback to procedural (using zenoY for visual offset)
+  const spriteDrawnNoir = drawZenoSprite(ctx, state, state.px, zenoY);
 
   if (!spriteDrawnNoir) {
     // Fallback to procedural rendering
@@ -917,37 +842,37 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     const playerColor = state.fellOff ? COLORS.danger : COLORS.player;
 
     if (state.failureAnimating && state.failureType && (state.failureType === 'tumble' || state.failureType === 'dive')) {
-      drawFailingStickFigure(ctx, state.px, state.py, playerColor, nowMs, state.failureType, state.failureFrame);
+      drawFailingStickFigure(ctx, state.px, zenoY, playerColor, nowMs, state.failureType, state.failureFrame);
     } else if (state.charging) {
-      drawZenoCoil(ctx, state.px, state.py, playerColor, nowMs, state.chargePower, 'noir');
+      drawZenoCoil(ctx, state.px, zenoY, playerColor, nowMs, state.chargePower, 'noir');
     } else if (state.flying && !state.failureAnimating) {
-      drawZenoBolt(ctx, state.px, state.py, playerColor, nowMs, { vx: state.vx, vy: state.vy }, 'noir');
+      drawZenoBolt(ctx, state.px, zenoY, playerColor, nowMs, { vx: state.vx, vy: state.vy }, 'noir');
     } else if (state.landingFrame > 0 && state.landingFrame < 15 && !state.fellOff) {
-      drawZenoImpact(ctx, state.px, state.py, playerColor, nowMs, state.landingFrame, 'noir');
+      drawZenoImpact(ctx, state.px, zenoY, playerColor, nowMs, state.landingFrame, 'noir');
     } else {
       // Idle or other states
-      drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
+      drawStickFigure(ctx, state.px, zenoY, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
     }
   }
 
   // Scribble energy during charging
   if (state.charging && state.chargePower > 0.2) {
-    drawScribbleEnergy(ctx, state.px, state.py, state.chargePower * 0.7, COLORS.accent1, nowMs, 'noir');
+    drawScribbleEnergy(ctx, state.px, zenoY, state.chargePower * 0.7, COLORS.accent1, nowMs, 'noir');
   }
 
   // Launch burst (more subtle for noir)
   if (state.flying && state.launchFrame < 8) {
-    drawLaunchBurst(ctx, state.px - 15, state.py, state.launchFrame, COLORS.accent3, 'noir');
+    drawLaunchBurst(ctx, state.px - 15, zenoY, state.launchFrame, COLORS.accent3, 'noir');
   }
 
   // Speed lines (sharper for noir)
   if (state.flying && !state.reduceFx) {
-    drawSpeedLines(ctx, state.px, state.py, { vx: state.vx, vy: state.vy }, COLORS.accent3, nowMs, 'noir');
+    drawSpeedLines(ctx, state.px, zenoY, { vx: state.vx, vy: state.vy }, COLORS.accent3, nowMs, 'noir');
   }
 
   // Impact burst on landing (noir style)
   if (state.landingFrame > 0 && state.landingFrame < 10 && !state.reduceFx) {
-    drawImpactBurst(ctx, state.px, state.py, COLORS.accent3, state.landingFrame, 'noir');
+    drawImpactBurst(ctx, state.px, zenoY, COLORS.accent3, state.landingFrame, 'noir');
   }
 
   // Failure text
@@ -955,7 +880,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.fillStyle = COLORS.danger;
     ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('!', state.px, state.py - 25);
+    ctx.fillText('!', state.px, zenoY - 25);
   }
 
   // Charging UI - minimal power bar
@@ -974,9 +899,9 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.fillStyle = powerColor;
     ctx.fillRect(barX + 1, barY + 1, fillW, barH - 2);
 
-    // Angle line
+    // Angle line (using zenoY for visual offset)
     const arcX = state.px;
-    const arcY = state.py;
+    const arcY = zenoY;
     const angleRad = (state.angle * Math.PI) / 180;
     const lineLen = 15 + state.chargePower * 20;
 
@@ -993,7 +918,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.arc(arcX + Math.cos(angleRad) * lineLen, arcY - Math.sin(angleRad) * lineLen, 3, 0, Math.PI * 2);
     ctx.fill();
 
-    // Trajectory preview arc (noir style)
+    // Trajectory preview arc (noir style, using zenoY for visual offset)
     if (state.chargePower > 0.2) {
       const power = MIN_POWER + state.chargePower * (MAX_POWER - MIN_POWER);
       const vx = Math.cos(angleRad) * power;
@@ -1002,7 +927,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
       // Generate preview points
       const previewPoints: { x: number; y: number }[] = [];
       let px = state.px;
-      let py = state.py;
+      let py = zenoY;
       const pvx = vx;
       let pvy = vy;
 
@@ -1011,7 +936,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
         px += pvx;
         pvy += BASE_GRAV;
         py += pvy;
-        if (py > groundY || px > W) break;
+        if (py > groundY + ZENO_Y_OFFSET || px > W) break;
       }
 
       // Draw styled preview arc (noir style)

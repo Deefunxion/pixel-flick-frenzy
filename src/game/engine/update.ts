@@ -8,6 +8,9 @@ import {
   MIN_ANGLE,
   MIN_POWER,
 } from '@/game/constants';
+
+// Time scale for gameplay speed (0.75 = 75% speed, 1.0 = normal)
+const TIME_SCALE = 0.75;
 import type { Theme } from '@/game/themes';
 import {
   loadDailyStats,
@@ -171,15 +174,15 @@ export function updateFrame(state: GameState, svc: GameServices) {
   // Grid
   state.gridOffset = (state.gridOffset + 0.3) % 10;
 
-  // Flying physics
+  // Flying physics (scaled by TIME_SCALE for slower gameplay)
   if (state.flying) {
     state.launchFrame++; // Increment for launch burst effect
 
-    state.vy += BASE_GRAV;
-    state.vx += state.wind * 0.3;
+    state.vy += BASE_GRAV * TIME_SCALE;
+    state.vx += state.wind * 0.3 * TIME_SCALE;
 
-    state.px += state.vx;
-    state.py += state.vy;
+    state.px += state.vx * TIME_SCALE;
+    state.py += state.vy * TIME_SCALE;
 
     const pastTarget = state.px >= state.zenoTarget;
     state.trail.push({ x: state.px, y: state.py, age: 0, pastTarget });
@@ -358,11 +361,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.currentMultiplier = 1;
   }
 
-  // Sliding
+  // Sliding (scaled by TIME_SCALE)
   if (state.sliding) {
-    const friction = 0.92;
+    const friction = Math.pow(0.92, TIME_SCALE); // Adjust friction for time scale
     state.vx *= friction;
-    state.px += state.vx;
+    state.px += state.vx * TIME_SCALE;
 
     if (Math.abs(state.vx) > 0.5 && Math.random() > 0.5) {
       spawnParticles(state, state.px, state.py, 1, 0.5, theme.accent1);
