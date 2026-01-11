@@ -93,6 +93,7 @@ const Game = () => {
   });
   const [newAchievement, setNewAchievement] = useState<string | null>(null);
   const [showMobileHint, setShowMobileHint] = useState(true);
+  const [spritesLoaded, setSpritesLoaded] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [themeId, setThemeId] = useState<ThemeId>(() => {
@@ -275,8 +276,10 @@ const Game = () => {
           }
           console.log('[Game] Animator initialized for theme:', theme);
         }
+        setSpritesLoaded(true);
       } catch (error) {
         console.warn('[Game] Sprite loading failed, using procedural fallback:', error);
+        setSpritesLoaded(true); // Still mark as "loaded" since we fallback gracefully
       }
     };
 
