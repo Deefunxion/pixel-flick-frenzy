@@ -204,6 +204,29 @@ export class NoirBackgroundRenderer {
     if (!img) return;
 
     ctx.drawImage(img, 0, 0, W, H);
+
+    // Add spotlight effect near the cliff edge/flag area
+    this.drawSpotlight(ctx);
+  }
+
+  private drawSpotlight(ctx: CanvasRenderingContext2D): void {
+    // Spotlight centered near cliff edge where the flag is
+    const spotlightX = CLIFF_EDGE - 40;
+    const spotlightY = H - 80;
+    const radius = 120;
+
+    // Create radial gradient for spotlight effect
+    const gradient = ctx.createRadialGradient(
+      spotlightX, spotlightY, 0,
+      spotlightX, spotlightY, radius
+    );
+    gradient.addColorStop(0, 'rgba(255, 255, 240, 0.15)');
+    gradient.addColorStop(0.4, 'rgba(255, 255, 220, 0.08)');
+    gradient.addColorStop(0.7, 'rgba(255, 255, 200, 0.03)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(spotlightX - radius, spotlightY - radius, radius * 2, radius * 2);
   }
 
   private drawVoidLayers(ctx: CanvasRenderingContext2D): void {
