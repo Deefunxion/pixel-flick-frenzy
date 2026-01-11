@@ -44,6 +44,45 @@ export const BACKGROUND_ASSETS = {
   },
 } as const;
 
+/** Noir theme background asset paths */
+export const NOIR_BACKGROUND_ASSETS = {
+  background: '/assets/background/noir/noir-background.png',
+
+  clouds: {
+    large: '/assets/background/noir/clouds/noir-cloud-large.png',
+    medium: '/assets/background/noir/clouds/noir-cloud-medium.png',
+    small: '/assets/background/noir/clouds/noir-cloud-small.png',
+  },
+
+  terrain: {
+    ground: '/assets/background/noir/terrain/noir-terrain-ground.png',
+    cliffEdge: '/assets/background/noir/terrain/noir-cliff-edge.png',
+  },
+
+  void: {
+    layer1: '/assets/background/noir/void/noir-void-layer-1.png',
+    layer2: '/assets/background/noir/void/noir-void-layer-2.png',
+    layer3: '/assets/background/noir/void/noir-void-layer-3.png',
+    gradient: '/assets/background/noir/void/noir-void-gradient.png',
+  },
+
+  flag: {
+    frame1: '/assets/background/noir/flag/noir-flag-frame-01.png',
+    frame2: '/assets/background/noir/flag/noir-flag-frame-02.png',
+    frame3: '/assets/background/noir/flag/noir-flag-frame-03.png',
+    frame4: '/assets/background/noir/flag/noir-flag-frame-04.png',
+  },
+
+  wind: {
+    swoosh1: '/assets/background/noir/wind/noir-wind-swoosh-1.png',
+    swoosh2: '/assets/background/noir/wind/noir-wind-swoosh-2.png',
+    swoosh3: '/assets/background/noir/wind/noir-wind-swoosh-3.png',
+    particleDust1: '/assets/background/noir/wind/noir-particle-dust-1.png',
+    particleDust2: '/assets/background/noir/wind/noir-particle-dust-2.png',
+    particleDust3: '/assets/background/noir/wind/noir-particle-dust-3.png',
+  },
+} as const;
+
 /** Get flat array of all asset paths for preloading */
 export function getAllBackgroundAssetPaths(): string[] {
   const paths: string[] = [];
@@ -54,6 +93,20 @@ export function getAllBackgroundAssetPaths(): string[] {
   paths.push(...Object.values(BACKGROUND_ASSETS.void));
   paths.push(...Object.values(BACKGROUND_ASSETS.flag));
   paths.push(...Object.values(BACKGROUND_ASSETS.wind));
+
+  return paths;
+}
+
+/** Get flat array of all noir background asset paths for preloading */
+export function getAllNoirBackgroundAssetPaths(): string[] {
+  const paths: string[] = [];
+
+  paths.push(NOIR_BACKGROUND_ASSETS.background);
+  paths.push(...Object.values(NOIR_BACKGROUND_ASSETS.clouds));
+  paths.push(...Object.values(NOIR_BACKGROUND_ASSETS.terrain));
+  paths.push(...Object.values(NOIR_BACKGROUND_ASSETS.void));
+  paths.push(...Object.values(NOIR_BACKGROUND_ASSETS.flag));
+  paths.push(...Object.values(NOIR_BACKGROUND_ASSETS.wind));
 
   return paths;
 }
@@ -69,6 +122,23 @@ export const ASSET_DIMENSIONS = {
   voidLayer: { width: 1920, height: 200 },
   flag: { width: 80, height: 120 },
   swoosh: { width: 300, height: 60 },
+} as const;
+
+/** Noir asset dimensions at 2x scale */
+export const NOIR_ASSET_DIMENSIONS = {
+  background: { width: 960, height: 480 },
+  cloudLarge: { width: 280, height: 140 },
+  cloudMedium: { width: 200, height: 100 },
+  cloudSmall: { width: 140, height: 70 },
+  terrainGround: { width: 960, height: 120 },
+  cliffEdge: { width: 240, height: 400 },
+  voidLayer: { width: 1920, height: 200 },
+  voidGradient: { width: 960, height: 200 },
+  flag: { width: 80, height: 120 },
+  swoosh: { width: 300, height: 60 },
+  particleDust1: { width: 16, height: 16 },
+  particleDust2: { width: 12, height: 12 },
+  particleDust3: { width: 8, height: 8 },
 } as const;
 
 /** Canvas scale factor (assets are 2x) */
