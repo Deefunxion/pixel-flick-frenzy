@@ -97,6 +97,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     launchFrame: 0,
     particleSystem: new ParticleSystem(),
     zenoAnimator: null,
+    fxAnimator: null,
   };
 }
 
