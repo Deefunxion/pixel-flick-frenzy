@@ -84,6 +84,10 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   // Ground level reference (for positioning)
   const groundY = H - 20;
 
+  // Visual offset to raise Zeno higher on screen (doesn't affect physics)
+  const ZENO_Y_OFFSET = -20;
+  const zenoY = state.py + ZENO_Y_OFFSET;
+
   // Update and render background layers using asset-based renderer
   backgroundRenderer.update(state.wind, nowMs);
   backgroundRenderer.render(ctx);
@@ -296,8 +300,8 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     renderParticles(ctx, state.particleSystem.getParticles(), nowMs, 'flipbook');
   }
 
-  // Player rendering - prefer sprites, fallback to procedural
-  const spriteDrawn = drawZenoSprite(ctx, state, state.px, state.py);
+  // Player rendering - prefer sprites, fallback to procedural (using zenoY for visual offset)
+  const spriteDrawn = drawZenoSprite(ctx, state, state.px, zenoY);
 
   if (!spriteDrawn) {
     // Fallback to procedural rendering
@@ -313,21 +317,21 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       drawFailingStickFigure(
         ctx,
         state.px,
-        state.py,
+        zenoY,
         playerColor,
         nowMs,
         state.failureType,
         state.failureFrame,
       );
     } else if (state.charging) {
-      drawZenoCoil(ctx, state.px, state.py, playerColor, nowMs, state.chargePower, 'flipbook');
+      drawZenoCoil(ctx, state.px, zenoY, playerColor, nowMs, state.chargePower, 'flipbook');
     } else if (state.flying && !state.failureAnimating) {
-      drawZenoBolt(ctx, state.px, state.py, playerColor, nowMs, { vx: state.vx, vy: state.vy }, 'flipbook');
+      drawZenoBolt(ctx, state.px, zenoY, playerColor, nowMs, { vx: state.vx, vy: state.vy }, 'flipbook');
     } else if (state.landingFrame > 0 && state.landingFrame < 15 && !state.fellOff) {
-      drawZenoImpact(ctx, state.px, state.py, playerColor, nowMs, state.landingFrame, 'flipbook');
+      drawZenoImpact(ctx, state.px, zenoY, playerColor, nowMs, state.landingFrame, 'flipbook');
     } else {
       // Idle or other states
-      drawStickFigure(ctx, state.px, state.py, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
+      drawStickFigure(ctx, state.px, zenoY, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
     }
   }
 
@@ -336,7 +340,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     drawScribbleEnergy(
       ctx,
       state.px,
-      state.py,
+      zenoY,
       state.chargePower,
       COLORS.accent1,
       nowMs,
@@ -346,17 +350,17 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
 
   // Launch burst effect
   if (state.flying && state.launchFrame < 12) {
-    drawLaunchBurst(ctx, state.px - 20, state.py, state.launchFrame, COLORS.accent3, 'flipbook');
+    drawLaunchBurst(ctx, state.px - 20, zenoY, state.launchFrame, COLORS.accent3, 'flipbook');
   }
 
   // Speed lines during high-velocity flight
   if (state.flying && !state.reduceFx) {
-    drawSpeedLines(ctx, state.px, state.py, { vx: state.vx, vy: state.vy }, COLORS.accent3, nowMs, 'flipbook');
+    drawSpeedLines(ctx, state.px, zenoY, { vx: state.vx, vy: state.vy }, COLORS.accent3, nowMs, 'flipbook');
   }
 
   // Impact burst on landing (flipbook style)
   if (state.landingFrame > 0 && state.landingFrame < 10 && !state.reduceFx) {
-    drawImpactBurst(ctx, state.px, state.py, COLORS.accent3, state.landingFrame, 'flipbook');
+    drawImpactBurst(ctx, state.px, zenoY, COLORS.accent3, state.landingFrame, 'flipbook');
   }
 
   // Funny failure text
@@ -369,7 +373,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.textAlign = 'center';
 
     const bounce = Math.sin(state.failureFrame * 0.3) * 3;
-    ctx.fillText(text, state.px, state.py - 30 + bounce);
+    ctx.fillText(text, state.px, zenoY - 30 + bounce);
   }
 
   // Charging UI - hand-drawn power bar
@@ -398,9 +402,9 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.fillStyle = powerColor;
     ctx.fillRect(barX + 2, barY + 2, fillW, barH - 4);
 
-    // Angle indicator arc
+    // Angle indicator arc (using zenoY for visual offset)
     const arcX = state.px;
-    const arcY = state.py;
+    const arcY = zenoY;
     const arcRadius = 25;
 
     // Draw arc
@@ -444,10 +448,10 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       const vx = Math.cos(angleRad) * power;
       const vy = -Math.sin(angleRad) * power;
 
-      // Generate preview points
+      // Generate preview points (using zenoY for visual offset)
       const previewPoints: { x: number; y: number }[] = [];
       let px = state.px;
-      let py = state.py;
+      let py = zenoY;
       const pvx = vx;
       let pvy = vy;
 
@@ -456,7 +460,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
         px += pvx;
         pvy += BASE_GRAV;
         py += pvy;
-        if (py > groundY || px > W) break;
+        if (py > groundY + ZENO_Y_OFFSET || px > W) break;
       }
 
       // Draw styled preview arc
