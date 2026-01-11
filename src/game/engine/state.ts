@@ -96,6 +96,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     bestHotStreak: loadNumber('best_hot_streak', 0, 'omf_best_hot_streak'),
     launchFrame: 0,
     particleSystem: new ParticleSystem(),
+    zenoAnimator: null,
   };
 }
 
