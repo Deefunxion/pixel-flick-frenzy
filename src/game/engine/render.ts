@@ -1,22 +1,12 @@
 import type { Theme } from '@/game/themes';
 import { CLIFF_EDGE, H, MAX_ANGLE, MIN_ANGLE, OPTIMAL_ANGLE, W, BASE_GRAV, MIN_POWER, MAX_POWER } from '@/game/constants';
 import type { GameState } from './types';
-import { ZENO_DISPLAY_WIDTH, ZENO_DISPLAY_HEIGHT } from './spriteConfig';
 import { backgroundRenderer } from './backgroundRenderer';
 import {
   drawStickFigure,
   drawFailingStickFigure,
-  drawRuledLines,
-  drawPaperTexture,
-  drawSpiralHoles,
   drawHandLine,
   drawHandCircle,
-  drawSketchyLine,
-  drawSketchyCircle,
-  drawCheckeredFlag,
-  drawEnhancedFlag,
-  drawGround,
-  drawSkyCloud,
   drawMoon,
   drawNightCloud,
   drawWindStrengthMeter,
@@ -24,8 +14,6 @@ import {
   drawDashedCurve,
   drawFilmGrain,
   drawVignette,
-  drawLayeredHandLine,
-  drawLayeredHandCircle,
   drawImpactBurst,
   drawInkSplatter,
   drawGhostFigure,
@@ -38,7 +26,6 @@ import {
   drawDecorativeCurl,
   drawStyledTrajectory,
   LINE_WEIGHTS,
-  WOBBLE_INTENSITY,
 } from './sketchy';
 import { renderParticles } from './particles';
 
