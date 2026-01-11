@@ -53,6 +53,7 @@ import { assetLoader } from '@/game/engine/assets';
 import { Animator } from '@/game/engine/animator';
 import { SPRITE_SHEETS } from '@/game/engine/spriteConfig';
 import { backgroundRenderer } from '@/game/engine/backgroundRenderer';
+import { noirBackgroundRenderer } from '@/game/engine/noirBackgroundRenderer';
 import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
@@ -266,9 +267,12 @@ const Game = () => {
         await assetLoader.preloadAll(Object.values(SPRITE_SHEETS));
         console.log('[Game] Sprite sheets loaded');
 
-        // Preload background assets for flipbook theme
-        await backgroundRenderer.preload();
-        console.log('[Game] Background assets loaded');
+        // Preload background assets for both themes
+        await Promise.all([
+          backgroundRenderer.preload(),
+          noirBackgroundRenderer.preload(),
+        ]);
+        console.log('[Game] Background assets loaded (flipbook + noir)');
 
         // Create animator based on current theme
         const theme = themeId === 'noir' ? 'noir' : 'flipbook';
