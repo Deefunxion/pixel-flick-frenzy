@@ -660,7 +660,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   const groundY = H - 20;
 
   // Visual offset to raise Zeno higher on screen (doesn't affect physics)
-  const ZENO_Y_OFFSET = -29;
+  const ZENO_Y_OFFSET = -24;
   const zenoY = state.py + ZENO_Y_OFFSET;
 
   // Update and render noir background layers using asset-based renderer
