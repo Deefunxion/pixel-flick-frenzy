@@ -214,7 +214,7 @@ export class BackgroundRenderer {
   }
 
   private drawVoidLayers(ctx: CanvasRenderingContext2D): void {
-    const groundY = H - 20;
+    const groundY = H - 40;
     const voidY = groundY; // Void starts at ground level
     const voidHeight = ASSET_DIMENSIONS.voidLayer.height * ASSET_SCALE;
 
@@ -265,7 +265,7 @@ export class BackgroundRenderer {
   }
 
   private drawTerrain(ctx: CanvasRenderingContext2D): void {
-    const groundY = H - 20;
+    const groundY = H - 40;
 
     // Draw terrain ground strip
     const groundImg = assetLoader.getImage(BACKGROUND_ASSETS.terrain.ground);

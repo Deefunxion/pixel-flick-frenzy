@@ -81,8 +81,8 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
 }
 
 function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS: Theme, nowMs: number) {
-  // Ground level reference (for positioning)
-  const groundY = H - 20;
+  // Ground level reference (for positioning) - raised for better centering
+  const groundY = H - 40;
 
   // Update and render background layers using asset-based renderer
   backgroundRenderer.update(state.wind, nowMs);
@@ -109,8 +109,9 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Star shape with layered effect
-    const starY = groundY - 42 + pulse;
+    // Star shape with layered effect (smaller size)
+    const starY = groundY - 32 + pulse;
+    const starRadius = 7;
     // Layer 2: faint offset
     ctx.strokeStyle = COLORS.highlight;
     ctx.lineWidth = LINE_WEIGHTS.shadow;
@@ -118,9 +119,8 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.beginPath();
     for (let i = 0; i < 5; i++) {
       const angle = (i * 144 - 90) * Math.PI / 180;
-      const r = 12;
-      const px = targetX + Math.cos(angle) * r + 0.5;
-      const py = starY + Math.sin(angle) * r + 0.5;
+      const px = targetX + Math.cos(angle) * starRadius + 0.5;
+      const py = starY + Math.sin(angle) * starRadius + 0.5;
       if (i === 0) ctx.moveTo(px, py);
       else ctx.lineTo(px, py);
     }
@@ -132,9 +132,8 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.beginPath();
     for (let i = 0; i < 5; i++) {
       const angle = (i * 144 - 90) * Math.PI / 180;
-      const r = 12;
-      const px = targetX + Math.cos(angle) * r;
-      const py = starY + Math.sin(angle) * r;
+      const px = targetX + Math.cos(angle) * starRadius;
+      const py = starY + Math.sin(angle) * starRadius;
       if (i === 0) ctx.moveTo(px, py);
       else ctx.lineTo(px, py);
     }
@@ -661,8 +660,8 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   ctx.fillStyle = bgGradient;
   ctx.fillRect(0, 0, W, H);
 
-  // Ground level reference
-  const groundY = H - 20;
+  // Ground level reference - raised for better centering
+  const groundY = H - 40;
 
   // Moon in the sky
   drawMoon(ctx, W - 60, 45, 18, COLORS.highlight, COLORS.player, nowMs);
