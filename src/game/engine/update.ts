@@ -11,6 +11,9 @@ import {
 
 // Time scale for gameplay speed (0.75 = 75% speed, 1.0 = normal)
 const TIME_SCALE = 0.75;
+
+// Cinematic zone threshold - triggers 4x zoom and 4x slowdown
+const CINEMATIC_THRESHOLD = 318.5;
 import type { Theme } from '@/game/themes';
 import {
   loadDailyStats,
@@ -174,15 +177,18 @@ export function updateFrame(state: GameState, svc: GameServices) {
   // Grid
   state.gridOffset = (state.gridOffset + 0.3) % 10;
 
-  // Flying physics (scaled by TIME_SCALE for slower gameplay)
+  // Flying physics (scaled by TIME_SCALE and slowMo for dramatic effects)
+  // slowMo of 0.75 = 4x slower, 0.97 = very slow
+  const effectiveTimeScale = TIME_SCALE * (1 - state.slowMo);
+
   if (state.flying) {
     state.launchFrame++; // Increment for launch burst effect
 
-    state.vy += BASE_GRAV * TIME_SCALE;
-    state.vx += state.wind * 0.3 * TIME_SCALE;
+    state.vy += BASE_GRAV * effectiveTimeScale;
+    state.vx += state.wind * 0.3 * effectiveTimeScale;
 
-    state.px += state.vx * TIME_SCALE;
-    state.py += state.vy * TIME_SCALE;
+    state.px += state.vx * effectiveTimeScale;
+    state.py += state.vy * effectiveTimeScale;
 
     const pastTarget = state.px >= state.zenoTarget;
     state.trail.push({ x: state.px, y: state.py, age: 0, pastTarget });
@@ -330,6 +336,16 @@ export function updateFrame(state: GameState, svc: GameServices) {
       targetZoom = 2.5;
     }
 
+    // CINEMATIC ZONE - 4x zoom and 4x slowdown when passing threshold
+    // This overrides all other effects for maximum dramatic impact
+    if (state.px > CINEMATIC_THRESHOLD && !state.reduceFx) {
+      targetZoom = 4;
+      targetSlowMo = 0.75; // 4x slower (effectiveTimeScale = 0.75 * 0.25 = 0.1875)
+      // Focus on the finish area instead of Zeno
+      state.zoomTargetX = CLIFF_EDGE - 30; // Slightly before cliff edge
+      state.zoomTargetY = H - 60; // Ground level area
+    }
+
     // Heartbeat audio during record zone
     if (state.recordZoneActive && !state.reduceFx) {
       // Play heartbeat every ~400ms based on frame count (faster when intense)
@@ -361,11 +377,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.currentMultiplier = 1;
   }
 
-  // Sliding (scaled by TIME_SCALE)
+  // Sliding (scaled by effectiveTimeScale for slowmo support)
   if (state.sliding) {
-    const friction = Math.pow(0.92, TIME_SCALE); // Adjust friction for time scale
+    const friction = Math.pow(0.92, effectiveTimeScale); // Adjust friction for time scale
     state.vx *= friction;
-    state.px += state.vx * TIME_SCALE;
+    state.px += state.vx * effectiveTimeScale;
 
     if (Math.abs(state.vx) > 0.5 && Math.random() > 0.5) {
       spawnParticles(state, state.px, state.py, 1, 0.5, theme.accent1);
