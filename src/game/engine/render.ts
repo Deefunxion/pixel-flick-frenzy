@@ -2,6 +2,7 @@ import type { Theme } from '@/game/themes';
 import { CLIFF_EDGE, H, MAX_ANGLE, MIN_ANGLE, OPTIMAL_ANGLE, W, BASE_GRAV, MIN_POWER, MAX_POWER } from '@/game/constants';
 import type { GameState } from './types';
 import { backgroundRenderer } from './backgroundRenderer';
+import { noirBackgroundRenderer } from './noirBackgroundRenderer';
 import {
   drawStickFigure,
   drawFailingStickFigure,
@@ -657,70 +658,17 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
 
 // Noir Ink theme renderer - high contrast, minimal, film noir aesthetic
 function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS: Theme, nowMs: number) {
-  // Dark background with subtle gradient
-  const bgGradient = ctx.createLinearGradient(0, 0, 0, H);
-  bgGradient.addColorStop(0, COLORS.background);
-  bgGradient.addColorStop(1, COLORS.backgroundGradientEnd);
-  ctx.fillStyle = bgGradient;
-  ctx.fillRect(0, 0, W, H);
-
   // Ground level reference
   const groundY = H - 20;
 
-  // Moon in the sky
-  drawMoon(ctx, W - 60, 45, 18, COLORS.highlight, COLORS.player, nowMs);
+  // Update and render noir background layers using asset-based renderer
+  noirBackgroundRenderer.update(state.wind, nowMs);
+  noirBackgroundRenderer.render(ctx);
 
-  // Ground and cliff edge (noir style - clean lines)
-  ctx.strokeStyle = COLORS.player;
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.moveTo(0, groundY);
-  ctx.lineTo(CLIFF_EDGE, groundY);
-  ctx.stroke();
-
-  // Cliff drop-off
-  ctx.beginPath();
-  ctx.moveTo(CLIFF_EDGE, groundY);
-  ctx.lineTo(CLIFF_EDGE, groundY + 40);
-  ctx.stroke();
-
-  // Ground glow effect
-  ctx.strokeStyle = COLORS.gridPrimary;
-  ctx.lineWidth = 1;
-  ctx.globalAlpha = 0.3;
-  ctx.beginPath();
-  ctx.moveTo(0, groundY - 2);
-  ctx.lineTo(CLIFF_EDGE, groundY - 2);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-
-  // Wind-drifting night clouds
-  const windDir = state.wind > 0 ? 1 : -1;
-  const windStrength = Math.abs(state.wind);
-  const cloudDrift = (nowMs / 40) * state.wind;
-  drawNightCloud(ctx, 100 + (cloudDrift % W), 50, 30, COLORS.accent3, nowMs);
-  drawNightCloud(ctx, 250 + (cloudDrift % W), 65, 22, COLORS.accent3, nowMs);
-  drawNightCloud(ctx, 380 + (cloudDrift % W), 45, 26, COLORS.accent3, nowMs);
-
-  // Best marker - simple vertical line with dot
+  // Best marker - animated flag using noir assets
   if (state.best > 0 && state.best <= CLIFF_EDGE) {
     const flagX = Math.floor(state.best);
-    ctx.strokeStyle = COLORS.accent2;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(flagX, groundY);
-    ctx.lineTo(flagX, groundY - 25);
-    ctx.stroke();
-
-    // Small diamond at top
-    ctx.fillStyle = COLORS.accent2;
-    ctx.beginPath();
-    ctx.moveTo(flagX, groundY - 30);
-    ctx.lineTo(flagX + 4, groundY - 25);
-    ctx.lineTo(flagX, groundY - 20);
-    ctx.lineTo(flagX - 4, groundY - 25);
-    ctx.closePath();
-    ctx.fill();
+    noirBackgroundRenderer.drawFlag(ctx, flagX, groundY);
   }
 
   // Zeno target marker - glowing line
@@ -746,6 +694,8 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   }
 
   // Wind indicator with strength meter
+  const windDir = state.wind > 0 ? 1 : -1;
+  const windStrength = Math.abs(state.wind);
   const windBoxX = 15;
   const windBoxY = 10;
 
