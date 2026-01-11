@@ -22,7 +22,13 @@ export function getDesiredAnimation(state: GameState): AnimationName {
     return 'bolt';
   }
 
-  if (state.landingFrame > 0 && state.landingFrame < 15 && !state.fellOff) {
+  // Show impact animation after landing, and let it finish before switching to idle
+  if (state.landingFrame > 0 && !state.fellOff) {
+    return 'impact';
+  }
+
+  // If impact animation is still playing, keep showing it until it finishes
+  if (state.zenoAnimator?.currentAnimation === 'impact' && !state.zenoAnimator.isFinished()) {
     return 'impact';
   }
 

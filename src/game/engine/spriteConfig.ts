@@ -41,31 +41,31 @@ export const ANIMATIONS: AnimationConfig[] = [
   {
     name: 'idle',
     frames: [0, 1, 2, 3],
-    frameRate: 8,
+    frameRate: 4,  // Slow breathing animation
     loop: true,
   },
   {
     name: 'coil',
     frames: [4, 5, 6, 7, 8, 9],
-    frameRate: 12,
+    frameRate: 8,  // Slower wind-up
     loop: false,
   },
   {
     name: 'bolt',
     frames: [10, 11, 12],
-    frameRate: 12,
+    frameRate: 8,  // Slower flight cycle
     loop: true,
   },
   {
     name: 'impact',
     frames: [13, 14, 15, 16, 17],
-    frameRate: 15,
+    frameRate: 10,  // Slower landing
     loop: false,
   },
   {
     name: 'fail',
     frames: [18, 19, 20, 21],
-    frameRate: 10,
+    frameRate: 8,  // Slower tumble
     loop: false,
   },
 ];
