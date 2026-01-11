@@ -52,8 +52,8 @@ export const ANIMATIONS: AnimationConfig[] = [
   },
   {
     name: 'bolt',
-    frames: [10, 11, 12],
-    frameRate: 8,  // Slower flight cycle
+    frames: [10],  // Single frame - removed 11 (empty) and 12 (reversed)
+    frameRate: 8,
     loop: true,
   },
   {
