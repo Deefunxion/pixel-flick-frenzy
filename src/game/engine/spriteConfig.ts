@@ -46,8 +46,8 @@ export const ANIMATIONS: AnimationConfig[] = [
   },
   {
     name: 'coil',
-    frames: [4, 5, 6, 7, 8, 9],
-    frameRate: 8,  // Slower wind-up
+    frames: [9, 8, 7, 6],  // Start hands up (9), end bent knees (6)
+    frameRate: 6,  // Slower wind-up for better hold feel
     loop: false,
   },
   {
