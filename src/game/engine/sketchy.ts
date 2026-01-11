@@ -6,6 +6,20 @@ export const INK_BLUE = '#1a4a7a';
 export const INK_LIGHT = '#4a7ab0';
 export const INK_DARK = '#0d2840';
 
+// Wobble intensity tiers for different element types
+// Higher values = more hand-drawn imperfection
+export const WOBBLE_INTENSITY = {
+  hero: 2.5,      // Player, ground, flag - most prominent wobble
+  standard: 2.0,  // Clouds, UI boxes, trajectories
+  fine: 1.0,      // Small details, eyes, dashes
+};
+
+// Frame timing for wobble updates (higher = more deliberate, less jittery)
+const WOBBLE_FRAME_MS = 150;
+
+// Pencil gray color for sketch underlays
+const PENCIL_GRAY = '#9a9590';
+
 // Seeded random for deterministic wobble
 function seededRandom(seed: number): number {
   const x = Math.sin(seed * 12.9898 + seed * 78.233) * 43758.5453;
@@ -13,8 +27,8 @@ function seededRandom(seed: number): number {
 }
 
 // Get wobble offset for hand-drawn effect
-function getWobble(x: number, y: number, nowMs: number, intensity: number = 1): { dx: number; dy: number } {
-  const frame = Math.floor(nowMs / 100);
+function getWobble(x: number, y: number, nowMs: number, intensity: number = WOBBLE_INTENSITY.standard): { dx: number; dy: number } {
+  const frame = Math.floor(nowMs / WOBBLE_FRAME_MS);
   const dx = (seededRandom(x * 50 + y * 30 + frame) - 0.5) * intensity;
   const dy = (seededRandom(y * 50 + x * 30 + frame + 100) - 0.5) * intensity;
   return { dx, dy };
@@ -111,7 +125,47 @@ function adjustAlpha(color: string, alpha: number): string {
   return color;
 }
 
-// Draw a hand-drawn line with slight wobble
+// Multi-pass sketchy line - pencil guideline + main ink stroke
+// Use for hero elements (player, ground, flag) for authentic "sketched then inked" look
+export function drawSketchyLine(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  color: string,
+  lineWidth: number = LINE_WEIGHTS.primary,
+  nowMs: number = 0,
+) {
+  // Pass 1: Pencil guideline (faint, offset up-left)
+  const guideColor = adjustAlpha(PENCIL_GRAY, 0.3);
+  drawHandLine(ctx, x1 - 0.5, y1 - 0.5, x2 - 0.5, y2 - 0.5, guideColor, LINE_WEIGHTS.shadow, nowMs);
+
+  // Pass 2: Main ink stroke
+  drawHandLine(ctx, x1, y1, x2, y2, color, lineWidth, nowMs);
+}
+
+// Multi-pass sketchy circle - pencil guideline + main ink stroke
+export function drawSketchyCircle(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  radius: number,
+  color: string,
+  lineWidth: number = LINE_WEIGHTS.primary,
+  nowMs: number = 0,
+  filled: boolean = false,
+) {
+  // Pass 1: Pencil guideline (faint, offset)
+  const guideColor = adjustAlpha(PENCIL_GRAY, 0.25);
+  drawHandCircle(ctx, cx - 0.5, cy - 0.5, radius, guideColor, LINE_WEIGHTS.shadow, nowMs, false);
+
+  // Pass 2: Main ink stroke
+  drawHandCircle(ctx, cx, cy, radius, color, lineWidth, nowMs, filled);
+}
+
+// Draw a hand-drawn line with enhanced wobble
+// For longer lines, breaks into segments with independent wobble per segment
 export function drawHandLine(
   ctx: CanvasRenderingContext2D,
   x1: number,
@@ -121,25 +175,58 @@ export function drawHandLine(
   color: string,
   lineWidth: number = 2,
   nowMs: number = 0,
+  intensity: number = WOBBLE_INTENSITY.standard,
 ) {
-  const w1 = getWobble(x1, y1, nowMs, 1.5);
-  const w2 = getWobble(x2, y2, nowMs, 1.5);
-
   ctx.strokeStyle = color;
   ctx.lineWidth = lineWidth;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  ctx.beginPath();
-  ctx.moveTo(x1 + w1.dx, y1 + w1.dy);
+  // Calculate line length
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const length = Math.sqrt(dx * dx + dy * dy);
 
-  // Add slight curve in the middle for hand-drawn feel
-  const midX = (x1 + x2) / 2;
-  const midY = (y1 + y2) / 2;
-  const midW = getWobble(midX, midY, nowMs, 2);
+  // For longer lines (>30px), break into segments for more natural wobble
+  if (length > 30) {
+    const numSegments = Math.min(4, Math.ceil(length / 25));
+    ctx.beginPath();
 
-  ctx.quadraticCurveTo(midX + midW.dx, midY + midW.dy, x2 + w2.dx, y2 + w2.dy);
-  ctx.stroke();
+    const w1 = getWobble(x1, y1, nowMs, intensity);
+    ctx.moveTo(x1 + w1.dx, y1 + w1.dy);
+
+    for (let i = 1; i <= numSegments; i++) {
+      const t = i / numSegments;
+      const px = x1 + dx * t;
+      const py = y1 + dy * t;
+      const w = getWobble(px + i * 17, py + i * 13, nowMs, intensity);
+
+      // Control point for curve with its own wobble
+      const ct = (i - 0.5) / numSegments;
+      const cpx = x1 + dx * ct;
+      const cpy = y1 + dy * ct;
+      const cw = getWobble(cpx * 1.3 + i * 23, cpy * 1.7 + i * 19, nowMs, intensity * 1.2);
+
+      ctx.quadraticCurveTo(cpx + cw.dx, cpy + cw.dy, px + w.dx, py + w.dy);
+    }
+
+    ctx.stroke();
+  } else {
+    // Short lines: single curve with enhanced wobble
+    const w1 = getWobble(x1, y1, nowMs, intensity);
+    const w2 = getWobble(x2, y2, nowMs, intensity);
+
+    ctx.beginPath();
+    ctx.moveTo(x1 + w1.dx, y1 + w1.dy);
+
+    // Add slight curve in the middle for hand-drawn feel
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2;
+    const midW = getWobble(midX, midY, nowMs, intensity * 1.3);
+
+    ctx.quadraticCurveTo(midX + midW.dx, midY + midW.dy, x2 + w2.dx, y2 + w2.dy);
+    ctx.stroke();
+  }
 }
 
 export function drawInkStroke(
@@ -294,21 +381,27 @@ export function drawHandCircle(
   lineWidth: number = 2,
   nowMs: number = 0,
   filled: boolean = false,
+  intensity: number = WOBBLE_INTENSITY.standard,
 ) {
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = lineWidth;
   ctx.lineCap = 'round';
 
-  const segments = 24;
+  // More segments for smoother wobble distribution
+  const segments = 32;
   ctx.beginPath();
 
   for (let i = 0; i <= segments; i++) {
     const angle = (i / segments) * Math.PI * 2;
-    const wobble = getWobble(cx + i * 10, cy + i * 10, nowMs, 1.5);
-    const r = radius + wobble.dx;
-    const px = cx + Math.cos(angle) * r;
-    const py = cy + Math.sin(angle) * r;
+    // Enhanced wobble with both dx and dy affecting radius
+    const wobble = getWobble(cx + i * 10, cy + i * 10, nowMs, intensity);
+    const radiusWobble = wobble.dx * 1.5 + wobble.dy * 0.5;
+    const r = radius + radiusWobble;
+    // Also wobble the center point slightly for more organic feel
+    const centerWobble = getWobble(cx * 1.3 + i * 7, cy * 1.7 + i * 11, nowMs, intensity * 0.3);
+    const px = cx + centerWobble.dx + Math.cos(angle) * r;
+    const py = cy + centerWobble.dy + Math.sin(angle) * r;
 
     if (i === 0) {
       ctx.moveTo(px, py);
@@ -456,68 +549,70 @@ export function drawStickFigure(
   const headX = x + bodyLean * 0.5;
   const headY = y - 35 * scale;
 
-  // Draw head (circle) with landing emphasis
-  drawHandCircle(ctx, headX, headY, headRadius, color, 2.5 * landingEmphasis, nowMs, false);
+  // Draw head (circle) with multi-pass for hero element
+  drawSketchyCircle(ctx, headX, headY, headRadius, color, 2.5 * landingEmphasis, nowMs, false);
 
-  // Draw smile
+  // Draw smile with slight wobble
+  const smileWobble = getWobble(headX, headY + 2, nowMs, WOBBLE_INTENSITY.fine);
   ctx.beginPath();
-  ctx.arc(headX, headY + 2, headRadius * 0.5, 0.2, Math.PI - 0.2);
+  ctx.arc(headX + smileWobble.dx * 0.3, headY + 2 + smileWobble.dy * 0.3, headRadius * 0.5, 0.2, Math.PI - 0.2);
   ctx.stroke();
 
-  // Draw eyes
+  // Draw eyes with wobble
   ctx.fillStyle = color;
+  const eyeWobbleL = getWobble(headX - headRadius * 0.35, headY - 2, nowMs, WOBBLE_INTENSITY.fine);
   ctx.beginPath();
-  ctx.arc(headX - headRadius * 0.35, headY - 2, 2, 0, Math.PI * 2);
+  ctx.arc(headX - headRadius * 0.35 + eyeWobbleL.dx * 0.3, headY - 2 + eyeWobbleL.dy * 0.3, 2, 0, Math.PI * 2);
   ctx.fill();
+  const eyeWobbleR = getWobble(headX + headRadius * 0.35, headY - 2, nowMs, WOBBLE_INTENSITY.fine);
   ctx.beginPath();
-  ctx.arc(headX + headRadius * 0.35, headY - 2, 2, 0, Math.PI * 2);
+  ctx.arc(headX + headRadius * 0.35 + eyeWobbleR.dx * 0.3, headY - 2 + eyeWobbleR.dy * 0.3, 2, 0, Math.PI * 2);
   ctx.fill();
 
-  // Body
+  // Body - multi-pass for hero element
   const bodyTopY = headY + headRadius + 2;
   const bodyBottomY = y - 8 * scale;
 
-  ctx.beginPath();
-  ctx.moveTo(headX, bodyTopY);
-  ctx.lineTo(x + bodyLean, bodyBottomY);
-  ctx.stroke();
+  drawSketchyLine(ctx, headX, bodyTopY, x + bodyLean, bodyBottomY, color, SCALED_LINE_WEIGHTS.body, nowMs);
 
-  // Arms
+  // Arms - multi-pass for hero element
   const armY = bodyTopY + 8 * scale;
   const armLen = 18 * scale;
 
   // Left arm
-  ctx.beginPath();
-  ctx.moveTo(x + bodyLean * 0.7, armY);
-  ctx.lineTo(
+  drawSketchyLine(
+    ctx,
+    x + bodyLean * 0.7, armY,
     x + bodyLean * 0.7 - Math.cos(armAngleL) * armLen,
-    armY + Math.sin(armAngleL) * armLen
+    armY + Math.sin(armAngleL) * armLen,
+    color, SCALED_LINE_WEIGHTS.limbs, nowMs
   );
-  ctx.stroke();
 
   // Right arm
-  ctx.beginPath();
-  ctx.moveTo(x + bodyLean * 0.7, armY);
-  ctx.lineTo(
+  drawSketchyLine(
+    ctx,
+    x + bodyLean * 0.7, armY,
     x + bodyLean * 0.7 + Math.cos(armAngleR) * armLen,
-    armY + Math.sin(armAngleR) * armLen
+    armY + Math.sin(armAngleR) * armLen,
+    color, SCALED_LINE_WEIGHTS.limbs, nowMs
   );
-  ctx.stroke();
 
-  // Legs
-  const legLen = 20 * scale;
-
+  // Legs - multi-pass for hero element
   // Left leg
-  ctx.beginPath();
-  ctx.moveTo(x + bodyLean, bodyBottomY);
-  ctx.lineTo(x + bodyLean - legSpread, y);
-  ctx.stroke();
+  drawSketchyLine(
+    ctx,
+    x + bodyLean, bodyBottomY,
+    x + bodyLean - legSpread, y,
+    color, SCALED_LINE_WEIGHTS.limbs, nowMs
+  );
 
   // Right leg
-  ctx.beginPath();
-  ctx.moveTo(x + bodyLean, bodyBottomY);
-  ctx.lineTo(x + bodyLean + legSpread, y);
-  ctx.stroke();
+  drawSketchyLine(
+    ctx,
+    x + bodyLean, bodyBottomY,
+    x + bodyLean + legSpread, y,
+    color, SCALED_LINE_WEIGHTS.limbs, nowMs
+  );
 
   ctx.restore();
 }
@@ -2381,11 +2476,11 @@ export function drawGround(
 ) {
   const wobble = getWobble(0, groundY, nowMs, 0.3);
 
-  // Ground line from left to cliff edge
-  drawHandLine(ctx, 0, groundY + wobble.dy, cliffEdgeX, groundY + wobble.dy, color, LINE_WEIGHTS.primary, nowMs);
+  // Ground line from left to cliff edge - multi-pass for hero element
+  drawSketchyLine(ctx, 0, groundY + wobble.dy, cliffEdgeX, groundY + wobble.dy, color, LINE_WEIGHTS.primary, nowMs);
 
-  // Cliff drop-off line (vertical)
-  drawHandLine(ctx, cliffEdgeX, groundY + wobble.dy, cliffEdgeX, groundY + 40, color, LINE_WEIGHTS.primary, nowMs);
+  // Cliff drop-off line (vertical) - multi-pass for hero element
+  drawSketchyLine(ctx, cliffEdgeX, groundY + wobble.dy, cliffEdgeX, groundY + 40, color, LINE_WEIGHTS.primary, nowMs);
 
   // Cross-hatching underneath the ground (earth texture)
   ctx.save();

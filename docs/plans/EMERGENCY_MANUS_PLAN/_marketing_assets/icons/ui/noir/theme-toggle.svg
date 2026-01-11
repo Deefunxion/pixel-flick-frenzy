@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Half circle (sun/moon) -->
+  <path d="M 24 8 A 16 16 0 0 1 24 40"
+        stroke="#e8e4e0" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <!-- Fill half -->
+  <path d="M 24 8 A 16 16 0 0 0 24 40 L 24 8 Z"
+        fill="#e8e4e0"/>
+  <!-- Sun rays -->
+  <path d="M 36 24 L 42 24" stroke="#e8e4e0" stroke-width="2" stroke-linecap="round"/>
+  <path d="M 33 14 L 38 9" stroke="#e8e4e0" stroke-width="2" stroke-linecap="round"/>
+  <path d="M 33 34 L 38 39" stroke="#e8e4e0" stroke-width="2" stroke-linecap="round"/>
+</svg>
