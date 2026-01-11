@@ -49,6 +49,9 @@ import { renderFrame } from '@/game/engine/render';
 import { createInitialState, resetPhysics } from '@/game/engine/state';
 import { updateFrame, type GameAudio, type GameUI } from '@/game/engine/update';
 import type { GameState } from '@/game/engine/types';
+import { assetLoader } from '@/game/engine/assets';
+import { Animator } from '@/game/engine/animator';
+import { SPRITE_SHEETS } from '@/game/engine/spriteConfig';
 import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
@@ -142,6 +145,11 @@ const Game = () => {
   useEffect(() => {
     saveString('theme_id', themeId);
     themeRef.current = getTheme(themeId);
+
+    // Update animator theme when theme changes
+    if (stateRef.current?.zenoAnimator) {
+      stateRef.current.zenoAnimator.setTheme(themeId === 'noir' ? 'noir' : 'flipbook');
+    }
   }, [themeId]);
 
   // Keep daily stats fresh (date rollover)
@@ -249,6 +257,30 @@ const Game = () => {
     console.log('[Game] Canvas ready, initializing state');
     ctx.imageSmoothingEnabled = false;
     stateRef.current = initState();
+
+    // Preload sprite sheets and initialize animator
+    const loadSprites = async () => {
+      try {
+        await assetLoader.preloadAll(Object.values(SPRITE_SHEETS));
+        console.log('[Game] Sprite sheets loaded');
+
+        // Create animator based on current theme
+        const theme = themeId === 'noir' ? 'noir' : 'flipbook';
+        const animator = new Animator(theme);
+
+        if (animator.initialize()) {
+          animator.play('idle');
+          if (stateRef.current) {
+            stateRef.current.zenoAnimator = animator;
+          }
+          console.log('[Game] Animator initialized for theme:', theme);
+        }
+      } catch (error) {
+        console.warn('[Game] Sprite loading failed, using procedural fallback:', error);
+      }
+    };
+
+    loadSprites();
 
     const ui: GameUI = {
       setFellOff,
