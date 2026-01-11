@@ -268,13 +268,7 @@ export class NoirBackgroundRenderer {
       ctx.drawImage(groundImg, 0, groundY - h + 25, w, h);
     }
 
-    // Draw cliff edge detail
-    const cliffImg = assetLoader.getImage(NOIR_BACKGROUND_ASSETS.terrain.cliffEdge);
-    if (cliffImg) {
-      const w = NOIR_ASSET_DIMENSIONS.cliffEdge.width * ASSET_SCALE;
-      const h = NOIR_ASSET_DIMENSIONS.cliffEdge.height * ASSET_SCALE;
-      ctx.drawImage(cliffImg, CLIFF_EDGE - w * 0.4, groundY - h * 0.25, w, h);
-    }
+    // Cliff edge rock removed - only flag marks the edge
   }
 
   private drawWindSwooshes(ctx: CanvasRenderingContext2D): void {

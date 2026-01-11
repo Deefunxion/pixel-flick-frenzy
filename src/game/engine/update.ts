@@ -9,8 +9,8 @@ import {
   MIN_POWER,
 } from '@/game/constants';
 
-// Time scale for gameplay speed (0.5 = half speed, 1.0 = normal)
-const TIME_SCALE = 0.5;
+// Time scale for gameplay speed (0.75 = 75% speed, 1.0 = normal)
+const TIME_SCALE = 0.75;
 import type { Theme } from '@/game/themes';
 import {
   loadDailyStats,
