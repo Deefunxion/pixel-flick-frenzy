@@ -22,6 +22,7 @@ import {
   saveString,
   todayLocalISODate,
 } from '@/game/storage';
+import { getZenoPrecision } from '@/game/leaderboard';
 import {
   ensureAudioContext,
   playImpact,
@@ -164,10 +165,11 @@ const Game = () => {
     }
   }, [dailyStats.date]);
 
-  // Format score with small decimals
+  // Format score with Zeno-adaptive decimals (more precision closer to edge)
   const formatScore = (score: number) => {
     const intPart = Math.floor(score);
-    const decPart = (score - intPart).toFixed(4).substring(2); // Get 4 decimals without "0."
+    const precision = getZenoPrecision(score);
+    const decPart = (score - intPart).toFixed(precision).substring(2); // Get decimals without "0."
     return { int: intPart, dec: decPart };
   };
 

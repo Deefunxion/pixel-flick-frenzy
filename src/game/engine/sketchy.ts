@@ -1,6 +1,8 @@
 // Sketchy/hand-drawn rendering utilities for flipbook aesthetic
 // ORGANIC VERSION - uses strokes for hand-drawn feel at 480x240 resolution
 
+import { formatZenoScore } from '@/game/leaderboard';
+
 // Blue ink color (like ballpoint pen)
 export const INK_BLUE = '#1a4a7a';
 export const INK_LIGHT = '#4a7ab0';
@@ -1182,7 +1184,7 @@ export function drawArrowWithLabel(
   ctx.fillText(label, endX + 5 * direction, y + 5);
 }
 
-// Draw handwritten number
+// Draw handwritten number with Zeno-adaptive precision
 export function drawHandwrittenNumber(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -1194,7 +1196,7 @@ export function drawHandwrittenNumber(
   ctx.fillStyle = color;
   ctx.font = `${fontSize}px "Comic Sans MS", cursive, sans-serif`;
   ctx.textAlign = 'left';
-  ctx.fillText(number.toFixed(4), x, y);
+  ctx.fillText(formatZenoScore(number), x, y);
 }
 
 // Draw film grain effect (Noir theme)

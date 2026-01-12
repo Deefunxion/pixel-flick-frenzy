@@ -8,7 +8,44 @@ export type LeaderboardEntry = {
   displayDistance: string;
 };
 
-// Get current precision level (starts at 4 decimals)
+/**
+ * Zeno Decimal System - precision based on proximity to the edge (420)
+ * The closer to the edge, the more decimals revealed.
+ * Like Zeno's paradox: infinite precision as you approach the limit.
+ *
+ * Distance from edge → Decimals
+ * > 120 (score < 300)      → 1
+ * > 20  (score < 400)      → 2
+ * > 5   (score < 415)      → 3
+ * > 1   (score < 419)      → 4
+ * > 0.1 (score < 419.9)    → 5
+ * > 0.01                   → 6
+ * > 0.001                  → 7
+ * > 0.0001                 → 8 (max)
+ */
+export function getZenoPrecision(score: number): number {
+  const distanceFromEdge = CLIFF_EDGE - score;
+
+  if (distanceFromEdge > 120) return 1;
+  if (distanceFromEdge > 20) return 2;
+  if (distanceFromEdge > 5) return 3;
+  if (distanceFromEdge > 1) return 4;
+  if (distanceFromEdge > 0.1) return 5;
+  if (distanceFromEdge > 0.01) return 6;
+  if (distanceFromEdge > 0.001) return 7;
+  return 8; // Max precision
+}
+
+/**
+ * Format a score with Zeno-adaptive precision
+ * Shows only as many decimals as meaningful for that score range
+ */
+export function formatZenoScore(score: number): string {
+  const precision = getZenoPrecision(score);
+  return score.toFixed(precision);
+}
+
+// Get current precision level (starts at 4 decimals) - legacy, kept for compatibility
 export function getCurrentPrecision(): number {
   return loadNumber('leaderboard_precision', 4, 'omf_leaderboard_precision');
 }
@@ -36,10 +73,9 @@ export function increasePrecision(): number {
   return next;
 }
 
-// Format distance with appropriate precision
+// Format distance with appropriate precision - now uses Zeno system
 export function formatLeaderboardDistance(distance: number): string {
-  const precision = getCurrentPrecision();
-  return distance.toFixed(precision);
+  return formatZenoScore(distance);
 }
 
 // Personal leaderboard (top 10 throws)
@@ -48,22 +84,15 @@ export function getPersonalLeaderboard(): LeaderboardEntry[] {
 }
 
 export function addToPersonalLeaderboard(distance: number): boolean {
-  const precision = getCurrentPrecision();
+  const precision = getZenoPrecision(distance);
   const leaderboard = getPersonalLeaderboard();
 
   const entry: LeaderboardEntry = {
     distance,
     precision,
     date: new Date().toISOString(),
-    displayDistance: distance.toFixed(precision),
+    displayDistance: formatZenoScore(distance),
   };
-
-  // Check if this would trigger precision increase
-  if (shouldIncreasePrecision(distance)) {
-    increasePrecision();
-    entry.precision = getCurrentPrecision();
-    entry.displayDistance = distance.toFixed(entry.precision);
-  }
 
   // Add and sort
   leaderboard.push(entry);

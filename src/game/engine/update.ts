@@ -120,9 +120,13 @@ export function updateFrame(state: GameState, svc: GameServices) {
     audio.startCharge(0);
   }
 
-  // Charging update (power only)
+  // Charging update (power only) - bounces 0→100→0→100 continuously
   if (state.charging && pressed) {
-    const dt = Math.min(nowMs - state.chargeStart, CHARGE_MS) / CHARGE_MS;
+    const elapsed = nowMs - state.chargeStart;
+    const cycleTime = CHARGE_MS * 2; // Full cycle is up + down
+    const cyclePosition = (elapsed % cycleTime) / CHARGE_MS;
+    // cyclePosition: 0→1 (going up), 1→2 (going down)
+    const dt = cyclePosition <= 1 ? cyclePosition : 2 - cyclePosition;
     state.chargePower = dt;
     audio.updateCharge(dt);
 
@@ -394,7 +398,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.sliding = false;
       state.vx = 0;
 
-      const landedAt = Math.round(state.px * 10000) / 10000;
+      const landedAt = Math.round(state.px * 100000000) / 100000000; // 8 decimal precision for Zeno system
 
       if (landedAt >= CLIFF_EDGE) {
         state.fellOff = true;
