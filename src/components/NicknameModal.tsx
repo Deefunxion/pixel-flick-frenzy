@@ -45,6 +45,8 @@ export function NicknameModal({ theme, onComplete }: NicknameModalProps) {
     setIsChecking(true);
     setError(null);
 
+    let didComplete = false;
+
     try {
       const { isNicknameAvailable, createAnonymousUser } = await import('@/firebase/auth');
 
@@ -60,17 +62,25 @@ export function NicknameModal({ theme, onComplete }: NicknameModalProps) {
       setIsSubmitting(true);
 
       // Create user with timeout (uses transaction for race-safe reservation)
-      const timeoutPromise = new Promise<null>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out. Please try again.')), 15000);
-      });
+      // Use AbortController pattern for cleaner timeout handling on iOS
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
       const profile = await Promise.race([
         createAnonymousUser(nickname),
-        timeoutPromise,
+        new Promise<null>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error('Request timed out. Please try again.'));
+          }, 15000);
+        }),
       ]);
 
+      // Clear timeout if we got a response
+      if (timeoutId) clearTimeout(timeoutId);
+
       if (profile) {
-        onComplete(profile);
+        didComplete = true;
+        // Use setTimeout(0) to ensure state updates flush before callback on iOS Safari
+        setTimeout(() => onComplete(profile), 0);
       } else {
         setError('Failed to create profile. Please try again.');
         setIsSubmitting(false);
@@ -78,8 +88,12 @@ export function NicknameModal({ theme, onComplete }: NicknameModalProps) {
     } catch (err) {
       console.error('Nickname creation error:', err);
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
-      setIsSubmitting(false);
-      setIsChecking(false);
+    } finally {
+      // Always reset states if we didn't complete successfully
+      if (!didComplete) {
+        setIsSubmitting(false);
+        setIsChecking(false);
+      }
     }
   }, [nickname, onComplete]);
 

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@/contexts/UserContext';
 import type { Theme } from '@/game/themes';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
+import { formatZenoScore } from '@/game/leaderboard';
 
 type LeaderboardType = 'totalScore' | 'bestThrow' | 'mostFalls';
 type LeaderboardEntry = {
@@ -208,7 +209,7 @@ export function LeaderboardScreen({ theme, onClose }: LeaderboardScreenProps) {
                     >
                       {activeTab === 'totalScore' || activeTab === 'mostFalls'
                         ? entry.score.toLocaleString()
-                        : entry.score.toFixed(4)
+                        : formatZenoScore(entry.score)
                       }
                     </div>
                   </div>
