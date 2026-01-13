@@ -59,6 +59,60 @@ import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
+import { captureError } from '@/lib/sentry';
+import type { Theme } from '@/game/themes';
+
+// iOS Audio Warning Toast Component
+type AudioWarningToastProps = {
+  show: boolean;
+  theme: Theme;
+  onDismiss: () => void;
+  onRetry: () => void;
+};
+
+function AudioWarningToast({ show, theme, onDismiss, onRetry }: AudioWarningToastProps) {
+  if (!show) return null;
+
+  return (
+    <div
+      className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50
+                 px-4 py-3 rounded-lg shadow-lg max-w-xs animate-bounce"
+      style={{
+        backgroundColor: theme.uiBg,
+        border: `2px solid ${theme.danger}`,
+        boxShadow: `0 4px 20px ${theme.danger}40`
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <span className="text-2xl">🔇</span>
+        <div className="flex-1">
+          <p className="text-sm font-bold" style={{ color: theme.danger }}>
+            Sound Blocked
+          </p>
+          <p className="text-xs mt-1" style={{ color: theme.uiText, opacity: 0.8 }}>
+            iOS requires a tap to enable audio
+          </p>
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={onRetry}
+              className="px-3 py-1 rounded text-xs font-bold"
+              style={{ backgroundColor: theme.accent1, color: theme.background }}
+            >
+              Enable Sound
+            </button>
+            <button
+              onClick={onDismiss}
+              className="px-3 py-1 rounded text-xs"
+              style={{ color: theme.uiText, opacity: 0.7 }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const Game = () => {
   const { firebaseUser, profile, isLoading, needsOnboarding, completeOnboarding } = useUser();
@@ -210,6 +264,17 @@ const Game = () => {
       } catch {
         // Vibration not supported or blocked
       }
+    }
+  }, []);
+
+  // iOS Audio: Retry handler for blocked audio
+  const handleAudioRetry = useCallback(async () => {
+    const unlocked = await unlockAudioForIOS(audioRefs.current);
+    setAudioContextState(getAudioState(audioRefs.current));
+    if (unlocked) {
+      setShowAudioWarning(false);
+      // Play a test tone to confirm audio is working
+      playTone(audioRefs.current, audioSettingsRef.current, 440, 0.1, 'sine', 0.05);
     }
   }, []);
 
@@ -395,8 +460,6 @@ const Game = () => {
       // Show warning on iOS if audio isn't running after unlock attempt
       if (!unlocked && e.pointerType === 'touch' && !audioSettingsRef.current.muted) {
         setShowAudioWarning(true);
-        // Auto-hide warning after 5 seconds
-        setTimeout(() => setShowAudioWarning(false), 5000);
       }
 
       // Hide mobile hint after first touch/click
@@ -501,7 +564,12 @@ const Game = () => {
             renderFrame(ctx, state, currentTheme, now, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
           }
         } catch (err: any) {
-          console.error('[Game] Loop error:', err);
+          captureError(err, {
+            phase: state.phase,
+            px: state.px,
+            py: state.py,
+            flying: state.flying,
+          });
           errorRef.current = err.message;
           // Render error to canvas for debugging
           ctx.save();
@@ -700,28 +768,25 @@ const Game = () => {
                 </button>
                 <button
                   className={buttonClass}
-                  style={buttonStyle}
+                  style={{
+                    ...buttonStyle,
+                    // Highlight if audio is blocked
+                    borderColor: audioContextState === 'suspended' && !audioSettings.muted
+                      ? theme.danger
+                      : buttonStyle.borderColor,
+                  }}
                   onClick={async () => {
                     ensureAudioContext(audioRefs.current);
                     await resumeIfSuspended(audioRefs.current);
+                    setAudioContextState(getAudioState(audioRefs.current));
                     setAudioSettings((s) => ({ ...s, muted: !s.muted }));
-                    // Also dismiss warning if user toggles sound
                     setShowAudioWarning(false);
                   }}
                   aria-label="Toggle sound"
                 >
-                  {audioSettings.muted ? '🔇' : '🔊'}
+                  {audioSettings.muted ? '🔇' : audioContextState === 'running' ? '🔊' : '🔈'}
                 </button>
               </div>
-              {/* iOS audio warning */}
-              {showAudioWarning && (
-                <div
-                  className="mt-2 px-3 py-2 rounded text-xs text-center"
-                  style={{ backgroundColor: theme.danger + '33', color: theme.danger, maxWidth: '200px' }}
-                >
-                  No sound? Check your silent switch or tap 🔊 again
-                </div>
-              )}
             </div>
           );
         })()}
@@ -819,6 +884,14 @@ const Game = () => {
         {needsOnboarding && (
           <NicknameModal theme={theme} onComplete={completeOnboarding} />
         )}
+
+        {/* iOS Audio Warning Toast - positioned as fixed overlay */}
+        <AudioWarningToast
+          show={showAudioWarning}
+          theme={theme}
+          onDismiss={() => setShowAudioWarning(false)}
+          onRetry={handleAudioRetry}
+        />
       </div>
     </div>
   );

@@ -16,15 +16,17 @@ service cloud.firestore {
         && request.resource.data.bestThrow >= resource.data.bestThrow;
     }
 
-    // Nicknames - get specific doc only (not list), only createable
+    // Nicknames - get specific doc only (not list), only createable once per user
     match /nicknames/{nickname} {
       allow get: if true; // Allow checking if nickname exists
       // No list permission (prevents enumeration)
       allow create: if request.auth != null
         && request.resource.data.uid == request.auth.uid
         && nickname.size() >= 3
-        && nickname.size() <= 12;
-      // No update or delete
+        && nickname.size() <= 12
+        // Only lowercase nicknames allowed (normalize on client)
+        && nickname == nickname.lower();
+      // No update or delete - nicknames are permanent
     }
 
     // Leaderboards - readable by all, writable by owner with monotonic scores
