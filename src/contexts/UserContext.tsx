@@ -4,6 +4,7 @@ import { type User } from 'firebase/auth';
 import { type UserProfile } from '@/firebase/auth';
 import { loadNumber } from '@/game/storage';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
+import { captureError } from '@/lib/sentry';
 
 type UserContextType = {
   firebaseUser: User | null;
@@ -80,7 +81,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
 
     init().catch((err) => {
-      console.error('Failed to initialize user context:', err);
+      captureError(err instanceof Error ? err : new Error(String(err)), {
+        action: 'initUserContext',
+      });
       setFirebaseUser(null);
       setProfile(null);
       setNeedsOnboarding(false);

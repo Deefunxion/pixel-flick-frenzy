@@ -16,6 +16,7 @@ import {
   type Timestamp,
 } from 'firebase/firestore';
 import { auth, db } from './config';
+import { captureError } from '@/lib/sentry';
 
 export type UserProfile = {
   uid: string;
@@ -58,20 +59,45 @@ export async function createAnonymousUser(nickname: string): Promise<UserProfile
     throw new Error('Nickname must be 3-12 letters only');
   }
 
-  // Sign in anonymously first to get uid
+  const normalizedNickname = nickname.toLowerCase();
+
+  // Pre-check: fail fast if nickname is taken (non-authoritative but saves time)
+  const nicknameRef = doc(db, 'nicknames', normalizedNickname);
+  const existingNickname = await getDoc(nicknameRef);
+  if (existingNickname.exists()) {
+    throw new Error('Nickname is already taken');
+  }
+
+  // Check if there's already a signed-in user with a profile
+  // This prevents duplicate registrations from repeated taps
+  if (auth.currentUser) {
+    const existingProfile = await getDoc(doc(db, 'users', auth.currentUser.uid));
+    if (existingProfile.exists()) {
+      // User already has a profile - return it instead of creating duplicate
+      return existingProfile.data() as UserProfile;
+    }
+  }
+
+  // Sign in anonymously to get uid
   const userCredential = await signInAnonymously(auth);
   const user = userCredential.user;
-  const normalizedNickname = nickname.toLowerCase();
 
   try {
     // Use transaction to atomically check and reserve nickname
     const profile = await runTransaction(db, async (transaction) => {
       // Check nickname availability within transaction
-      const nicknameRef = doc(db, 'nicknames', normalizedNickname);
       const nicknameDoc = await transaction.get(nicknameRef);
 
       if (nicknameDoc.exists()) {
         throw new Error('Nickname is already taken');
+      }
+
+      // Double-check user doesn't already have a profile (race condition guard)
+      const userRef = doc(db, 'users', user.uid);
+      const existingUserDoc = await transaction.get(userRef);
+      if (existingUserDoc.exists()) {
+        // Profile was created by another transaction - return it
+        return existingUserDoc.data() as UserProfile;
       }
 
       // Create user profile
@@ -104,7 +130,6 @@ export async function createAnonymousUser(nickname: string): Promise<UserProfile
       };
 
       // Write both docs in transaction
-      const userRef = doc(db, 'users', user.uid);
       transaction.set(userRef, newProfile);
       transaction.set(nicknameRef, {
         uid: user.uid,
@@ -116,9 +141,18 @@ export async function createAnonymousUser(nickname: string): Promise<UserProfile
 
     return profile;
   } catch (error) {
-    // If transaction fails, sign out the anonymous user
-    await auth.signOut();
-    console.error('Error creating anonymous user:', error);
+    // If transaction fails and user has no profile, sign out
+    const userRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userRef);
+    if (!userDoc.exists()) {
+      await auth.signOut();
+    }
+
+    captureError(error instanceof Error ? error : new Error(String(error)), {
+      nickname: normalizedNickname,
+      uid: user.uid,
+      action: 'createAnonymousUser',
+    });
     throw error;
   }
 }
