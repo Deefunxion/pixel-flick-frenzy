@@ -313,12 +313,17 @@ export function updateFrame(state: GameState, svc: GameServices) {
     }
   }
 
-  if ((state.flying || state.sliding) && state.px > 90) {
+  // Only apply edge slow-mo effects when player has meaningful best score
+  // This prevents first-throw-ever from being entirely in slow motion
+  const hasEstablishedBest = state.best > 50;
+  
+  if ((state.flying || state.sliding) && state.px > 90 && hasEstablishedBest) {
     const edgeProximity = (state.px - 90) / (CLIFF_EDGE - 90);
 
-    // Base slowMo from edge proximity
-    let targetSlowMo = state.reduceFx ? 0 : Math.min(0.7, edgeProximity * 0.8);
-    let targetZoom = state.reduceFx ? 1 : (1 + edgeProximity * 0.3);
+    // Base slowMo from edge proximity - only when approaching personal best territory
+    const approachingPersonalBest = state.px > state.best - 50;
+    let targetSlowMo = (state.reduceFx || !approachingPersonalBest) ? 0 : Math.min(0.7, edgeProximity * 0.8);
+    let targetZoom = (state.reduceFx || !approachingPersonalBest) ? 1 : (1 + edgeProximity * 0.3);
 
     // Record Zone Bullet Time - Two Levels
     if (state.recordZoneActive && !state.reduceFx) {
