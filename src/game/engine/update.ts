@@ -9,8 +9,8 @@ import {
   MIN_POWER,
 } from '@/game/constants';
 
-// Time scale for gameplay speed (0.75 = 75% speed, 1.0 = normal)
-const TIME_SCALE = 0.75;
+// Time scale for gameplay speed (0.550 = 55% speed, 1.0 = normal)
+const TIME_SCALE = 0.550;
 
 // Cinematic zone threshold - triggers 4x zoom and 4x slowdown
 const CINEMATIC_THRESHOLD = 318.5;
