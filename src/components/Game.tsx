@@ -25,25 +25,32 @@ import {
 import { getZenoPrecision } from '@/game/leaderboard';
 import {
   ensureAudioContext,
-  playImpact,
   playTone,
-  playWhoosh,
   playHeartbeat,
-  playRecordBreak,
-  playFailureSound,
   playWilhelmScream,
   resumeIfSuspended,
   unlockAudioForIOS,
   getAudioState,
-  startChargeTone,
-  stopChargeTone,
   stopEdgeWarning,
-  updateChargeTone,
   updateEdgeWarning,
+  // Hybrid functions (file-based with synth fallback)
+  playWhooshHybrid,
+  playImpactHybrid,
+  startChargeToneHybrid,
+  stopChargeToneHybrid,
+  updateChargeToneHybrid,
+  playRecordBreakHybrid,
+  playFailureSoundHybrid,
+  startFly,
+  stopFly,
+  playSlide,
+  stopSlide,
+  playWin,
   type AudioRefs,
   type AudioSettings,
   type AudioState,
 } from '@/game/audio';
+import { loadAudioFiles } from '@/game/audioFiles';
 import { newSessionGoals, type SessionGoal } from '@/game/goals';
 import { ACHIEVEMENTS } from '@/game/engine/achievements';
 import { renderFrame } from '@/game/engine/render';
@@ -328,18 +335,23 @@ const Game = () => {
     ctx.imageSmoothingEnabled = false;
     stateRef.current = initState();
 
-    // Preload sprite sheets, background assets, and initialize animator
-    const loadSprites = async () => {
+    // Preload sprite sheets, background assets, audio files, and initialize animator
+    const loadAssets = async () => {
       try {
-        await assetLoader.preloadAll(Object.values(SPRITE_SHEETS));
-        console.log('[Game] Sprite sheets loaded');
-
-        // Preload background assets for both themes
+        // Load sprites and backgrounds in parallel
         await Promise.all([
+          assetLoader.preloadAll(Object.values(SPRITE_SHEETS)),
           backgroundRenderer.preload(),
           noirBackgroundRenderer.preload(),
         ]);
-        console.log('[Game] Background assets loaded (flipbook + noir)');
+        console.log('[Game] Sprite sheets and backgrounds loaded');
+
+        // Load audio files (non-blocking, will fallback to synth if fails)
+        loadAudioFiles(audioRefs.current).then((loaded) => {
+          console.log('[Game] Audio files loaded:', loaded);
+        }).catch((err) => {
+          console.warn('[Game] Audio files failed to load, using synth fallback:', err);
+        });
 
         // Create animator based on current theme
         const theme = themeId === 'noir' ? 'noir' : 'flipbook';
@@ -354,12 +366,12 @@ const Game = () => {
         }
         setSpritesLoaded(true);
       } catch (error) {
-        console.warn('[Game] Sprite loading failed, using procedural fallback:', error);
+        console.warn('[Game] Asset loading failed, using procedural fallback:', error);
         setSpritesLoaded(true); // Still mark as "loaded" since we fallback gracefully
       }
     };
 
-    loadSprites();
+    loadAssets();
 
     const ui: GameUI = {
       setFellOff,
@@ -382,19 +394,25 @@ const Game = () => {
     };
 
     const audio: GameAudio = {
-      startCharge: () => startChargeTone(audioRefs.current, audioSettingsRef.current),
-      updateCharge: (p) => updateChargeTone(audioRefs.current, audioSettingsRef.current, p),
-      stopCharge: () => stopChargeTone(audioRefs.current),
-      whoosh: () => playWhoosh(audioRefs.current, audioSettingsRef.current),
-      impact: (i) => playImpact(audioRefs.current, audioSettingsRef.current, i),
+      startCharge: () => startChargeToneHybrid(audioRefs.current, audioSettingsRef.current),
+      updateCharge: (p) => updateChargeToneHybrid(audioRefs.current, audioSettingsRef.current, p),
+      stopCharge: () => stopChargeToneHybrid(audioRefs.current),
+      whoosh: () => playWhooshHybrid(audioRefs.current, audioSettingsRef.current),
+      impact: (i) => playImpactHybrid(audioRefs.current, audioSettingsRef.current, i),
       edgeWarning: (p) => updateEdgeWarning(audioRefs.current, audioSettingsRef.current, p),
       stopEdgeWarning: () => stopEdgeWarning(audioRefs.current),
       tone: (freq, dur, type = 'square', vol = 0.1) => playTone(audioRefs.current, audioSettingsRef.current, freq, dur, type, vol),
       zenoJingle: () => playZenoJingle(),
       heartbeat: (i) => playHeartbeat(audioRefs.current, audioSettingsRef.current, i),
-      recordBreak: () => playRecordBreak(audioRefs.current, audioSettingsRef.current),
-      failureSound: (type) => playFailureSound(audioRefs.current, audioSettingsRef.current, type),
+      recordBreak: () => playRecordBreakHybrid(audioRefs.current, audioSettingsRef.current),
+      failureSound: (type) => playFailureSoundHybrid(audioRefs.current, audioSettingsRef.current, type),
       wilhelmScream: () => playWilhelmScream(audioRefs.current, audioSettingsRef.current),
+      // New file-based sounds
+      startFly: () => startFly(audioRefs.current, audioSettingsRef.current),
+      stopFly: () => stopFly(),
+      slide: () => playSlide(audioRefs.current, audioSettingsRef.current),
+      stopSlide: () => stopSlide(),
+      win: () => playWin(audioRefs.current, audioSettingsRef.current),
     };
 
     const scheduleReset = (ms: number) => {
@@ -519,7 +537,7 @@ const Game = () => {
         stateRef.current.paused = document.hidden;
         // Stop any audio when going to background
         if (document.hidden) {
-          stopChargeTone(audioRefs.current);
+          stopChargeToneHybrid(audioRefs.current);
           stopEdgeWarning(audioRefs.current);
         }
       }
@@ -603,7 +621,7 @@ const Game = () => {
       }
       window.clearInterval(hudInterval);
       cancelAnimationFrame(animFrameRef.current);
-      stopChargeTone(audioRefs.current);
+      stopChargeToneHybrid(audioRefs.current);
       stopEdgeWarning(audioRefs.current);
     };
   }, [initState, playZenoJingle, triggerHaptic, handleNewPersonalBest, isLoading]);

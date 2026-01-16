@@ -32,6 +32,14 @@ All notable changes to One-More-Flick are documented in this file.
   - Prevents nickname modal from appearing on every page refresh
   - Key: `onboarding_complete`
 
+- **File-Based Audio System**: Replaced synthesized sounds with real audio files
+  - Uses Kenney.nl CC0 sounds (short, game-ready, ~74KB total)
+  - Hybrid approach: file-based audio with synth fallback if files fail to load
+  - New sounds: charge (phaserUp6), whoosh (phaseJump1), impact (impactMetal), slide (lowRandom), win (threeTone1), record-break (zapThreeToneUp), failure (phaserDown2)
+  - Audio files stored in `/public/assets/audio/game/` as .ogg
+  - New `audioFiles.ts` module for loading and managing audio buffers
+  - Added slide sound on landing, win sound on successful landing
+
 ### Changed
 - **Sprite Sheet**: New `zeno-flipbook.png` (6400×128 px, 50 frames)
   - All frames in single horizontal row
@@ -58,6 +66,11 @@ All notable changes to One-More-Flick are documented in this file.
 - Updated `animationController.ts` with complete state machine
 - Updated `animator.ts` with random frame selection for win
 - Updated `UserContext.tsx` with skip functionality and caching
+- Created `audioFiles.ts` for WebAudio buffer management and file playback
+- Updated `audio.ts` with hybrid functions (file + synth fallback)
+- Updated `Game.tsx` to load audio files during initialization
+- Updated `update.ts` with `GameAudio` type for slide/win sounds
+- Audio files: charge.wav, whoosh.wav, impact-soft.wav, impact-hard.wav, slide.wav, win.wav, record-break.wav, failure.wav
 - Updated `NicknameModal.tsx` with skip button
 - Updated `Game.tsx` to pass `skipOnboarding` prop
 

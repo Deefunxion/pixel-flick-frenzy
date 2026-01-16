@@ -46,6 +46,12 @@ export type GameAudio = {
   recordBreak: () => void;
   failureSound: (type: 'tumble' | 'dive' | 'splat') => void;
   wilhelmScream: () => void;
+  // New file-based sounds
+  startFly?: () => void;
+  stopFly?: () => void;
+  slide?: () => void;
+  stopSlide?: () => void;
+  win?: () => void;
 };
 
 export type GameUI = {
@@ -158,6 +164,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
     audio.stopCharge();
     audio.whoosh();
+    audio.startFly?.(); // Start fly sound while in air
   }
 
   // Nudge feature disabled - one input per throw only
@@ -241,6 +248,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.vy = 0;
 
       audio.impact(Math.min(1, impactVelocity / 4));
+      audio.stopFly?.(); // Stop fly sound when landing
+      audio.slide?.(); // Play slide sound when landing
     }
   }
 
@@ -408,6 +417,10 @@ export function updateFrame(state: GameState, svc: GameServices) {
         ui.setLastMultiplier(0);
         ui.setPerfectLanding(false);
 
+        // Stop slide and fly sounds when falling off
+        audio.stopSlide?.();
+        audio.stopFly?.();
+
         // Increment and sync total falls
         state.totalFalls++;
         saveNumber('total_falls', state.totalFalls);
@@ -513,6 +526,10 @@ export function updateFrame(state: GameState, svc: GameServices) {
         state.stats.totalDistance += state.dist;
         if (isPerfect) state.stats.perfectLandings++;
         if (finalMultiplier > state.stats.maxMultiplier) state.stats.maxMultiplier = finalMultiplier;
+
+        // Play win sound on successful landing
+        audio.win?.();
+        audio.stopSlide?.();
 
         ui.setSessionGoals((prev) => updateGoals(prev, { land_5_times: 1 }));
         if (finalMultiplier >= 3) ui.setSessionGoals((prev) => updateGoals(prev, { reach_multiplier_3: 1 }));
