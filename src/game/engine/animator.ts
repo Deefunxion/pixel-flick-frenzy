@@ -95,10 +95,17 @@ export class Animator {
     }
 
     this.currentAnimation = name;
-    this.currentFrameIndex = 0;
     this.frameTimer = 0;
     this.finished = false;
     this.isPlaying = true;
+
+    // For 'win' animation, randomly select one of the frames
+    if (name === 'win') {
+      const config = this.animationConfigs.get(name)!;
+      this.currentFrameIndex = Math.floor(Math.random() * config.frames.length);
+    } else {
+      this.currentFrameIndex = 0;
+    }
   }
 
   /**

@@ -6,36 +6,64 @@ import type { AnimationName } from './spriteConfig';
 /**
  * Determines which animation should play based on game state.
  * This centralizes the animation selection logic.
+ *
+ * Animation flow:
+ * idle → coil → launch → fly → descend → touchdown → win/slide → idle
+ *                                    ↘ lose (if fell off)
  */
 export function getDesiredAnimation(state: GameState): AnimationName {
-  // Priority order: failure > charging > flying > landing > idle
+  // Priority order: lose > charging > launch > fly/descend > landing/sliding > win > idle
 
+  // Failure animation (fell off the edge)
   if (state.failureAnimating) {
-    return 'fail';
+    return 'lose';
   }
 
+  // Charging up for throw
   if (state.charging) {
     return 'coil';
   }
 
-  // During flight (not yet landed), show bolt/flying animation
+  // During flight (not yet landed)
   if (state.flying && !state.sliding) {
-    return 'bolt';
+    // Launch phase: first ~15 frames after release
+    if (state.launchFrame > 0 && state.launchFrame < 15) {
+      return 'launch';
+    }
+
+    // Descending: falling down (vy > threshold to avoid jitter)
+    if (state.vy > 1.5) {
+      return 'descend';
+    }
+
+    // Flying: ascending or horizontal movement
+    return 'fly';
   }
 
-  // During landing/sliding, show impact animation
+  // Sliding on ground
   if (state.sliding) {
-    return 'impact';
+    return 'slide';
   }
 
-  // Show impact animation after landing, and let it finish before switching to idle
+  // Touchdown animation after landing (first contact, before sliding)
   if (state.landingFrame > 0 && !state.fellOff) {
-    return 'impact';
+    return 'touchdown';
   }
 
-  // If impact animation is still playing, keep showing it until it finishes
-  if (state.zenoAnimator?.currentAnimation === 'impact' && !state.zenoAnimator.isFinished()) {
-    return 'impact';
+  // Keep touchdown animation until it finishes
+  if (state.zenoAnimator?.currentAnimation === 'touchdown' && !state.zenoAnimator.isFinished()) {
+    return 'touchdown';
+  }
+
+  // Victory animation after successful landing
+  // Triggers when: landed, didn't fall off, and not sliding anymore
+  if (state.landed && !state.fellOff && !state.sliding) {
+    return 'win';
+  }
+
+  // Keep win animation playing if already in it
+  if (state.zenoAnimator?.currentAnimation === 'win') {
+    return 'win';
   }
 
   return 'idle';

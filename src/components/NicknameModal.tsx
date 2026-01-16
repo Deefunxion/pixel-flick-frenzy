@@ -7,9 +7,12 @@ import { FIREBASE_ENABLED } from '@/firebase/flags';
 type NicknameModalProps = {
   theme: Theme;
   onComplete: (profile: UserProfile) => void;
+  onSkip?: () => void; // For dev mode - skip onboarding
 };
 
-export function NicknameModal({ theme, onComplete }: NicknameModalProps) {
+const isDev = import.meta.env.DEV;
+
+export function NicknameModal({ theme, onComplete, onSkip }: NicknameModalProps) {
   const [nickname, setNickname] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
@@ -168,6 +171,22 @@ export function NicknameModal({ theme, onComplete }: NicknameModalProps) {
           >
             {isChecking ? 'Checking...' : isSubmitting ? 'Creating...' : 'Join the Leaderboards'}
           </button>
+
+          {/* Dev mode skip button */}
+          {isDev && onSkip && (
+            <button
+              type="button"
+              onClick={onSkip}
+              className="w-full py-2 mt-3 rounded text-sm opacity-60 hover:opacity-100 transition-opacity"
+              style={{
+                background: 'transparent',
+                color: theme.uiText,
+                border: `1px solid ${theme.accent3}`,
+              }}
+            >
+              Skip (Dev Mode)
+            </button>
+          )}
         </form>
       </div>
     </div>

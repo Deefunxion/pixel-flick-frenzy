@@ -4,8 +4,8 @@
  * Sprite sheet configuration for Zeno character
  * Defines paths, frame sizes, and animation metadata
  *
- * Sprite sheet format: Horizontal strip (2816 x 128 px)
- * - 22 frames total, each 128x128 pixels
+ * Sprite sheet format: Horizontal strip (6400 x 128 px)
+ * - 50 frames total, each 128x128 pixels
  * - All frames in a single row
  */
 
@@ -24,7 +24,7 @@ export const SPRITE_SHEETS = {
 } as const;
 
 // Animation types
-export type AnimationName = 'idle' | 'coil' | 'bolt' | 'impact' | 'fail';
+export type AnimationName = 'idle' | 'coil' | 'launch' | 'fly' | 'descend' | 'touchdown' | 'slide' | 'win' | 'lose';
 
 // Animation configuration
 export interface AnimationConfig {
@@ -34,38 +34,63 @@ export interface AnimationConfig {
   loop: boolean;         // Whether to loop or stop on last frame
 }
 
-// Frame layout: horizontal strip, frames 0-21
-// Frames arranged left-to-right: idle (0-3), coil (4-9), bolt (10-12), impact (13-17), fail (18-21)
+// Frame layout: horizontal strip, frames 0-49
+// idle(0-3), coil(4-12), launch(13-16), fly(17-22), descend(23-28), touchdown(29), slide(30-33), win(34-35), lose(36-49)
 
 export const ANIMATIONS: AnimationConfig[] = [
   {
     name: 'idle',
     frames: [0, 1, 2, 3],
-    frameRate: 4,  // Slow breathing animation
+    frameRate: 3,  // Slow breathing animation
     loop: true,
   },
   {
     name: 'coil',
-    frames: [4, 5, 6, 7],  // Charging sequence: stance -> prepare -> crouch -> lunge
-    frameRate: 2.5,  // ~0.4 sec per frame for charging feel
+    frames: [4, 5, 6, 7, 8, 9, 10, 11, 12],  // Charging sequence (9 frames)
+    frameRate: 4,  // Slower charge-up to see all frames
     loop: false,
   },
   {
-    name: 'bolt',
-    frames: [10, 11, 12],  // Flying animation with 3 frames
+    name: 'launch',
+    frames: [13, 14, 15, 16],  // Launch/jump animation
     frameRate: 8,
+    loop: false,
+  },
+  {
+    name: 'fly',
+    frames: [17, 18, 19, 20, 21, 22],  // Flying through air (6 frames)
+    frameRate: 4,  // Moderate speed
     loop: true,
   },
   {
-    name: 'impact',
-    frames: [13, 14, 15, 16, 17],
-    frameRate: 10,  // Slower landing
+    name: 'descend',
+    frames: [23, 24, 25, 26, 27, 28],  // Coming down (6 frames)
+    frameRate: 4,  // Moderate speed
+    loop: true,
+  },
+  {
+    name: 'touchdown',
+    frames: [29],  // Landing on ground (1 frame)
+    frameRate: 1,  // Static
     loop: false,
   },
   {
-    name: 'fail',
-    frames: [18, 19, 20, 21],
-    frameRate: 8,  // Slower tumble
+    name: 'slide',
+    frames: [30, 31, 32, 33],  // Sliding on ground (4 frames) - plays through then holds on last frame
+    frameRate: 10,  // Fast transition through first 3 frames
+    loop: false,  // Stops and holds on frame 33 (4.png)
+  },
+  {
+    name: 'win',
+    frames: [34, 35],  // Victory celebration (2 poses - random selection)
+    frameRate: 1,  // Static (random frame selected on play)
+    loop: false,
+    // Note: Animator will randomly pick one of these frames
+  },
+  {
+    name: 'lose',
+    frames: [36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49],  // Fall and defeat (14 frames)
+    frameRate: 6,
     loop: false,
   },
 ];
