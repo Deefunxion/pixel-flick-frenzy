@@ -115,7 +115,7 @@ function AudioWarningToast({ show, theme, onDismiss, onRetry }: AudioWarningToas
 }
 
 const Game = () => {
-  const { firebaseUser, profile, isLoading, needsOnboarding, completeOnboarding } = useUser();
+  const { firebaseUser, profile, isLoading, needsOnboarding, completeOnboarding, skipOnboarding } = useUser();
   console.log('[Game] Render, isLoading:', isLoading, 'needsOnboarding:', needsOnboarding);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -882,7 +882,7 @@ const Game = () => {
 
         {/* Onboarding modal for first-time users */}
         {needsOnboarding && (
-          <NicknameModal theme={theme} onComplete={completeOnboarding} />
+          <NicknameModal theme={theme} onComplete={completeOnboarding} onSkip={skipOnboarding} />
         )}
 
         {/* iOS Audio Warning Toast - positioned as fixed overlay */}

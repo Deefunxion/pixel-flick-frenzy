@@ -2,9 +2,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { type User } from 'firebase/auth';
 import { type UserProfile } from '@/firebase/auth';
-import { loadNumber } from '@/game/storage';
+import { loadNumber, loadString, saveString } from '@/game/storage';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
 import { captureError } from '@/lib/sentry';
+
+// Cache key for onboarding completion (survives page refresh)
+const ONBOARDING_COMPLETE_KEY = 'onboarding_complete';
 
 type UserContextType = {
   firebaseUser: User | null;
@@ -13,6 +16,7 @@ type UserContextType = {
   needsOnboarding: boolean;
   setProfile: (profile: UserProfile) => void;
   completeOnboarding: (profile: UserProfile) => void;
+  skipOnboarding: () => void; // Dev mode - skip without creating profile
   refreshProfile: () => Promise<void>;
 };
 
@@ -40,6 +44,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      // Check if user already completed onboarding (survives page refresh)
+      const cachedOnboarding = loadString(ONBOARDING_COMPLETE_KEY, '');
+      const hasCompletedBefore = cachedOnboarding === 'true';
+
       const [{ subscribeToAuthState, getUserProfile, hasUserProfile }, { syncScoreToFirebase }] =
         await Promise.all([import('@/firebase/auth'), import('@/firebase/scoreSync')]);
 
@@ -54,6 +62,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
             const userProfile = await getUserProfile(user.uid);
             setProfile(userProfile);
             setNeedsOnboarding(false);
+            // Mark as completed in cache
+            saveString(ONBOARDING_COMPLETE_KEY, 'true');
 
             // One-time sync: upload existing local scores to Firebase
             if (userProfile) {
@@ -69,10 +79,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
               }
             }
           } else {
-            setNeedsOnboarding(true);
+            // Only show onboarding if user hasn't completed it before
+            // This prevents the modal from showing during auth loading
+            setNeedsOnboarding(!hasCompletedBefore);
           }
         } else {
-          setNeedsOnboarding(true);
+          // Only show onboarding if user hasn't completed it before
+          setNeedsOnboarding(!hasCompletedBefore);
           setProfile(null);
         }
 
@@ -110,6 +123,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const completeOnboarding = (profile: UserProfile) => {
     setProfile(profile);
     setNeedsOnboarding(false);
+    // Cache that onboarding is complete (survives page refresh)
+    saveString(ONBOARDING_COMPLETE_KEY, 'true');
+  };
+
+  // Skip onboarding (dev mode only) - play without profile
+  const skipOnboarding = () => {
+    setNeedsOnboarding(false);
+    // Cache so it doesn't ask again
+    saveString(ONBOARDING_COMPLETE_KEY, 'true');
   };
 
   return (
@@ -121,6 +143,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         needsOnboarding,
         setProfile,
         completeOnboarding,
+        skipOnboarding,
         refreshProfile,
       }}
     >
