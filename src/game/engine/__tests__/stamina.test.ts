@@ -189,3 +189,45 @@ describe('Air Brake Integration', () => {
     expect(state.stamina).toBe(100);
   });
 });
+
+describe('Slide Control Integration', () => {
+  it('applies slide extend tap when pressed during slide', () => {
+    const state = createInitialState({ reduceFx: false });
+    state.sliding = true;
+    state.px = 300;
+    state.vx = 1.0;
+    state.stamina = 100;
+    state.precisionInput.lastPressedState = false;
+
+    updateFrame(state, createMockServices(true));
+
+    // Extend adds 0.15 velocity (before friction)
+    // Final velocity affected by friction: (1.0 + 0.15) * friction
+    expect(state.vx).toBeGreaterThan(1.0); // Extended
+    expect(state.stamina).toBe(92); // 100 - 8
+  });
+
+  it('applies slide brake friction when held during slide', () => {
+    const state = createInitialState({ reduceFx: false });
+    state.sliding = true;
+    state.px = 300;
+    state.vx = 2.0;
+    state.stamina = 100;
+    state.precisionInput.lastPressedState = true;
+    state.precisionInput.holdDuration = 5;
+
+    const initialVx = state.vx;
+    updateFrame(state, createMockServices(true));
+
+    // FIX 2: With TIME_SCALE = 0.55 and frictionMultiplier = 2.5:
+    // Normal friction = 0.92^0.55 ≈ 0.956
+    // Brake friction = 0.92^(0.55 * 2.5) = 0.92^1.375 ≈ 0.89
+    const timeScale = 0.55;
+    const normalFriction = Math.pow(0.92, timeScale);
+    const brakeFriction = Math.pow(0.92, timeScale * 2.5);
+
+    // Velocity with brake should be less than with normal friction
+    expect(state.vx).toBeLessThan(initialVx * normalFriction);
+    expect(state.vx).toBeCloseTo(initialVx * brakeFriction, 1);
+  });
+});

@@ -31,7 +31,7 @@ import type { GameState } from './types';
 import { nextWind, spawnCelebration, spawnParticles } from './state';
 import { ACHIEVEMENTS } from './achievements';
 import { updateAnimator } from './animationController';
-import { applyAirBrake } from './precision';
+import { applyAirBrake, applySlideControl } from './precision';
 
 export type GameAudio = {
   startCharge: (power01: number) => void;
@@ -425,7 +425,29 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
   // Sliding (scaled by effectiveTimeScale for slowmo support)
   if (state.sliding) {
-    const friction = Math.pow(0.92, effectiveTimeScale); // Adjust friction for time scale
+    // Precision control: Slide extend/brake (FIX 1: check flag)
+    let frictionMultiplier = 1.0;
+    if (!state.landed && !precisionAppliedThisFrame) {
+      const deltaTime = 1/60;
+      if (state.precisionInput.pressedThisFrame) {
+        // Tap: extend slide
+        const result = applySlideControl(state, 'tap');
+        if (result.applied) precisionAppliedThisFrame = true;
+      } else if (pressed && state.precisionInput.holdDuration > 0) {
+        // Hold: brake
+        const result = applySlideControl(state, 'hold', deltaTime);
+        if (result.applied) {
+          precisionAppliedThisFrame = true;
+          if (result.frictionMultiplier) {
+            frictionMultiplier = result.frictionMultiplier;
+          }
+        }
+      }
+    }
+
+    // FIX 2: Apply friction with TIME_SCALE and optional brake multiplier
+    const baseFriction = 0.92;
+    const friction = Math.pow(baseFriction, effectiveTimeScale * frictionMultiplier);
     state.vx *= friction;
     state.px += state.vx * effectiveTimeScale;
 
