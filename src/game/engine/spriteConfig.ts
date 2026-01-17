@@ -17,10 +17,13 @@ export const FRAME_HEIGHT = 128;
 export const ZENO_DISPLAY_WIDTH = 50;
 export const ZENO_DISPLAY_HEIGHT = 50;
 
-// Sprite sheet paths
+// Sprite sheet paths (v2 = 50-frame animation system, 2026-01-17)
+// Cache-busting version to force reload of new sprite sheet
+const SPRITE_VERSION = 'v2';
+
 export const SPRITE_SHEETS = {
-  flipbook: '/assets/sprites/zeno-flipbook.png',
-  noir: '/assets/sprites/zeno-noir.png',
+  flipbook: `/assets/sprites/zeno-flipbook.png?${SPRITE_VERSION}`,
+  noir: `/assets/sprites/zeno-noir.png?${SPRITE_VERSION}`,
 } as const;
 
 // Animation types
