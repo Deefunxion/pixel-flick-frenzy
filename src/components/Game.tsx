@@ -667,11 +667,19 @@ const Game = () => {
         {/* Header - compact */}
         <div className="flex items-center justify-between w-full max-w-md px-2">
           <h1 className="text-sm font-bold" style={{ color: theme.accent1 }}>One-More-Flick</h1>
-          {profile && (
-            <span className="text-xs font-mono" style={{ color: theme.highlight }}>
-              {profile.nickname}
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {/* Precision control tips */}
+            <div className="flex items-center gap-2 text-[10px] font-mono" style={{ color: theme.uiText, opacity: 0.7 }}>
+              <span title="Tap while flying/sliding">👆 TAP</span>
+              <span style={{ opacity: 0.4 }}>|</span>
+              <span title="Hold while flying/sliding">✋ HOLD</span>
+            </div>
+            {profile && (
+              <span className="text-xs font-mono" style={{ color: theme.highlight }}>
+                {profile.nickname}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Controls microcopy - hidden in landscape to save space */}
