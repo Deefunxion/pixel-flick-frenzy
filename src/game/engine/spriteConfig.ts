@@ -1,5 +1,7 @@
 // src/game/engine/spriteConfig.ts
 
+import { assetPath } from '@/lib/assetPath';
+
 /**
  * Sprite sheet configuration for Zeno character
  * Defines paths, frame sizes, and animation metadata
@@ -22,8 +24,8 @@ export const ZENO_DISPLAY_HEIGHT = 50;
 const SPRITE_VERSION = 'v2';
 
 export const SPRITE_SHEETS = {
-  flipbook: `/assets/sprites/zeno-flipbook.png?${SPRITE_VERSION}`,
-  noir: `/assets/sprites/zeno-noir.png?${SPRITE_VERSION}`,
+  flipbook: assetPath(`/assets/sprites/zeno-flipbook.png?${SPRITE_VERSION}`),
+  noir: assetPath(`/assets/sprites/zeno-noir.png?${SPRITE_VERSION}`),
 } as const;
 
 // Animation types

@@ -11,7 +11,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "build:itch": "vite build --mode itch",
-    "package:itch": "npm run build:itch && rm -rf itch-dist && cp -a dist itch-dist && rm -rf itch-dist/assets/brand itch-dist/assets/icons itch-dist/assets/game-screenshots-polished itch-dist/placeholder.svg && rm -f one-more-flick-itch.zip && (cd itch-dist && zip -r ../one-more-flick-itch.zip .) && rm -rf itch-dist && echo 'Created one-more-flick-itch.zip'",
+    "package:itch": "bash scripts/package-itch.sh",
     "deploy:itch": "npm run package:itch && butler push dist deefunxion/zeno:html5",
     "lint": "eslint .",
     "preview": "vite preview",

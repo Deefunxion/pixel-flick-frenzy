@@ -8,6 +8,7 @@ import {
   OPTIMAL_ANGLE,
   W,
 } from '@/game/constants';
+import { assetPath } from '@/lib/assetPath';
 import { getTheme, DEFAULT_THEME_ID, THEME_IDS, type ThemeId } from '@/game/themes';
 import { useUser } from '@/contexts/UserContext';
 import { NicknameModal } from './NicknameModal';
@@ -691,7 +692,7 @@ const Game = () => {
       >
         {/* Header - compact */}
         <div className="flex items-center justify-between w-full max-w-md px-2">
-          <img src="/assets/icons/logo.png" alt="one more flick." className="h-8" />
+          <img src={assetPath('/assets/icons/logo.png')} alt="one more flick." className="h-8" />
           <div className="flex items-center gap-2">
             {/* Precision control tips - with background for visibility */}
             <div
@@ -703,7 +704,7 @@ const Game = () => {
               }}
             >
               <div className="flex items-center gap-1">
-                <img src="/assets/icons/airplane-flying.png" alt="flying" className="w-4 h-4" />
+                <img src={assetPath('/assets/icons/airplane-flying.png')} alt="flying" className="w-4 h-4" />
                 <span className="text-[7px] opacity-60">TAP</span>
                 <span>BRAKE</span>
                 <span className="opacity-40">|</span>
@@ -711,7 +712,7 @@ const Game = () => {
                 <span className="text-[6px] tracking-tighter">HARD BRAKE</span>
               </div>
               <div className="flex items-center gap-1">
-                <img src="/assets/icons/airplane-landing.png" alt="landing" className="w-4 h-4" />
+                <img src={assetPath('/assets/icons/airplane-landing.png')} alt="landing" className="w-4 h-4" />
                 <span className="text-[7px] opacity-60">TAP</span>
                 <span>SLIDE</span>
                 <span className="opacity-40">|</span>

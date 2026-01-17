@@ -1,87 +1,89 @@
 // src/game/engine/backgroundAssets.ts
 
+import { assetPath } from '@/lib/assetPath';
+
 /**
  * Background asset paths and configuration
  * All assets are 2x resolution (canvas is 480x240, assets are 960x480 base)
  */
 
 export const BACKGROUND_ASSETS = {
-  paper: '/assets/background/paper-background.png',
+  paper: assetPath('/assets/background/paper-background.png'),
 
   clouds: {
-    large: '/assets/background/clouds/cloud-large.png',
-    medium: '/assets/background/clouds/cloud-medium.png',
-    small: '/assets/background/clouds/cloud-small.png',
+    large: assetPath('/assets/background/clouds/cloud-large.png'),
+    medium: assetPath('/assets/background/clouds/cloud-medium.png'),
+    small: assetPath('/assets/background/clouds/cloud-small.png'),
   },
 
   terrain: {
-    ground: '/assets/background/terrain/terrain-ground.png',
-    cliffEdge: '/assets/background/terrain/cliff-edge.png',
+    ground: assetPath('/assets/background/terrain/terrain-ground.png'),
+    cliffEdge: assetPath('/assets/background/terrain/cliff-edge.png'),
   },
 
   void: {
-    layer1: '/assets/background/void/void-layer-1.png',
-    layer2: '/assets/background/void/void-layer-2.png',
-    layer3: '/assets/background/void/void-layer-3.png',
-    gradient: '/assets/background/void/void-gradient.png',
+    layer1: assetPath('/assets/background/void/void-layer-1.png'),
+    layer2: assetPath('/assets/background/void/void-layer-2.png'),
+    layer3: assetPath('/assets/background/void/void-layer-3.png'),
+    gradient: assetPath('/assets/background/void/void-gradient.png'),
   },
 
   flag: {
-    frame1: '/assets/background/flag/flag-frame-01.png',
-    frame2: '/assets/background/flag/flag-frame-02.png',
-    frame3: '/assets/background/flag/flag-frame-03.png',
-    frame4: '/assets/background/flag/flag-frame-04.png',
+    frame1: assetPath('/assets/background/flag/flag-frame-01.png'),
+    frame2: assetPath('/assets/background/flag/flag-frame-02.png'),
+    frame3: assetPath('/assets/background/flag/flag-frame-03.png'),
+    frame4: assetPath('/assets/background/flag/flag-frame-04.png'),
   },
 
   wind: {
-    swoosh1: '/assets/background/wind/wind-swoosh-1.png',
-    swoosh2: '/assets/background/wind/wind-swoosh-2.png',
-    swoosh3: '/assets/background/wind/wind-swoosh-3.png',
-    particlePaper: '/assets/background/wind/particle-paper-scrap.png',
-    particleLeaf: '/assets/background/wind/particle-leaf.png',
-    particleDust1: '/assets/background/wind/particle-dust-1.png',
-    particleDust2: '/assets/background/wind/particle-dust-2.png',
+    swoosh1: assetPath('/assets/background/wind/wind-swoosh-1.png'),
+    swoosh2: assetPath('/assets/background/wind/wind-swoosh-2.png'),
+    swoosh3: assetPath('/assets/background/wind/wind-swoosh-3.png'),
+    particlePaper: assetPath('/assets/background/wind/particle-paper-scrap.png'),
+    particleLeaf: assetPath('/assets/background/wind/particle-leaf.png'),
+    particleDust1: assetPath('/assets/background/wind/particle-dust-1.png'),
+    particleDust2: assetPath('/assets/background/wind/particle-dust-2.png'),
   },
-} as const;
+};
 
 /** Noir theme background asset paths */
 export const NOIR_BACKGROUND_ASSETS = {
-  background: '/assets/background/noir/noir-background.png',
+  background: assetPath('/assets/background/noir/noir-background.png'),
 
   clouds: {
-    large: '/assets/background/noir/clouds/noir-cloud-large.png',
-    medium: '/assets/background/noir/clouds/noir-cloud-medium.png',
-    small: '/assets/background/noir/clouds/noir-cloud-small.png',
+    large: assetPath('/assets/background/noir/clouds/noir-cloud-large.png'),
+    medium: assetPath('/assets/background/noir/clouds/noir-cloud-medium.png'),
+    small: assetPath('/assets/background/noir/clouds/noir-cloud-small.png'),
   },
 
   terrain: {
-    ground: '/assets/background/noir/terrain/noir-terrain-ground.png',
-    cliffEdge: '/assets/background/noir/terrain/noir-cliff-edge.png',
+    ground: assetPath('/assets/background/noir/terrain/noir-terrain-ground.png'),
+    cliffEdge: assetPath('/assets/background/noir/terrain/noir-cliff-edge.png'),
   },
 
   void: {
-    layer1: '/assets/background/noir/void/noir-void-layer-1.png',
-    layer2: '/assets/background/noir/void/noir-void-layer-2.png',
-    layer3: '/assets/background/noir/void/noir-void-layer-3.png',
-    gradient: '/assets/background/noir/void/noir-void-gradient.png',
+    layer1: assetPath('/assets/background/noir/void/noir-void-layer-1.png'),
+    layer2: assetPath('/assets/background/noir/void/noir-void-layer-2.png'),
+    layer3: assetPath('/assets/background/noir/void/noir-void-layer-3.png'),
+    gradient: assetPath('/assets/background/noir/void/noir-void-gradient.png'),
   },
 
   flag: {
-    frame1: '/assets/background/noir/flag/noir-flag-frame-01.png',
-    frame2: '/assets/background/noir/flag/noir-flag-frame-02.png',
-    frame3: '/assets/background/noir/flag/noir-flag-frame-03.png',
-    frame4: '/assets/background/noir/flag/noir-flag-frame-04.png',
+    frame1: assetPath('/assets/background/noir/flag/noir-flag-frame-01.png'),
+    frame2: assetPath('/assets/background/noir/flag/noir-flag-frame-02.png'),
+    frame3: assetPath('/assets/background/noir/flag/noir-flag-frame-03.png'),
+    frame4: assetPath('/assets/background/noir/flag/noir-flag-frame-04.png'),
   },
 
   wind: {
-    swoosh1: '/assets/background/noir/wind/noir-wind-swoosh-1.png',
-    swoosh2: '/assets/background/noir/wind/noir-wind-swoosh-2.png',
-    swoosh3: '/assets/background/noir/wind/noir-wind-swoosh-3.png',
-    particleDust1: '/assets/background/noir/wind/noir-particle-dust-1.png',
-    particleDust2: '/assets/background/noir/wind/noir-particle-dust-2.png',
-    particleDust3: '/assets/background/noir/wind/noir-particle-dust-3.png',
+    swoosh1: assetPath('/assets/background/noir/wind/noir-wind-swoosh-1.png'),
+    swoosh2: assetPath('/assets/background/noir/wind/noir-wind-swoosh-2.png'),
+    swoosh3: assetPath('/assets/background/noir/wind/noir-wind-swoosh-3.png'),
+    particleDust1: assetPath('/assets/background/noir/wind/noir-particle-dust-1.png'),
+    particleDust2: assetPath('/assets/background/noir/wind/noir-particle-dust-2.png'),
+    particleDust3: assetPath('/assets/background/noir/wind/noir-particle-dust-3.png'),
   },
-} as const;
+};
 
 /** Get flat array of all asset paths for preloading */
 export function getAllBackgroundAssetPaths(): string[] {
