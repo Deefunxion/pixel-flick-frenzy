@@ -615,12 +615,14 @@ const Game = () => {
             getDailyStats: () => dailyStatsRef.current,
           });
           // Pass devicePixelRatio for high-res rendering
-          if (!errorRef.current && state.phase !== 'gameover') {
+          if (!errorRef.current) {
             renderFrame(ctx, state, currentTheme, now, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
           }
         } catch (err: any) {
+          // Derive phase from existing state properties for error context
+          const derivedPhase = state.flying ? 'flying' : state.sliding ? 'sliding' : state.charging ? 'charging' : 'idle';
           captureError(err, {
-            phase: state.phase,
+            phase: derivedPhase,
             px: state.px,
             py: state.py,
             flying: state.flying,
