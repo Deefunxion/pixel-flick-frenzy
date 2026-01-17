@@ -2,26 +2,26 @@
 // Audio file management for game sounds
 // Note: This module is independent to avoid circular dependencies with audio.ts
 
-// Audio file paths (custom sounds from Dee + Kenney.nl CC0)
-const AUDIO_BASE_PATH = '/assets/audio/game';
+import { assetPath } from '@/lib/assetPath';
 
+// Audio file paths (custom sounds from Dee + Kenney.nl CC0)
 export const AUDIO_FILES = {
-  charge: `${AUDIO_BASE_PATH}/charge.wav`,       // Custom - rising charge (2s)
-  whoosh: `${AUDIO_BASE_PATH}/whoosh.wav`,       // Custom - launch sound (0.5s)
-  fly: `${AUDIO_BASE_PATH}/fly.wav`,             // Custom - flying through air (1.5s)
-  impactSoft: `${AUDIO_BASE_PATH}/impact-soft.wav`,  // Custom - soft landing (0.3s)
-  impactHard: `${AUDIO_BASE_PATH}/impact-hard.wav`,  // Custom - hard landing (0.5s)
-  slide: `${AUDIO_BASE_PATH}/slide.wav`,         // Custom - sliding friction (1s)
-  win: `${AUDIO_BASE_PATH}/win.ogg`,             // Kenney - threeTone1 triumphant
-  recordBreak: `${AUDIO_BASE_PATH}/record-break.ogg`, // Kenney - zapThreeToneUp ascending
-  failure: `${AUDIO_BASE_PATH}/failure.ogg`,     // Kenney - phaserDown2 descending
+  charge: assetPath('/assets/audio/game/charge.wav'),       // Custom - rising charge (2s)
+  whoosh: assetPath('/assets/audio/game/whoosh.wav'),       // Custom - launch sound (0.5s)
+  fly: assetPath('/assets/audio/game/fly.wav'),             // Custom - flying through air (1.5s)
+  impactSoft: assetPath('/assets/audio/game/impact-soft.wav'),  // Custom - soft landing (0.3s)
+  impactHard: assetPath('/assets/audio/game/impact-hard.wav'),  // Custom - hard landing (0.5s)
+  slide: assetPath('/assets/audio/game/slide.wav'),         // Custom - sliding friction (1s)
+  win: assetPath('/assets/audio/game/win.ogg'),             // Kenney - threeTone1 triumphant
+  recordBreak: assetPath('/assets/audio/game/record-break.ogg'), // Kenney - zapThreeToneUp ascending
+  failure: assetPath('/assets/audio/game/failure.ogg'),     // Kenney - phaserDown2 descending
   // Precision control sounds
-  tapAirBrake: `${AUDIO_BASE_PATH}/tap_air_brake.wav`,     // Tap to brake mid-air
-  tapPushGround: `${AUDIO_BASE_PATH}/tap_push_ground.wav`, // Tap to push/slide on ground
-  tapPushGround2: `${AUDIO_BASE_PATH}/tap_push_ground2.wav`, // Alternate push sound
-  lateHold: `${AUDIO_BASE_PATH}/late_hold.wav`,            // Hold brake (air/ground)
-  lateHold2: `${AUDIO_BASE_PATH}/late_hold2.wav`,          // Alternate hold sound
-  backgroundAmbient: `${AUDIO_BASE_PATH}/background-ambient.wav`, // Background ambient loop
+  tapAirBrake: assetPath('/assets/audio/game/tap_air_brake.wav'),     // Tap to brake mid-air
+  tapPushGround: assetPath('/assets/audio/game/tap_push_ground.wav'), // Tap to push/slide on ground
+  tapPushGround2: assetPath('/assets/audio/game/tap_push_ground2.wav'), // Alternate push sound
+  lateHold: assetPath('/assets/audio/game/late_hold.wav'),            // Hold brake (air/ground)
+  lateHold2: assetPath('/assets/audio/game/late_hold2.wav'),          // Alternate hold sound
+  backgroundAmbient: assetPath('/assets/audio/game/background-ambient.wav'), // Background ambient loop
 } as const;
 
 export type AudioFileName = keyof typeof AUDIO_FILES;
