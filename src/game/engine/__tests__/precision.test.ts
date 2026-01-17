@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyAirBrake, calculateEdgeMultiplier } from '../precision';
+import { applyAirBrake, applySlideControl, calculateEdgeMultiplier } from '../precision';
 import { createInitialState } from '../state';
 
 describe('Edge Multiplier', () => {
@@ -106,6 +106,91 @@ describe('Air Brake', () => {
       expect(result.applied).toBe(false);
       expect(result.denied).toBe(true);
       expect(state.stamina).toBe(0.1); // Unchanged
+    });
+  });
+});
+
+describe('Slide Control', () => {
+  describe('Tap (extend: +0.15 velocity in travel direction)', () => {
+    it('adds 0.15 to positive velocity at position 300', () => {
+      const state = createInitialState({ reduceFx: false });
+      state.px = 300;
+      state.vx = 1.0;
+      state.stamina = 100;
+
+      const result = applySlideControl(state, 'tap');
+
+      expect(result.applied).toBe(true);
+      expect(state.vx).toBeCloseTo(1.15);
+      expect(state.stamina).toBe(92); // 100 - 8*1.0
+    });
+
+    // FIX 5: Handle negative velocity correctly
+    it('subtracts 0.15 from negative velocity (extends in travel direction)', () => {
+      const state = createInitialState({ reduceFx: false });
+      state.px = 300;
+      state.vx = -1.0; // Moving backwards (rare with wind)
+      state.stamina = 100;
+
+      const result = applySlideControl(state, 'tap');
+
+      expect(result.applied).toBe(true);
+      expect(state.vx).toBeCloseTo(-1.15); // Extended in negative direction
+      expect(state.stamina).toBe(92);
+    });
+
+    it('costs more stamina near the edge', () => {
+      const state = createInitialState({ reduceFx: false });
+      state.px = 410; // ~1.73x multiplier
+      state.vx = 1.0;
+      state.stamina = 100;
+
+      const result = applySlideControl(state, 'tap');
+      const edgeMult = calculateEdgeMultiplier(410);
+      const expectedCost = Math.ceil(8 * edgeMult);
+
+      expect(result.applied).toBe(true);
+      expect(state.stamina).toBe(100 - expectedCost);
+    });
+
+    it('denies if insufficient stamina for edge-scaled cost', () => {
+      const state = createInitialState({ reduceFx: false });
+      state.px = 415; // Higher multiplier
+      state.vx = 1.0;
+      state.stamina = 10; // Not enough for scaled cost
+
+      const result = applySlideControl(state, 'tap');
+
+      expect(result.applied).toBe(false);
+      expect(result.denied).toBe(true);
+    });
+  });
+
+  describe('Hold (brake: 2.5x friction)', () => {
+    it('returns brake friction multiplier of 2.5', () => {
+      const state = createInitialState({ reduceFx: false });
+      state.px = 300;
+      state.stamina = 100;
+      const deltaTime = 1/60;
+
+      const result = applySlideControl(state, 'hold', deltaTime);
+
+      expect(result.applied).toBe(true);
+      expect(result.frictionMultiplier).toBe(2.5);
+      expect(state.stamina).toBeCloseTo(100 - 10 * 1.0 * deltaTime);
+    });
+
+    it('costs more stamina near edge', () => {
+      const state = createInitialState({ reduceFx: false });
+      state.px = 410;
+      state.stamina = 100;
+      const deltaTime = 1/60;
+      const edgeMult = calculateEdgeMultiplier(410);
+
+      const result = applySlideControl(state, 'hold', deltaTime);
+
+      expect(result.applied).toBe(true);
+      expect(state.stamina).toBeCloseTo(100 - 10 * edgeMult * deltaTime);
     });
   });
 });

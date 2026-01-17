@@ -10,9 +10,19 @@ const AIR_BRAKE_TAP_BASE_COST = 5;      // Base cost, scaled by edge multiplier
 const AIR_BRAKE_HOLD_REDUCTION = 0.97;  // 3% velocity reduction per frame
 const AIR_BRAKE_HOLD_COST_PER_SEC = 15; // Base cost/sec, scaled by edge multiplier
 
+// Slide control constants
+const SLIDE_EXTEND_VELOCITY = 0.15;
+const SLIDE_EXTEND_BASE_COST = 8;
+const SLIDE_BRAKE_FRICTION_MULT = 2.5;
+const SLIDE_BRAKE_COST_PER_SEC = 10;
+
 export type PrecisionResult = {
   applied: boolean;
   denied: boolean;
+};
+
+export type SlideControlResult = PrecisionResult & {
+  frictionMultiplier?: number;
 };
 
 /**
@@ -66,4 +76,43 @@ export function applyAirBrake(
   state.vy *= AIR_BRAKE_HOLD_REDUCTION;
   state.stamina -= frameCost;
   return { applied: true, denied: false };
+}
+
+/**
+ * Apply slide control during ground slide phase.
+ * Tap: +0.15 velocity in travel direction (extend slide), costs 8 * edgeMultiplier stamina
+ * Hold: 2.5x friction (brake), costs 10/sec * edgeMultiplier stamina
+ *
+ * FIX 5: Extends in current direction of travel, not always positive
+ */
+export function applySlideControl(
+  state: GameState,
+  inputType: 'tap' | 'hold',
+  deltaTime: number = 1/60
+): SlideControlResult {
+  const edgeMultiplier = calculateEdgeMultiplier(state.px);
+
+  if (inputType === 'tap') {
+    const cost = Math.ceil(SLIDE_EXTEND_BASE_COST * edgeMultiplier);
+    if (state.stamina < cost) {
+      return { applied: false, denied: true };
+    }
+    // FIX 5: Extend in current direction of travel
+    if (state.vx > 0) {
+      state.vx += SLIDE_EXTEND_VELOCITY;
+    } else if (state.vx < 0) {
+      state.vx -= SLIDE_EXTEND_VELOCITY; // Extend in negative direction
+    }
+    // If vx === 0, do nothing (shouldn't happen during slide)
+    state.stamina -= cost;
+    return { applied: true, denied: false };
+  }
+
+  // Hold (brake)
+  const frameCost = SLIDE_BRAKE_COST_PER_SEC * edgeMultiplier * deltaTime;
+  if (state.stamina < frameCost) {
+    return { applied: false, denied: true, frictionMultiplier: 1.0 };
+  }
+  state.stamina -= frameCost;
+  return { applied: true, denied: false, frictionMultiplier: SLIDE_BRAKE_FRICTION_MULT };
 }
