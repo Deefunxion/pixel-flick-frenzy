@@ -40,6 +40,13 @@ export interface Stats {
   maxMultiplier: number;
 }
 
+export interface PrecisionInput {
+  pressedThisFrame: boolean;   // True only on the frame input started
+  releasedThisFrame: boolean;  // True only on the frame input released
+  holdDuration: number;        // Frames held (for continuous hold)
+  lastPressedState: boolean;   // Previous frame's pressed state
+}
+
 export interface GameState {
   px: number;
   py: number;
@@ -115,4 +122,6 @@ export interface GameState {
   zenoAnimator: Animator | null;
   // Precision mechanics - stamina system
   stamina: number;
+  // Precision mechanics - input state tracking
+  precisionInput: PrecisionInput;
 }

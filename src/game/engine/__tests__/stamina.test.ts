@@ -14,3 +14,24 @@ describe('Stamina State', () => {
     expect(state.stamina).toBe(100);
   });
 });
+
+describe('Input State for Precision Control', () => {
+  it('initializes with input tracking state', () => {
+    const state = createInitialState({ reduceFx: false });
+    expect(state.precisionInput).toEqual({
+      pressedThisFrame: false,
+      releasedThisFrame: false,
+      holdDuration: 0,
+      lastPressedState: false,
+    });
+  });
+
+  it('resets input state on resetPhysics', () => {
+    const state = createInitialState({ reduceFx: false });
+    state.precisionInput.holdDuration = 500;
+    state.precisionInput.pressedThisFrame = true;
+    resetPhysics(state);
+    expect(state.precisionInput.holdDuration).toBe(0);
+    expect(state.precisionInput.pressedThisFrame).toBe(false);
+  });
+});
