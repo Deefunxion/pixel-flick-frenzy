@@ -385,7 +385,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
     }
   }
 
-  if ((state.flying || state.sliding) && state.px > 90) {
+  // Only apply edge slow-mo effects when player has meaningful best score
+  // This prevents first-throw-ever from being entirely in slow motion
+  const hasEstablishedBest = state.best > 50;
+  
+  if ((state.flying || state.sliding) && state.px > 90 && hasEstablishedBest) {
     const edgeProximity = (state.px - 90) / (CLIFF_EDGE - 90);
 
     // Slow-mo is an unlockable feature - requires 'bullet_time' achievement (best > 400)
@@ -394,6 +398,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
     // Base slowMo from edge proximity (only if bullet_time unlocked)
     let targetSlowMo = (state.reduceFx || !hasBulletTime) ? 0 : Math.min(0.7, edgeProximity * 0.8);
     let targetZoom = state.reduceFx ? 1 : (1 + edgeProximity * 0.3);
+
 
     // Record Zone Bullet Time - Two Levels (only if bullet_time unlocked)
     if (state.recordZoneActive && !state.reduceFx && hasBulletTime) {
