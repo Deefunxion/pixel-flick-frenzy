@@ -46,6 +46,13 @@ import {
   playSlide,
   stopSlide,
   playWin,
+  // Precision control sounds
+  playAirBrakeTap,
+  playAirBrakeHold,
+  playSlideExtend,
+  playSlideBrake,
+  playStaminaLow,
+  playActionDenied,
   type AudioRefs,
   type AudioSettings,
   type AudioState,
@@ -413,6 +420,13 @@ const Game = () => {
       slide: () => playSlide(audioRefs.current, audioSettingsRef.current),
       stopSlide: () => stopSlide(),
       win: () => playWin(audioRefs.current, audioSettingsRef.current),
+      // Precision control sounds
+      airBrakeTap: () => playAirBrakeTap(audioRefs.current, audioSettingsRef.current),
+      airBrakeHold: () => playAirBrakeHold(audioRefs.current, audioSettingsRef.current),
+      slideExtend: () => playSlideExtend(audioRefs.current, audioSettingsRef.current),
+      slideBrake: () => playSlideBrake(audioRefs.current, audioSettingsRef.current),
+      staminaLow: () => playStaminaLow(audioRefs.current, audioSettingsRef.current),
+      actionDenied: () => playActionDenied(audioRefs.current, audioSettingsRef.current),
     };
 
     const scheduleReset = (ms: number) => {
@@ -654,12 +668,40 @@ const Game = () => {
       >
         {/* Header - compact */}
         <div className="flex items-center justify-between w-full max-w-md px-2">
-          <h1 className="text-sm font-bold" style={{ color: theme.accent1 }}>One-More-Flick</h1>
-          {profile && (
-            <span className="text-xs font-mono" style={{ color: theme.highlight }}>
-              {profile.nickname}
-            </span>
-          )}
+          <img src="/assets/icons/logo.png" alt="one more flick." className="h-8" />
+          <div className="flex items-center gap-2">
+            {/* Precision control tips - with background for visibility */}
+            <div
+              className="flex flex-col gap-0.5 text-[8px] font-bold px-2 py-1 rounded"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.85)',
+                color: '#1e3a5f',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              }}
+            >
+              <div className="flex items-center gap-1">
+                <img src="/assets/icons/airplane-flying.png" alt="flying" className="w-4 h-4" />
+                <span className="text-[7px] opacity-60">TAP</span>
+                <span>BRAKE</span>
+                <span className="opacity-40">|</span>
+                <span className="text-[7px] opacity-60">HOLD</span>
+                <span className="text-[6px] tracking-tighter">HARD BRAKE</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <img src="/assets/icons/airplane-landing.png" alt="landing" className="w-4 h-4" />
+                <span className="text-[7px] opacity-60">TAP</span>
+                <span>SLIDE</span>
+                <span className="opacity-40">|</span>
+                <span className="text-[7px] opacity-60">HOLD</span>
+                <span>BRAKE</span>
+              </div>
+            </div>
+            {profile && (
+              <span className="text-xs font-mono" style={{ color: theme.highlight }}>
+                {profile.nickname}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Controls microcopy - hidden in landscape to save space */}

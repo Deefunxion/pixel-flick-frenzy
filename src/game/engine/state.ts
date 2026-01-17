@@ -97,6 +97,14 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     launchFrame: 0,
     particleSystem: new ParticleSystem(),
     zenoAnimator: null,
+    stamina: 100,
+    precisionInput: {
+      pressedThisFrame: false,
+      releasedThisFrame: false,
+      holdDuration: 0,
+      lastPressedState: false,
+    },
+    staminaDeniedShake: 0,
   };
 }
 
@@ -131,6 +139,14 @@ export function resetPhysics(state: GameState) {
   state.failureFrame = 0;
   state.failureType = null;
   state.launchFrame = 0;
+  state.stamina = 100;
+  state.precisionInput = {
+    pressedThisFrame: false,
+    releasedThisFrame: false,
+    holdDuration: 0,
+    lastPressedState: false,
+  };
+  state.staminaDeniedShake = 0;
   if (state.particleSystem) {
     state.particleSystem.clear();
   }

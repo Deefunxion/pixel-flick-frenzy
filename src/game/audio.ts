@@ -556,3 +556,55 @@ export function playFailureSoundHybrid(refs: AudioRefs, settings: AudioSettings,
     playFailureSound(refs, settings, type);
   }
 }
+
+// ============================================
+// PRECISION CONTROL SOUNDS (synth-based)
+// ============================================
+
+/**
+ * Air brake tap - short, crisp feedback for single tap
+ */
+export function playAirBrakeTap(refs: AudioRefs, settings: AudioSettings) {
+  if (settings.muted || settings.volume <= 0) return;
+  playTone(refs, settings, 300, 0.08, 'sine', 0.04);
+}
+
+/**
+ * Air brake hold - subtle continuous feedback
+ */
+export function playAirBrakeHold(refs: AudioRefs, settings: AudioSettings) {
+  if (settings.muted || settings.volume <= 0) return;
+  playTone(refs, settings, 200, 0.05, 'sine', 0.02);
+}
+
+/**
+ * Slide extend - low frequency tap for slide boost
+ */
+export function playSlideExtend(refs: AudioRefs, settings: AudioSettings) {
+  if (settings.muted || settings.volume <= 0) return;
+  playTone(refs, settings, 150, 0.06, 'triangle', 0.05);
+}
+
+/**
+ * Slide brake - friction-like sound for braking
+ */
+export function playSlideBrake(refs: AudioRefs, settings: AudioSettings) {
+  if (settings.muted || settings.volume <= 0) return;
+  playTone(refs, settings, 100, 0.04, 'sawtooth', 0.03);
+}
+
+/**
+ * Stamina low warning - high pitched alert
+ */
+export function playStaminaLow(refs: AudioRefs, settings: AudioSettings) {
+  if (settings.muted || settings.volume <= 0) return;
+  playTone(refs, settings, 880, 0.1, 'square', 0.04);
+}
+
+/**
+ * Action denied - feedback when action fails due to insufficient stamina
+ */
+export function playActionDenied(refs: AudioRefs, settings: AudioSettings) {
+  if (settings.muted || settings.volume <= 0) return;
+  playTone(refs, settings, 150, 0.15, 'sawtooth', 0.06);
+}

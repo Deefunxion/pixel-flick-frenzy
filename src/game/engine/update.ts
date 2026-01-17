@@ -31,6 +31,7 @@ import type { GameState } from './types';
 import { nextWind, spawnCelebration, spawnParticles } from './state';
 import { ACHIEVEMENTS } from './achievements';
 import { updateAnimator } from './animationController';
+import { applyAirBrake, applySlideControl } from './precision';
 
 export type GameAudio = {
   startCharge: (power01: number) => void;
@@ -52,6 +53,13 @@ export type GameAudio = {
   slide?: () => void;
   stopSlide?: () => void;
   win?: () => void;
+  // Precision control sounds
+  airBrakeTap?: () => void;
+  airBrakeHold?: () => void;
+  slideExtend?: () => void;
+  slideBrake?: () => void;
+  staminaLow?: () => void;
+  actionDenied?: () => void;
 };
 
 export type GameUI = {
@@ -117,6 +125,24 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.touchFeedback *= 0.9;
     if (state.touchFeedback < 0.01) state.touchFeedback = 0;
   }
+
+  // Precision control input edge detection (for tap vs hold)
+  if (state.flying || state.sliding) {
+    const wasPressed = state.precisionInput.lastPressedState;
+    state.precisionInput.pressedThisFrame = pressed && !wasPressed;
+    state.precisionInput.releasedThisFrame = !pressed && wasPressed;
+
+    if (pressed) {
+      state.precisionInput.holdDuration++;
+    } else {
+      state.precisionInput.holdDuration = 0;
+    }
+
+    state.precisionInput.lastPressedState = pressed;
+  }
+
+  // FIX 1: Track if precision control was used this frame to prevent double-dipping
+  let precisionAppliedThisFrame = false;
 
   // Charging start - blocked if already landed (waiting for reset)
   if (!state.flying && !state.sliding && !state.landed && pressed && !state.charging) {
@@ -194,6 +220,42 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
   if (state.flying) {
     state.launchFrame++; // Increment for launch burst effect
+
+    // Precision control: Air brake (FIX 1: check flag)
+    if (!state.landed && !precisionAppliedThisFrame) {
+      const deltaTime = 1/60;
+      if (state.precisionInput.pressedThisFrame) {
+        // Tap: single reduction
+        const result = applyAirBrake(state, 'tap');
+        if (result.applied) {
+          precisionAppliedThisFrame = true;
+          audio.airBrakeTap?.();
+        } else if (result.denied) {
+          audio.actionDenied?.();
+          state.staminaDeniedShake = 8;
+        }
+      } else if (pressed && state.precisionInput.holdDuration > 0) {
+        // Hold: continuous reduction
+        const result = applyAirBrake(state, 'hold', deltaTime);
+        if (result.applied) {
+          precisionAppliedThisFrame = true;
+          // Play hold sound every 6 frames to avoid spam
+          if (state.precisionInput.holdDuration % 6 === 0) {
+            audio.airBrakeHold?.();
+          }
+        } else if (result.denied) {
+          audio.actionDenied?.();
+          state.staminaDeniedShake = 8;
+        }
+      }
+    }
+
+    // Low stamina warning (play beep periodically when below threshold)
+    if (state.stamina <= 25 && state.stamina > 0) {
+      if (Math.floor(svc.nowMs / 500) !== Math.floor((svc.nowMs - 16) / 500)) {
+        audio.staminaLow?.();
+      }
+    }
 
     state.vy += BASE_GRAV * effectiveTimeScale;
     state.vx += state.wind * 0.3 * effectiveTimeScale;
@@ -296,6 +358,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
   if (state.screenShake > 0) state.screenShake *= 0.8;
   if (state.landingFrame > 0) state.landingFrame--;
+  if (state.staminaDeniedShake > 0) state.staminaDeniedShake--;
 
   if (state.slowMo > 0) state.slowMo *= 0.95;
   if (state.screenFlash > 0) state.screenFlash *= 0.85;
@@ -329,13 +392,16 @@ export function updateFrame(state: GameState, svc: GameServices) {
   if ((state.flying || state.sliding) && state.px > 90 && hasEstablishedBest) {
     const edgeProximity = (state.px - 90) / (CLIFF_EDGE - 90);
 
-    // Base slowMo from edge proximity - only when approaching personal best territory
-    const approachingPersonalBest = state.px > state.best - 50;
-    let targetSlowMo = (state.reduceFx || !approachingPersonalBest) ? 0 : Math.min(0.7, edgeProximity * 0.8);
-    let targetZoom = (state.reduceFx || !approachingPersonalBest) ? 1 : (1 + edgeProximity * 0.3);
+    // Slow-mo is an unlockable feature - requires 'bullet_time' achievement (best > 400)
+    const hasBulletTime = state.achievements.has('bullet_time');
 
-    // Record Zone Bullet Time - Two Levels
-    if (state.recordZoneActive && !state.reduceFx) {
+    // Base slowMo from edge proximity (only if bullet_time unlocked)
+    let targetSlowMo = (state.reduceFx || !hasBulletTime) ? 0 : Math.min(0.7, edgeProximity * 0.8);
+    let targetZoom = state.reduceFx ? 1 : (1 + edgeProximity * 0.3);
+
+
+    // Record Zone Bullet Time - Two Levels (only if bullet_time unlocked)
+    if (state.recordZoneActive && !state.reduceFx && hasBulletTime) {
       // Level 1: Instant bullet time when entering record zone
       // Base slowMo jumps to 0.7 immediately
       targetSlowMo = Math.max(0.7, targetSlowMo);
@@ -348,15 +414,14 @@ export function updateFrame(state: GameState, svc: GameServices) {
       }
     }
 
-    // Peak moment - maximum freeze
-    if (state.recordZonePeak && !state.reduceFx) {
+    // Peak moment - maximum freeze (only if bullet_time unlocked)
+    if (state.recordZonePeak && !state.reduceFx && hasBulletTime) {
       targetSlowMo = 0.98;
       targetZoom = 2.5;
     }
 
-    // CINEMATIC ZONE - 2x zoom and 2x slowdown when passing threshold
-    // This overrides all other effects for dramatic impact
-    if (state.px > CINEMATIC_THRESHOLD && !state.reduceFx) {
+    // CINEMATIC ZONE - 2x zoom and 2x slowdown when passing threshold (only if bullet_time unlocked)
+    if (state.px > CINEMATIC_THRESHOLD && !state.reduceFx && hasBulletTime) {
       targetZoom = 2;
       targetSlowMo = 0.5; // 2x slower (effectiveTimeScale = 0.75 * 0.5 = 0.375)
       // Focus on the finish area instead of Zeno
@@ -364,8 +429,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.zoomTargetY = H - 60; // Ground level area
     }
 
-    // Heartbeat audio during record zone
-    if (state.recordZoneActive && !state.reduceFx) {
+    // Heartbeat audio during record zone (only if bullet_time unlocked)
+    if (state.recordZoneActive && !state.reduceFx && hasBulletTime) {
       // Play heartbeat every ~400ms based on frame count (faster when intense)
       const heartbeatInterval = state.recordZoneIntensity > 0.6 ? 300 : 400;
       if (Math.floor(nowMs / heartbeatInterval) !== Math.floor((nowMs - 16) / heartbeatInterval)) {
@@ -373,7 +438,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
       }
     }
 
-    // Record break celebration
+    // Record break celebration (always plays - not dependent on slow-mo)
     if (state.recordZonePeak) {
       audio.recordBreak();
       state.recordZonePeak = false; // Only trigger once
@@ -397,7 +462,49 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
   // Sliding (scaled by effectiveTimeScale for slowmo support)
   if (state.sliding) {
-    const friction = Math.pow(0.92, effectiveTimeScale); // Adjust friction for time scale
+    // Precision control: Slide extend/brake (FIX 1: check flag)
+    let frictionMultiplier = 1.0;
+    if (!state.landed && !precisionAppliedThisFrame) {
+      const deltaTime = 1/60;
+      if (state.precisionInput.pressedThisFrame) {
+        // Tap: extend slide
+        const result = applySlideControl(state, 'tap');
+        if (result.applied) {
+          precisionAppliedThisFrame = true;
+          audio.slideExtend?.();
+        } else if (result.denied) {
+          audio.actionDenied?.();
+          state.staminaDeniedShake = 8;
+        }
+      } else if (pressed && state.precisionInput.holdDuration > 0) {
+        // Hold: brake
+        const result = applySlideControl(state, 'hold', deltaTime);
+        if (result.applied) {
+          precisionAppliedThisFrame = true;
+          if (result.frictionMultiplier) {
+            frictionMultiplier = result.frictionMultiplier;
+          }
+          // Play brake sound every 6 frames to avoid spam
+          if (state.precisionInput.holdDuration % 6 === 0) {
+            audio.slideBrake?.();
+          }
+        } else if (result.denied) {
+          audio.actionDenied?.();
+          state.staminaDeniedShake = 8;
+        }
+      }
+    }
+
+    // Low stamina warning (play beep periodically when below threshold)
+    if (state.stamina <= 25 && state.stamina > 0) {
+      if (Math.floor(svc.nowMs / 500) !== Math.floor((svc.nowMs - 16) / 500)) {
+        audio.staminaLow?.();
+      }
+    }
+
+    // FIX 2: Apply friction with TIME_SCALE and optional brake multiplier
+    const baseFriction = 0.92;
+    const friction = Math.pow(baseFriction, effectiveTimeScale * frictionMultiplier);
     state.vx *= friction;
     state.px += state.vx * effectiveTimeScale;
 
