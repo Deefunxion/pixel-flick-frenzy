@@ -46,6 +46,13 @@ import {
   playSlide,
   stopSlide,
   playWin,
+  // Precision control sounds
+  playAirBrakeTap,
+  playAirBrakeHold,
+  playSlideExtend,
+  playSlideBrake,
+  playStaminaLow,
+  playActionDenied,
   type AudioRefs,
   type AudioSettings,
   type AudioState,
@@ -413,6 +420,13 @@ const Game = () => {
       slide: () => playSlide(audioRefs.current, audioSettingsRef.current),
       stopSlide: () => stopSlide(),
       win: () => playWin(audioRefs.current, audioSettingsRef.current),
+      // Precision control sounds
+      airBrakeTap: () => playAirBrakeTap(audioRefs.current, audioSettingsRef.current),
+      airBrakeHold: () => playAirBrakeHold(audioRefs.current, audioSettingsRef.current),
+      slideExtend: () => playSlideExtend(audioRefs.current, audioSettingsRef.current),
+      slideBrake: () => playSlideBrake(audioRefs.current, audioSettingsRef.current),
+      staminaLow: () => playStaminaLow(audioRefs.current, audioSettingsRef.current),
+      actionDenied: () => playActionDenied(audioRefs.current, audioSettingsRef.current),
     };
 
     const scheduleReset = (ms: number) => {

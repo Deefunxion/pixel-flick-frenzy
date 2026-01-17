@@ -53,6 +53,13 @@ export type GameAudio = {
   slide?: () => void;
   stopSlide?: () => void;
   win?: () => void;
+  // Precision control sounds
+  airBrakeTap?: () => void;
+  airBrakeHold?: () => void;
+  slideExtend?: () => void;
+  slideBrake?: () => void;
+  staminaLow?: () => void;
+  actionDenied?: () => void;
 };
 
 export type GameUI = {
@@ -220,11 +227,24 @@ export function updateFrame(state: GameState, svc: GameServices) {
       if (state.precisionInput.pressedThisFrame) {
         // Tap: single reduction
         const result = applyAirBrake(state, 'tap');
-        if (result.applied) precisionAppliedThisFrame = true;
+        if (result.applied) {
+          precisionAppliedThisFrame = true;
+          audio.airBrakeTap?.();
+        } else if (result.denied) {
+          audio.actionDenied?.();
+        }
       } else if (pressed && state.precisionInput.holdDuration > 0) {
         // Hold: continuous reduction
         const result = applyAirBrake(state, 'hold', deltaTime);
-        if (result.applied) precisionAppliedThisFrame = true;
+        if (result.applied) {
+          precisionAppliedThisFrame = true;
+          // Play hold sound every 6 frames to avoid spam
+          if (state.precisionInput.holdDuration % 6 === 0) {
+            audio.airBrakeHold?.();
+          }
+        } else if (result.denied) {
+          audio.actionDenied?.();
+        }
       }
     }
 
@@ -432,7 +452,12 @@ export function updateFrame(state: GameState, svc: GameServices) {
       if (state.precisionInput.pressedThisFrame) {
         // Tap: extend slide
         const result = applySlideControl(state, 'tap');
-        if (result.applied) precisionAppliedThisFrame = true;
+        if (result.applied) {
+          precisionAppliedThisFrame = true;
+          audio.slideExtend?.();
+        } else if (result.denied) {
+          audio.actionDenied?.();
+        }
       } else if (pressed && state.precisionInput.holdDuration > 0) {
         // Hold: brake
         const result = applySlideControl(state, 'hold', deltaTime);
@@ -441,6 +466,12 @@ export function updateFrame(state: GameState, svc: GameServices) {
           if (result.frictionMultiplier) {
             frictionMultiplier = result.frictionMultiplier;
           }
+          // Play brake sound every 6 frames to avoid spam
+          if (state.precisionInput.holdDuration % 6 === 0) {
+            audio.slideBrake?.();
+          }
+        } else if (result.denied) {
+          audio.actionDenied?.();
         }
       }
     }
