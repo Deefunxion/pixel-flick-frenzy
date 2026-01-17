@@ -668,19 +668,23 @@ const Game = () => {
         <div className="flex items-center justify-between w-full max-w-md px-2">
           <h1 className="text-sm font-bold" style={{ color: theme.accent1 }}>One-More-Flick</h1>
           <div className="flex items-center gap-3">
-            {/* Precision control tips */}
-            <div className="flex flex-col items-end text-[9px] font-mono leading-tight" style={{ color: theme.uiText, opacity: 0.8 }}>
+            {/* Precision control tips - custom flipbook icons */}
+            <div className="flex flex-col items-end text-[9px] font-mono leading-tight" style={{ color: theme.uiText, opacity: 0.9 }}>
               <div className="flex items-center gap-1">
-                <span>✈️</span>
-                <span style={{ color: theme.accent2 }}>👆BRAKE</span>
+                <img src="/assets/icons/airplane-flying_128.png" alt="flying" className="w-3 h-3" />
+                <img src="/assets/icons/pointing-up_128.png" alt="tap" className="w-3 h-3" />
+                <span style={{ color: theme.accent2 }}>BRAKE</span>
                 <span style={{ opacity: 0.4 }}>/</span>
-                <span style={{ color: theme.accent2 }}>✋SLOW</span>
+                <img src="/assets/icons/stop-palm_128.png" alt="hold" className="w-3 h-3" />
+                <span style={{ color: theme.accent2 }}>SLOW</span>
               </div>
               <div className="flex items-center gap-1">
-                <span>🛬</span>
-                <span style={{ color: theme.accent2 }}>👆PUSH</span>
+                <img src="/assets/icons/airplane-landing_128.png" alt="landing" className="w-3 h-3" />
+                <img src="/assets/icons/pointing-up_128.png" alt="tap" className="w-3 h-3" />
+                <span style={{ color: theme.accent2 }}>PUSH</span>
                 <span style={{ opacity: 0.4 }}>/</span>
-                <span style={{ color: theme.accent2 }}>✋STOP</span>
+                <img src="/assets/icons/stop-palm_128.png" alt="hold" className="w-3 h-3" />
+                <span style={{ color: theme.accent2 }}>STOP</span>
               </div>
             </div>
             {profile && (
