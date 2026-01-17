@@ -15,6 +15,13 @@ export const AUDIO_FILES = {
   win: `${AUDIO_BASE_PATH}/win.ogg`,             // Kenney - threeTone1 triumphant
   recordBreak: `${AUDIO_BASE_PATH}/record-break.ogg`, // Kenney - zapThreeToneUp ascending
   failure: `${AUDIO_BASE_PATH}/failure.ogg`,     // Kenney - phaserDown2 descending
+  // Precision control sounds
+  tapAirBrake: `${AUDIO_BASE_PATH}/tap_air_brake.wav`,     // Tap to brake mid-air
+  tapPushGround: `${AUDIO_BASE_PATH}/tap_push_ground.wav`, // Tap to push/slide on ground
+  tapPushGround2: `${AUDIO_BASE_PATH}/tap_push_ground2.wav`, // Alternate push sound
+  lateHold: `${AUDIO_BASE_PATH}/late_hold.wav`,            // Hold brake (air/ground)
+  lateHold2: `${AUDIO_BASE_PATH}/late_hold2.wav`,          // Alternate hold sound
+  backgroundAmbient: `${AUDIO_BASE_PATH}/background-ambient.wav`, // Background ambient loop
 } as const;
 
 export type AudioFileName = keyof typeof AUDIO_FILES;
@@ -328,5 +335,98 @@ export function playFailureFile(refs: AudioRefsLike, settings: AudioSettingsLike
   const buffer = audioBuffers.get('failure');
   if (buffer) {
     playBuffer(refs, settings, buffer, 0.6);
+  }
+}
+
+// ============================================
+// PRECISION CONTROL SOUNDS (file-based)
+// ============================================
+
+/**
+ * Play air brake tap sound - short crisp feedback for tapping mid-air
+ */
+export function playTapAirBrakeFile(refs: AudioRefsLike, settings: AudioSettingsLike): void {
+  const buffer = audioBuffers.get('tapAirBrake');
+  if (buffer) {
+    playBuffer(refs, settings, buffer, 0.5);
+  }
+}
+
+/**
+ * Play slide push tap sound - for tapping to extend slide on ground
+ */
+export function playTapPushGroundFile(refs: AudioRefsLike, settings: AudioSettingsLike): void {
+  const buffer = audioBuffers.get('tapPushGround2');
+  if (buffer) {
+    playBuffer(refs, settings, buffer, 0.5);
+  }
+}
+
+/**
+ * Play hold brake sound - for holding to brake (air or ground)
+ */
+export function playLateHoldFile(refs: AudioRefsLike, settings: AudioSettingsLike): void {
+  const buffer = audioBuffers.get('lateHold');
+  if (buffer) {
+    playBuffer(refs, settings, buffer, 0.4);
+  }
+}
+
+// Background ambient sound management
+let ambientSource: AudioBufferSourceNode | null = null;
+let ambientGainNode: GainNode | null = null;
+
+/**
+ * Start background ambient sound (loops continuously)
+ */
+export function startAmbientFile(refs: AudioRefsLike, settings: AudioSettingsLike): void {
+  stopAmbientFile();
+
+  const buffer = audioBuffers.get('backgroundAmbient');
+  if (!buffer || settings.muted || settings.volume <= 0) return;
+
+  try {
+    const ctx = getContext(refs);
+    ambientSource = ctx.createBufferSource();
+    ambientSource.buffer = buffer;
+    ambientSource.loop = true;
+
+    ambientGainNode = ctx.createGain();
+    ambientGainNode.gain.value = 0.15 * settings.volume; // Low background volume
+
+    ambientSource.connect(ambientGainNode);
+    ambientGainNode.connect(ctx.destination);
+    ambientSource.start(0);
+
+    ambientSource.onended = () => {
+      ambientSource = null;
+      ambientGainNode = null;
+    };
+  } catch (err) {
+    console.warn('[AudioFiles] Error starting ambient sound:', err);
+  }
+}
+
+/**
+ * Stop background ambient sound
+ */
+export function stopAmbientFile(): void {
+  if (ambientSource) {
+    try {
+      ambientSource.stop();
+    } catch {
+      // Already stopped
+    }
+    ambientSource = null;
+  }
+  ambientGainNode = null;
+}
+
+/**
+ * Update ambient volume based on settings
+ */
+export function updateAmbientVolume(settings: AudioSettingsLike): void {
+  if (ambientGainNode) {
+    ambientGainNode.gain.value = settings.muted ? 0 : 0.15 * settings.volume;
   }
 }

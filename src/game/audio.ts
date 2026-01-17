@@ -12,6 +12,14 @@ import {
   playWinFile,
   playRecordBreakFile,
   playFailureFile,
+  // Precision control sounds
+  playTapAirBrakeFile,
+  playTapPushGroundFile,
+  playLateHoldFile,
+  // Background ambient
+  startAmbientFile as startAmbientFileInternal,
+  stopAmbientFile as stopAmbientFileInternal,
+  updateAmbientVolume as updateAmbientVolumeInternal,
 } from './audioFiles';
 
 export type AudioSettings = {
@@ -558,39 +566,55 @@ export function playFailureSoundHybrid(refs: AudioRefs, settings: AudioSettings,
 }
 
 // ============================================
-// PRECISION CONTROL SOUNDS (synth-based)
+// PRECISION CONTROL SOUNDS (file-based with synth fallback)
 // ============================================
 
 /**
- * Air brake tap - short, crisp feedback for single tap
+ * Air brake tap - short, crisp feedback for single tap mid-air
  */
 export function playAirBrakeTap(refs: AudioRefs, settings: AudioSettings) {
   if (settings.muted || settings.volume <= 0) return;
-  playTone(refs, settings, 300, 0.08, 'sine', 0.04);
+  if (areAudioFilesLoaded()) {
+    playTapAirBrakeFile(refs, settings);
+  } else {
+    playTone(refs, settings, 300, 0.08, 'sine', 0.04);
+  }
 }
 
 /**
- * Air brake hold - subtle continuous feedback
+ * Air brake hold - subtle continuous feedback for holding brake mid-air
  */
 export function playAirBrakeHold(refs: AudioRefs, settings: AudioSettings) {
   if (settings.muted || settings.volume <= 0) return;
-  playTone(refs, settings, 200, 0.05, 'sine', 0.02);
+  if (areAudioFilesLoaded()) {
+    playLateHoldFile(refs, settings);
+  } else {
+    playTone(refs, settings, 200, 0.05, 'sine', 0.02);
+  }
 }
 
 /**
- * Slide extend - low frequency tap for slide boost
+ * Slide extend - tap to push/extend slide on ground
  */
 export function playSlideExtend(refs: AudioRefs, settings: AudioSettings) {
   if (settings.muted || settings.volume <= 0) return;
-  playTone(refs, settings, 150, 0.06, 'triangle', 0.05);
+  if (areAudioFilesLoaded()) {
+    playTapPushGroundFile(refs, settings);
+  } else {
+    playTone(refs, settings, 150, 0.06, 'triangle', 0.05);
+  }
 }
 
 /**
- * Slide brake - friction-like sound for braking
+ * Slide brake - hold to brake during slide
  */
 export function playSlideBrake(refs: AudioRefs, settings: AudioSettings) {
   if (settings.muted || settings.volume <= 0) return;
-  playTone(refs, settings, 100, 0.04, 'sawtooth', 0.03);
+  if (areAudioFilesLoaded()) {
+    playLateHoldFile(refs, settings);
+  } else {
+    playTone(refs, settings, 100, 0.04, 'sawtooth', 0.03);
+  }
 }
 
 /**
@@ -607,4 +631,32 @@ export function playStaminaLow(refs: AudioRefs, settings: AudioSettings) {
 export function playActionDenied(refs: AudioRefs, settings: AudioSettings) {
   if (settings.muted || settings.volume <= 0) return;
   playTone(refs, settings, 150, 0.15, 'sawtooth', 0.06);
+}
+
+// ============================================
+// BACKGROUND AMBIENT SOUND
+// ============================================
+
+/**
+ * Start background ambient sound (loops continuously)
+ */
+export function startAmbient(refs: AudioRefs, settings: AudioSettings): void {
+  if (areAudioFilesLoaded()) {
+    startAmbientFileInternal(refs, settings);
+  }
+  // No synth fallback for ambient
+}
+
+/**
+ * Stop background ambient sound
+ */
+export function stopAmbient(): void {
+  stopAmbientFileInternal();
+}
+
+/**
+ * Update ambient volume when settings change
+ */
+export function updateAmbient(settings: AudioSettings): void {
+  updateAmbientVolumeInternal(settings);
 }

@@ -101,6 +101,12 @@ function drawZenoSprite(
     return false;
   }
 
+  // Safety check for invalid positions (NaN, Infinity) - fallback to procedural
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    console.warn('[Render] Invalid sprite position:', x, y);
+    return false;
+  }
+
   // Determine if we need to flip based on velocity
   const flipH = state.vx < -0.5;
 
