@@ -4,6 +4,12 @@ All notable changes to One-More-Flick are documented in this file.
 
 ## [Unreleased] - 2026-01-17
 
+### Fixed
+- **First-throw slow-motion frustration**: New players experienced 30+ second slow-motion on their first throw, making the game feel broken
+  - Slow-motion effects now require unlocking the "Bullet Time" achievement (land beyond 400)
+  - New players get full-speed gameplay until they master the mechanics
+  - Achievement-gated features: edge proximity slow-mo, record zone bullet time, cinematic zone effects, heartbeat audio
+
 ### Added - Precision Mechanics
 - **Stamina System**: 100-unit resource pool per throw for precision control
   - Resets to full on each new throw

@@ -16,4 +16,5 @@ export const ACHIEVEMENTS: Record<string, AchievementDef> = {
   hundred_throws: { name: 'Dedicated', desc: '100 total throws', check: (stats) => stats.totalThrows >= 100 },
   high_roller: { name: 'High Roller', desc: 'Achieve 4x multiplier', check: (stats) => stats.maxMultiplier >= 4 },
   thousand_score: { name: 'Scorer', desc: 'Accumulate 1000 total score', check: (_, s) => s.totalScore >= 1000 },
+  bullet_time: { name: 'Bullet Time', desc: 'Land beyond 400 to unlock slow-mo', check: (_, s) => s.best > 400 },
 };
