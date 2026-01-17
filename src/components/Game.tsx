@@ -683,15 +683,15 @@ const Game = () => {
                 <span>BRAKE</span>
                 <span className="opacity-40">|</span>
                 <span className="text-[7px] opacity-60">HOLD</span>
-                <span>SLOW</span>
+                <span className="text-[6px] tracking-tighter">HARD BRAKE</span>
               </div>
               <div className="flex items-center gap-1">
                 <img src="/assets/icons/airplane-landing.png" alt="landing" className="w-4 h-4" />
                 <span className="text-[7px] opacity-60">TAP</span>
-                <span>PUSH</span>
+                <span>SLIDE</span>
                 <span className="opacity-40">|</span>
                 <span className="text-[7px] opacity-60">HOLD</span>
-                <span>STOP</span>
+                <span>BRAKE</span>
               </div>
             </div>
             {profile && (
