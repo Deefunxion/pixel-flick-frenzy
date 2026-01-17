@@ -686,3 +686,6 @@ public/assets/audio/Shapeforms Audio Free Sound Effects/Shapeforms Audio Free So
 public/assets/audio/Shapeforms Audio Free Sound Effects/Shapeforms Audio Free Sound Effects/Type Preview/Tablet/Tablet_Tap_07.wav
 public/assets/audio/Shapeforms Audio Free Sound Effects/Shapeforms Audio Free Sound Effects/Type Preview/Tablet/Tablet_Typing_01.wav
 public/assets/audio/Shapeforms Audio Free Sound Effects/Shapeforms Audio Free Sound Effects/Type Preview/Tablet/Tablet_Typing_06.wav
+
+# Development assets (audio packs, sprite sources)
+dev-assets/

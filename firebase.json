@@ -3,6 +3,19 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 9199
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4040
+    },
+    "singleProjectMode": true
+  },
   "hosting": {
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],

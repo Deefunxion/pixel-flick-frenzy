@@ -11,6 +11,12 @@ npm run build     # Production build
 npm run lint      # Run ESLint
 npm run preview   # Preview production build locally
 
+# Local development with Firebase Emulators (recommended)
+npm run emulators      # Start Auth + Firestore emulators (needs Java)
+npm run dev:emulators  # Start Vite with emulator connection
+npm run emulators:dev  # Run both together (uses concurrently)
+# Emulator UI: http://localhost:4000
+
 # Deployment (Firebase Hosting)
 npm run build && firebase deploy --only hosting
 firebase deploy --only firestore:rules,firestore:indexes  # Deploy security rules
