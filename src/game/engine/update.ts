@@ -118,6 +118,21 @@ export function updateFrame(state: GameState, svc: GameServices) {
     if (state.touchFeedback < 0.01) state.touchFeedback = 0;
   }
 
+  // Precision control input edge detection (for tap vs hold)
+  if (state.flying || state.sliding) {
+    const wasPressed = state.precisionInput.lastPressedState;
+    state.precisionInput.pressedThisFrame = pressed && !wasPressed;
+    state.precisionInput.releasedThisFrame = !pressed && wasPressed;
+
+    if (pressed) {
+      state.precisionInput.holdDuration++;
+    } else {
+      state.precisionInput.holdDuration = 0;
+    }
+
+    state.precisionInput.lastPressedState = pressed;
+  }
+
   // Charging start - blocked if already landed (waiting for reset)
   if (!state.flying && !state.sliding && !state.landed && pressed && !state.charging) {
     state.charging = true;
