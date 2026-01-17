@@ -104,6 +104,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
       holdDuration: 0,
       lastPressedState: false,
     },
+    staminaDeniedShake: 0,
   };
 }
 
@@ -145,6 +146,7 @@ export function resetPhysics(state: GameState) {
     holdDuration: 0,
     lastPressedState: false,
   };
+  state.staminaDeniedShake = 0;
   if (state.particleSystem) {
     state.particleSystem.clear();
   }

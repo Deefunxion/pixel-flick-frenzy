@@ -330,8 +330,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
 
   // Stamina bar (only during flight/slide when stamina used)
   if ((state.flying || state.sliding) && state.stamina < 100) {
-    const staminaBarY = zenoY - 25;
-    drawStaminaBar(ctx, zenoX, staminaBarY, state.stamina, nowMs, COLORS, 0);
+    drawStaminaBar(ctx, zenoX, zenoY - 25, state.stamina, nowMs, COLORS, state.staminaDeniedShake || 0);
   }
 
   // Funny failure text
@@ -753,8 +752,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
 
   // Stamina bar (only during flight/slide when stamina used)
   if ((state.flying || state.sliding) && state.stamina < 100) {
-    const staminaBarY = zenoY - 25;
-    drawStaminaBar(ctx, state.px, staminaBarY, state.stamina, nowMs, COLORS, 0);
+    drawStaminaBar(ctx, state.px, zenoY - 25, state.stamina, nowMs, COLORS, state.staminaDeniedShake || 0);
   }
 
   // Failure text

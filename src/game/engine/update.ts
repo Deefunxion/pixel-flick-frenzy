@@ -232,6 +232,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
           audio.airBrakeTap?.();
         } else if (result.denied) {
           audio.actionDenied?.();
+          state.staminaDeniedShake = 8;
         }
       } else if (pressed && state.precisionInput.holdDuration > 0) {
         // Hold: continuous reduction
@@ -244,7 +245,15 @@ export function updateFrame(state: GameState, svc: GameServices) {
           }
         } else if (result.denied) {
           audio.actionDenied?.();
+          state.staminaDeniedShake = 8;
         }
+      }
+    }
+
+    // Low stamina warning (play beep periodically when below threshold)
+    if (state.stamina <= 25 && state.stamina > 0) {
+      if (Math.floor(svc.nowMs / 500) !== Math.floor((svc.nowMs - 16) / 500)) {
+        audio.staminaLow?.();
       }
     }
 
@@ -349,6 +358,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
   if (state.screenShake > 0) state.screenShake *= 0.8;
   if (state.landingFrame > 0) state.landingFrame--;
+  if (state.staminaDeniedShake > 0) state.staminaDeniedShake--;
 
   if (state.slowMo > 0) state.slowMo *= 0.95;
   if (state.screenFlash > 0) state.screenFlash *= 0.85;
@@ -457,6 +467,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
           audio.slideExtend?.();
         } else if (result.denied) {
           audio.actionDenied?.();
+          state.staminaDeniedShake = 8;
         }
       } else if (pressed && state.precisionInput.holdDuration > 0) {
         // Hold: brake
@@ -472,7 +483,15 @@ export function updateFrame(state: GameState, svc: GameServices) {
           }
         } else if (result.denied) {
           audio.actionDenied?.();
+          state.staminaDeniedShake = 8;
         }
+      }
+    }
+
+    // Low stamina warning (play beep periodically when below threshold)
+    if (state.stamina <= 25 && state.stamina > 0) {
+      if (Math.floor(svc.nowMs / 500) !== Math.floor((svc.nowMs - 16) / 500)) {
+        audio.staminaLow?.();
       }
     }
 

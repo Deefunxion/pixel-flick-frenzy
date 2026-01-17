@@ -124,4 +124,5 @@ export interface GameState {
   stamina: number;
   // Precision mechanics - input state tracking
   precisionInput: PrecisionInput;
+  staminaDeniedShake: number; // Frames of shake remaining
 }
