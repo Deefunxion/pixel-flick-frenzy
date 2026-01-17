@@ -671,19 +671,19 @@ const Game = () => {
             {/* Precision control tips - custom flipbook icons */}
             <div className="flex flex-col items-end text-[9px] font-mono leading-tight" style={{ color: theme.uiText, opacity: 0.9 }}>
               <div className="flex items-center gap-1">
-                <img src="/assets/icons/airplane-flying_128.png" alt="flying" className="w-3 h-3" />
-                <img src="/assets/icons/pointing-up_128.png" alt="tap" className="w-3 h-3" />
+                <img src="/assets/icons/airplane-flying.png" alt="flying" className="w-4 h-4" />
+                <img src="/assets/icons/pointing-up.png" alt="tap" className="w-3 h-3" />
                 <span style={{ color: theme.accent2 }}>BRAKE</span>
                 <span style={{ opacity: 0.4 }}>/</span>
-                <img src="/assets/icons/stop-palm_128.png" alt="hold" className="w-3 h-3" />
+                <img src="/assets/icons/stop-palm.png" alt="hold" className="w-3 h-3" />
                 <span style={{ color: theme.accent2 }}>SLOW</span>
               </div>
               <div className="flex items-center gap-1">
-                <img src="/assets/icons/airplane-landing_128.png" alt="landing" className="w-3 h-3" />
-                <img src="/assets/icons/pointing-up_128.png" alt="tap" className="w-3 h-3" />
+                <img src="/assets/icons/airplane-landing.png" alt="landing" className="w-4 h-4" />
+                <img src="/assets/icons/pointing-up.png" alt="tap" className="w-3 h-3" />
                 <span style={{ color: theme.accent2 }}>PUSH</span>
                 <span style={{ opacity: 0.4 }}>/</span>
-                <img src="/assets/icons/stop-palm_128.png" alt="hold" className="w-3 h-3" />
+                <img src="/assets/icons/stop-palm.png" alt="hold" className="w-3 h-3" />
                 <span style={{ color: theme.accent2 }}>STOP</span>
               </div>
             </div>
