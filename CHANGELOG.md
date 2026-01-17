@@ -2,7 +2,40 @@
 
 All notable changes to One-More-Flick are documented in this file.
 
-## [Unreleased] - 2026-01-16
+## [Unreleased] - 2026-01-17
+
+### Added - Precision Mechanics
+- **Stamina System**: 100-unit resource pool per throw for precision control
+  - Resets to full on each new throw
+  - Shared between air brake and slide control
+  - Edge proximity scaling increases costs near cliff (350-420)
+
+- **Air Brake** (during flight):
+  - Tap: 5% velocity reduction, costs 5 * edgeMultiplier stamina
+  - Hold: 3%/frame velocity reduction, costs 15/sec * edgeMultiplier stamina
+  - Use case: Fine-tune landing position mid-air
+
+- **Slide Control** (during ground slide):
+  - Tap: +0.15 velocity in travel direction, costs 8 * edgeMultiplier stamina
+  - Hold: 2.5x friction (brake), costs 10/sec * edgeMultiplier stamina
+  - Use case: Extend to reach target or brake before falling off
+
+- **Edge Proximity Scaling**: Stamina costs increase quadratically near cliff edge (350-420)
+  - Position 350: 1.0x multiplier
+  - Position 400: 1.5x multiplier
+  - Position 419: ~2.0x multiplier
+
+- **Stamina UI**:
+  - Bar above Zeno (hidden when full)
+  - Color coding: Green (>50%), Yellow (25-50%), Red (<25%)
+  - Flashing effect when low
+  - Shake effect when action denied
+
+- **Audio Feedback**:
+  - Air brake tap/hold sounds
+  - Slide extend/brake sounds
+  - Low stamina warning beep
+  - Action denied error buzz
 
 ### Added
 - **9-Animation System**: Replaced old 5-animation system with comprehensive 9-animation set
@@ -60,6 +93,14 @@ All notable changes to One-More-Flick are documented in this file.
 - **Missing Animation Triggers**: `launch`, `descend`, and `win` animations now properly trigger based on game state
 - **Win Not Showing**: Fixed condition where win animation wouldn't play after slide sequence
 - **Nickname Modal Spam**: Fixed modal appearing on every refresh by caching onboarding completion in localStorage
+
+### Technical - Precision Mechanics
+- New `precision.ts` module with edge multiplier and control functions
+- Extended `GameState` with stamina, precisionInput, and staminaDeniedShake
+- Precision applied flag prevents double-dipping on landing frame
+- Unit tests for all precision mechanics in `__tests__/precision.test.ts` and `__tests__/stamina.test.ts`
+- Updated `render.ts` with stamina bar UI rendering
+- Extended `GameAudio` type with precision control sounds
 
 ### Technical
 - Updated `spriteConfig.ts` with new animation definitions
