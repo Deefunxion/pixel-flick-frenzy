@@ -669,11 +669,19 @@ const Game = () => {
           <h1 className="text-sm font-bold" style={{ color: theme.accent1 }}>One-More-Flick</h1>
           <div className="flex items-center gap-3">
             {/* Precision control tips */}
-            <div className="flex items-center gap-1 text-[9px] font-mono" style={{ color: theme.uiText, opacity: 0.8 }}>
-              <span>MID-AIR:</span>
-              <span style={{ color: theme.accent2 }}>👆BRAKE</span>
-              <span style={{ opacity: 0.4 }}>/</span>
-              <span style={{ color: theme.accent2 }}>✋SLOW</span>
+            <div className="flex flex-col items-end text-[9px] font-mono leading-tight" style={{ color: theme.uiText, opacity: 0.8 }}>
+              <div className="flex items-center gap-1">
+                <span>✈️</span>
+                <span style={{ color: theme.accent2 }}>👆BRAKE</span>
+                <span style={{ opacity: 0.4 }}>/</span>
+                <span style={{ color: theme.accent2 }}>✋SLOW</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span>🛬</span>
+                <span style={{ color: theme.accent2 }}>👆PUSH</span>
+                <span style={{ opacity: 0.4 }}>/</span>
+                <span style={{ color: theme.accent2 }}>✋STOP</span>
+              </div>
             </div>
             {profile && (
               <span className="text-xs font-mono" style={{ color: theme.highlight }}>
