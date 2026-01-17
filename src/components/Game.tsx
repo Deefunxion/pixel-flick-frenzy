@@ -666,25 +666,32 @@ const Game = () => {
       >
         {/* Header - compact */}
         <div className="flex items-center justify-between w-full max-w-md px-2">
-          <h1 className="text-sm font-bold" style={{ color: theme.accent1 }}>One-More-Flick</h1>
-          <div className="flex items-center gap-3">
-            {/* Precision control tips - custom flipbook icons */}
-            <div className="flex flex-col items-end text-[9px] font-mono leading-tight" style={{ color: theme.uiText, opacity: 0.9 }}>
+          <img src="/assets/icons/logo.png" alt="one more flick." className="h-5" />
+          <div className="flex items-center gap-2">
+            {/* Precision control tips - with background for visibility */}
+            <div
+              className="flex flex-col gap-0.5 text-[8px] font-bold px-2 py-1 rounded"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.85)',
+                color: '#1e3a5f',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              }}
+            >
               <div className="flex items-center gap-1">
                 <img src="/assets/icons/airplane-flying.png" alt="flying" className="w-4 h-4" />
-                <img src="/assets/icons/pointing-up.png" alt="tap" className="w-3 h-3" />
-                <span style={{ color: theme.accent2 }}>BRAKE</span>
-                <span style={{ opacity: 0.4 }}>/</span>
-                <img src="/assets/icons/stop-palm.png" alt="hold" className="w-3 h-3" />
-                <span style={{ color: theme.accent2 }}>SLOW</span>
+                <span className="text-[7px] opacity-60">TAP</span>
+                <span>BRAKE</span>
+                <span className="opacity-40">|</span>
+                <span className="text-[7px] opacity-60">HOLD</span>
+                <span>SLOW</span>
               </div>
               <div className="flex items-center gap-1">
                 <img src="/assets/icons/airplane-landing.png" alt="landing" className="w-4 h-4" />
-                <img src="/assets/icons/pointing-up.png" alt="tap" className="w-3 h-3" />
-                <span style={{ color: theme.accent2 }}>PUSH</span>
-                <span style={{ opacity: 0.4 }}>/</span>
-                <img src="/assets/icons/stop-palm.png" alt="hold" className="w-3 h-3" />
-                <span style={{ color: theme.accent2 }}>STOP</span>
+                <span className="text-[7px] opacity-60">TAP</span>
+                <span>PUSH</span>
+                <span className="opacity-40">|</span>
+                <span className="text-[7px] opacity-60">HOLD</span>
+                <span>STOP</span>
               </div>
             </div>
             {profile && (
