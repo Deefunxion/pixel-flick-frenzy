@@ -53,6 +53,10 @@ import {
   playSlideBrake,
   playStaminaLow,
   playActionDenied,
+  // Background ambient
+  startAmbient,
+  stopAmbient,
+  updateAmbient,
   type AudioRefs,
   type AudioSettings,
   type AudioState,
@@ -211,6 +215,8 @@ const Game = () => {
     saveJson('audio_muted', audioSettings.muted);
     saveNumber('audio_volume', audioSettings.volume);
     audioSettingsRef.current = audioSettings;
+    // Update ambient volume when settings change
+    updateAmbient(audioSettings);
   }, [audioSettings]);
 
   // Persist theme selection and update ref
@@ -289,6 +295,8 @@ const Game = () => {
       setShowAudioWarning(false);
       // Play a test tone to confirm audio is working
       playTone(audioRefs.current, audioSettingsRef.current, 440, 0.1, 'sine', 0.05);
+      // Start ambient sound
+      startAmbient(audioRefs.current, audioSettingsRef.current);
     }
   }, []);
 
@@ -356,6 +364,10 @@ const Game = () => {
         // Load audio files (non-blocking, will fallback to synth if fails)
         loadAudioFiles(audioRefs.current).then((loaded) => {
           console.log('[Game] Audio files loaded:', loaded);
+          // Start ambient sound if audio is already unlocked
+          if (loaded && audioRefs.current.unlocked) {
+            startAmbient(audioRefs.current, audioSettingsRef.current);
+          }
         }).catch((err) => {
           console.warn('[Game] Audio files failed to load, using synth fallback:', err);
         });
@@ -449,7 +461,12 @@ const Game = () => {
         e.preventDefault();
         pressedRef.current = true;
         // Unlock audio on first gesture (iOS compatible)
+        const wasUnlocked = audioRefs.current.unlocked;
         await unlockAudioForIOS(audioRefs.current);
+        // Start ambient on first unlock
+        if (!wasUnlocked && audioRefs.current.unlocked) {
+          startAmbient(audioRefs.current, audioSettingsRef.current);
+        }
       }
       if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
         const s = stateRef.current;
@@ -485,9 +502,15 @@ const Game = () => {
       }
 
       // iOS requires aggressive audio unlock on first touch
+      const wasUnlocked = audioRefs.current.unlocked;
       const unlocked = await unlockAudioForIOS(audioRefs.current);
       const state = getAudioState(audioRefs.current);
       setAudioContextState(state);
+
+      // Start ambient on first successful unlock
+      if (!wasUnlocked && unlocked) {
+        startAmbient(audioRefs.current, audioSettingsRef.current);
+      }
 
       // Show warning on iOS if audio isn't running after unlock attempt
       if (!unlocked && e.pointerType === 'touch' && !audioSettingsRef.current.muted) {

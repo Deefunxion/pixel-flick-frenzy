@@ -118,13 +118,20 @@ export class Animator {
     const config = this.animationConfigs.get(this.currentAnimation);
     if (!config) return;
 
+    // Clamp deltaTime to prevent huge jumps (defensive for mobile)
+    const safeDeltaTime = Math.min(deltaTime, 0.1); // Max 100ms per frame
     const frameDuration = 1 / config.frameRate;
-    this.frameTimer += deltaTime;
+    this.frameTimer += safeDeltaTime;
+
+    // Limit iterations to prevent infinite loop (defensive)
+    let iterations = 0;
+    const maxIterations = 10;
 
     // Advance frames based on elapsed time
-    while (this.frameTimer >= frameDuration) {
+    while (this.frameTimer >= frameDuration && iterations < maxIterations) {
       this.frameTimer -= frameDuration;
       this.currentFrameIndex++;
+      iterations++;
 
       // Handle end of animation
       if (this.currentFrameIndex >= config.frames.length) {
@@ -133,8 +140,15 @@ export class Animator {
         } else {
           this.currentFrameIndex = config.frames.length - 1;
           this.finished = true;
+          break;
         }
       }
+    }
+
+    // Final safety clamp
+    if (this.currentFrameIndex < 0) this.currentFrameIndex = 0;
+    if (config.frames.length > 0 && this.currentFrameIndex >= config.frames.length) {
+      this.currentFrameIndex = config.frames.length - 1;
     }
   }
 
@@ -148,10 +162,25 @@ export class Animator {
     flipH: boolean = false
   ): void {
     const sprites = this.sprites.get(this.currentAnimation);
-    if (!sprites || sprites.length === 0) return;
+    if (!sprites || sprites.length === 0) {
+      // Fallback: try to get idle animation sprites
+      const idleSprites = this.sprites.get('idle');
+      if (idleSprites && idleSprites.length > 0) {
+        idleSprites[0].draw(ctx, x, y, ZENO_DISPLAY_WIDTH, ZENO_DISPLAY_HEIGHT, flipH);
+      }
+      return;
+    }
 
-    const sprite = sprites[this.currentFrameIndex];
-    if (!sprite) return;
+    // Clamp frame index to valid range (defensive fix for mobile)
+    const safeFrameIndex = Math.max(0, Math.min(this.currentFrameIndex, sprites.length - 1));
+    const sprite = sprites[safeFrameIndex];
+    if (!sprite) {
+      // Fallback to first frame
+      if (sprites[0]) {
+        sprites[0].draw(ctx, x, y, ZENO_DISPLAY_WIDTH, ZENO_DISPLAY_HEIGHT, flipH);
+      }
+      return;
+    }
 
     sprite.draw(ctx, x, y, ZENO_DISPLAY_WIDTH, ZENO_DISPLAY_HEIGHT, flipH);
   }

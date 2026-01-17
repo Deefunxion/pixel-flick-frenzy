@@ -3,6 +3,13 @@
 import type { GameState } from './types';
 import type { AnimationName } from './spriteConfig';
 
+// Hysteresis thresholds to prevent rapid animation switching
+const DESCEND_ENTER_THRESHOLD = 2.0;  // Must exceed this to switch TO descend
+const DESCEND_EXIT_THRESHOLD = 0.5;   // Must go below this to switch FROM descend
+
+// Track last flight animation to apply hysteresis
+let lastFlightAnimation: 'fly' | 'descend' = 'fly';
+
 /**
  * Determines which animation should play based on game state.
  * This centralizes the animation selection logic.
@@ -21,6 +28,8 @@ export function getDesiredAnimation(state: GameState): AnimationName {
 
   // Charging up for throw
   if (state.charging) {
+    // Reset flight animation tracking on new throw
+    lastFlightAnimation = 'fly';
     return 'coil';
   }
 
@@ -31,17 +40,28 @@ export function getDesiredAnimation(state: GameState): AnimationName {
       return 'launch';
     }
 
-    // Descending: falling down (vy > threshold to avoid jitter)
-    if (state.vy > 1.5) {
+    // Hysteresis for fly/descend to prevent jitter during precision controls
+    if (lastFlightAnimation === 'fly') {
+      // Currently flying - only switch to descend if vy exceeds higher threshold
+      if (state.vy > DESCEND_ENTER_THRESHOLD) {
+        lastFlightAnimation = 'descend';
+        return 'descend';
+      }
+      return 'fly';
+    } else {
+      // Currently descending - only switch back to fly if vy drops below lower threshold
+      if (state.vy < DESCEND_EXIT_THRESHOLD) {
+        lastFlightAnimation = 'fly';
+        return 'fly';
+      }
       return 'descend';
     }
-
-    // Flying: ascending or horizontal movement
-    return 'fly';
   }
 
   // Sliding on ground
   if (state.sliding) {
+    // Reset flight animation tracking when landing
+    lastFlightAnimation = 'fly';
     return 'slide';
   }
 
