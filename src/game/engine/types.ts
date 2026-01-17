@@ -113,4 +113,6 @@ export interface GameState {
   particleSystem: ParticleSystem;
   // Sprite-based character animation
   zenoAnimator: Animator | null;
+  // Precision mechanics - stamina system
+  stamina: number;
 }
