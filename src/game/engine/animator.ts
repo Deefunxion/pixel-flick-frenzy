@@ -8,6 +8,8 @@ import {
   SPRITE_SHEETS,
   ZENO_DISPLAY_WIDTH,
   ZENO_DISPLAY_HEIGHT,
+  FRAME_WIDTH,
+  FRAME_HEIGHT,
   getFrameRect,
 } from './spriteConfig';
 import { assetLoader } from './assets';
@@ -52,6 +54,19 @@ export class Animator {
       return false;
     }
 
+    // Validate sprite sheet dimensions (expected: 6400x128 for 50 frames)
+    const expectedWidth = 50 * FRAME_WIDTH; // 50 * 128 = 6400
+    const expectedHeight = FRAME_HEIGHT;    // 128
+
+    if (image.naturalWidth < expectedWidth || image.naturalHeight < expectedHeight) {
+      console.error(
+        `[Animator] Sprite sheet has wrong dimensions! ` +
+        `Got ${image.naturalWidth}x${image.naturalHeight}, ` +
+        `expected ${expectedWidth}x${expectedHeight}. ` +
+        `This may be a cached old version - clear browser cache.`
+      );
+    }
+
     this.image = image;
 
     // Create Sprite objects for each frame of each animation
@@ -60,6 +75,15 @@ export class Animator {
 
       for (const frameIndex of config.frames) {
         const rect = getFrameRect(frameIndex);
+
+        // Validate frame is within sprite sheet bounds
+        if (rect.x + rect.w > image.naturalWidth) {
+          console.warn(
+            `[Animator] Frame ${frameIndex} (x=${rect.x}) exceeds sprite sheet width ${image.naturalWidth}. ` +
+            `Animation "${config.name}" may show blank frames.`
+          );
+        }
+
         sprites.push(new Sprite(image, rect.x, rect.y, rect.w, rect.h));
       }
 
