@@ -132,3 +132,60 @@ describe('Input Edge Detection', () => {
     expect(state.precisionInput.holdDuration).toBe(6);
   });
 });
+
+describe('Air Brake Integration', () => {
+  it('applies air brake tap when pressed during flight', () => {
+    const state = createInitialState({ reduceFx: false });
+    state.flying = true;
+    state.px = 300;
+    state.vx = 5;
+    state.vy = -3;
+    state.stamina = 100;
+    state.precisionInput.lastPressedState = false;
+
+    // First frame with press (tap)
+    updateFrame(state, createMockServices(true));
+
+    // Velocity should be reduced by tap (5%), then physics applied
+    // Air brake: vx = 5 * 0.95 = 4.75, vy = -3 * 0.95 = -2.85
+    // Physics: gravity 0.15 * 0.55 = 0.0825 added to vy, wind affects vx
+    // Final vy approx -2.85 + 0.0825 = -2.7675
+    expect(state.vx).toBeCloseTo(4.75, 1);
+    expect(state.vy).toBeCloseTo(-2.77, 1); // After gravity applied
+    expect(state.stamina).toBe(95);
+  });
+
+  it('applies air brake hold when held during flight', () => {
+    const state = createInitialState({ reduceFx: false });
+    state.flying = true;
+    state.px = 300;
+    state.vx = 5;
+    state.vy = -3;
+    state.stamina = 100;
+    state.precisionInput.lastPressedState = true;
+    state.precisionInput.holdDuration = 5;
+
+    // Subsequent frame with continued press (hold)
+    updateFrame(state, createMockServices(true));
+
+    // Velocity should be reduced by hold (3%), then physics applied
+    // Air brake: vx = 5 * 0.97 = 4.85, vy = -3 * 0.97 = -2.91
+    // Physics: gravity 0.15 * 0.55 = 0.0825 added to vy
+    // Final vy approx -2.91 + 0.0825 = -2.8275
+    expect(state.vx).toBeCloseTo(4.85, 1);
+    expect(state.vy).toBeCloseTo(-2.83, 1); // After gravity applied
+  });
+
+  it('does not apply air brake if landed', () => {
+    const state = createInitialState({ reduceFx: false });
+    state.landed = true;
+    state.vx = 5;
+    state.stamina = 100;
+    state.precisionInput.lastPressedState = false;
+
+    updateFrame(state, createMockServices(true));
+
+    expect(state.vx).toBe(5);
+    expect(state.stamina).toBe(100);
+  });
+});

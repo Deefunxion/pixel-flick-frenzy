@@ -31,6 +31,7 @@ import type { GameState } from './types';
 import { nextWind, spawnCelebration, spawnParticles } from './state';
 import { ACHIEVEMENTS } from './achievements';
 import { updateAnimator } from './animationController';
+import { applyAirBrake } from './precision';
 
 export type GameAudio = {
   startCharge: (power01: number) => void;
@@ -133,6 +134,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.precisionInput.lastPressedState = pressed;
   }
 
+  // FIX 1: Track if precision control was used this frame to prevent double-dipping
+  let precisionAppliedThisFrame = false;
+
   // Charging start - blocked if already landed (waiting for reset)
   if (!state.flying && !state.sliding && !state.landed && pressed && !state.charging) {
     state.charging = true;
@@ -209,6 +213,20 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
   if (state.flying) {
     state.launchFrame++; // Increment for launch burst effect
+
+    // Precision control: Air brake (FIX 1: check flag)
+    if (!state.landed && !precisionAppliedThisFrame) {
+      const deltaTime = 1/60;
+      if (state.precisionInput.pressedThisFrame) {
+        // Tap: single reduction
+        const result = applyAirBrake(state, 'tap');
+        if (result.applied) precisionAppliedThisFrame = true;
+      } else if (pressed && state.precisionInput.holdDuration > 0) {
+        // Hold: continuous reduction
+        const result = applyAirBrake(state, 'hold', deltaTime);
+        if (result.applied) precisionAppliedThisFrame = true;
+      }
+    }
 
     state.vy += BASE_GRAV * effectiveTimeScale;
     state.vx += state.wind * 0.3 * effectiveTimeScale;
