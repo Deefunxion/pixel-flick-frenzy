@@ -666,7 +666,7 @@ const Game = () => {
       >
         {/* Header - compact */}
         <div className="flex items-center justify-between w-full max-w-md px-2">
-          <img src="/assets/icons/logo.png" alt="one more flick." className="h-5" />
+          <img src="/assets/icons/logo.png" alt="one more flick." className="h-8" />
           <div className="flex items-center gap-2">
             {/* Precision control tips - with background for visibility */}
             <div
