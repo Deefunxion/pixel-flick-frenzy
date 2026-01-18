@@ -703,3 +703,4 @@ Screenshot*.png
 public/assets/ui/elements/element_*.png
 public/assets/ui/elements/manifest.txt
 public/assets/ui/elements/selection_ui_assets/
+.worktrees/
