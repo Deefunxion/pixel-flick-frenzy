@@ -853,7 +853,7 @@ const Game = () => {
                 className={buttonClass}
                 style={{
                   ...buttonStyle,
-                  padding: '4px 8px',
+                  padding: '2px 4px',
                   borderColor: theme.highlight,
                 }}
                 onClick={() => setShowLeaderboard(true)}
@@ -862,7 +862,7 @@ const Game = () => {
                 <img
                   src={UI_ASSETS.leaderboard}
                   alt="Leaderboard"
-                  className="h-6 object-contain"
+                  className="h-8 object-contain"
                   style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
                 />
               </button>
