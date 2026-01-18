@@ -12,7 +12,7 @@ export function TutorialOverlay({ phase, active, timeRemaining }: TutorialOverla
   if (!active || phase === 'none') return null;
 
   const content = TUTORIAL_CONTENT[phase];
-  const progress = timeRemaining / 2.0; // 2 second duration
+  const progress = timeRemaining / 4.0; // 4 second duration
 
   return (
     <div className="absolute inset-0 pointer-events-none flex items-center justify-center">

@@ -80,9 +80,11 @@ import { Animator } from '@/game/engine/animator';
 import { SPRITE_SHEETS } from '@/game/engine/spriteConfig';
 import { backgroundRenderer } from '@/game/engine/backgroundRenderer';
 import { noirBackgroundRenderer } from '@/game/engine/noirBackgroundRenderer';
+import { UI_ASSETS } from '@/game/engine/uiAssets';
 import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { TutorialOverlay } from './TutorialOverlay';
+import { resetTutorialProgress } from '@/game/engine/tutorial';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
 import { captureError } from '@/lib/sentry';
@@ -213,6 +215,10 @@ const Game = () => {
 
   const [hudPx, setHudPx] = useState(LAUNCH_PAD_X);
   const [hudFlying, setHudFlying] = useState(false);
+  // Tutorial overlay state (synced from stateRef)
+  const [tutorialPhase, setTutorialPhase] = useState<'none' | 'idle' | 'charge' | 'air' | 'slide'>('none');
+  const [tutorialActive, setTutorialActive] = useState(false);
+  const [tutorialTimeRemaining, setTutorialTimeRemaining] = useState(0);
 
   useEffect(() => {
     saveJson('reduce_fx', reduceFx);
@@ -466,6 +472,10 @@ const Game = () => {
       if (!s) return;
       setHudPx(s.px);
       setHudFlying(s.flying || s.sliding || s.charging);
+      // Sync tutorial state
+      setTutorialPhase(s.tutorialState.phase);
+      setTutorialActive(s.tutorialState.active);
+      setTutorialTimeRemaining(s.tutorialState.timeRemaining);
     };
 
     const hudInterval = window.setInterval(syncHud, 120);
@@ -797,9 +807,10 @@ const Game = () => {
 
           {/* Tutorial overlay */}
           <TutorialOverlay
-            phase={state.tutorialState.phase}
-            active={state.tutorialState.active}
-            timeRemaining={state.tutorialState.timeRemaining}
+
+            phase={tutorialPhase}
+            active={tutorialActive}
+            timeRemaining={tutorialTimeRemaining}
           />
         </div>
 
@@ -831,51 +842,38 @@ const Game = () => {
             : 'rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 hover:opacity-90 active:translate-y-px transition-all';
 
           return (
-            <div className="w-full max-w-md flex items-center justify-between gap-2 text-xs px-2" style={{ color: theme.uiText }}>
-              {/* Left: Theme picker */}
-              <button
-                className={buttonClass}
-                style={{
-                  ...buttonStyle,
-                  borderColor: theme.accent1,
-                }}
-                onClick={() => {
-                  const currentIndex = THEME_IDS.indexOf(themeId);
-                  const nextIndex = (currentIndex + 1) % THEME_IDS.length;
-                  setThemeId(THEME_IDS[nextIndex]);
-                }}
-                aria-label="Switch theme"
-              >
-                {isNoir ? 'Noir' : 'Flipbook'}
-              </button>
-
-              {/* Center: Leaderboard */}
-              <button
-                className={buttonClass}
-                style={{
-                  ...buttonStyle,
-                  borderColor: theme.highlight,
-                }}
-                onClick={() => setShowLeaderboard(true)}
-                aria-label="View leaderboard"
-              >
-                Leaderboard
-              </button>
-
-              {/* Right: Stats + Sound */}
-              <div className="flex items-center gap-2">
+            <div className="w-full max-w-md flex items-center justify-center gap-3 text-xs px-2" style={{ color: theme.uiText }}>
+              {/* Left: Tutorial + Sound */}
+              <div className="flex items-center gap-1">
                 <button
                   className={buttonClass}
-                  style={buttonStyle}
-                  onClick={() => setShowStats(true)}
-                  aria-label="View stats"
+                  style={{
+                    ...buttonStyle,
+                    padding: '2px 4px',
+                  }}
+                  onClick={() => {
+                    resetTutorialProgress();
+                    if (stateRef.current) {
+                      stateRef.current.tutorialState.hasSeenCharge = false;
+                      stateRef.current.tutorialState.hasSeenAir = false;
+                      stateRef.current.tutorialState.hasSeenSlide = false;
+                    }
+                  }}
+                  aria-label="Replay tutorial"
+                  title="Replay tutorial"
                 >
-                  Stats
+                  <img
+                    src={UI_ASSETS.helpIcon}
+                    alt="Help"
+                    className="h-8 object-contain"
+                    style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+                  />
                 </button>
                 <button
                   className={buttonClass}
                   style={{
                     ...buttonStyle,
+                    padding: '4px',
                     // Highlight if audio is blocked
                     borderColor: audioContextState === 'suspended' && !audioSettings.muted
                       ? theme.danger
@@ -890,17 +888,64 @@ const Game = () => {
                   }}
                   aria-label="Toggle sound"
                 >
-                  {audioSettings.muted ? '🔇' : audioContextState === 'running' ? '🔊' : '🔈'}
+                  <img
+                    src={audioSettings.muted ? UI_ASSETS.volumeOff : UI_ASSETS.volumeOn}
+                    alt={audioSettings.muted ? 'Sound off' : 'Sound on'}
+                    className="w-6 h-6"
+                    style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+                  />
                 </button>
               </div>
+
+              {/* Center: Leaderboard */}
+              <button
+                className={buttonClass}
+                style={{
+                  ...buttonStyle,
+                  padding: '2px 4px',
+                  borderColor: theme.highlight,
+                }}
+                onClick={() => setShowLeaderboard(true)}
+                aria-label="View leaderboard"
+              >
+                <img
+                  src={UI_ASSETS.leaderboard}
+                  alt="Leaderboard"
+                  className="h-8 object-contain"
+                  style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+                />
+              </button>
+
+              {/* Right: Stats */}
+              <button
+                className={buttonClass}
+                style={{
+                  ...buttonStyle,
+                  padding: '2px 4px',
+                }}
+                onClick={() => setShowStats(true)}
+                aria-label="View stats"
+              >
+                <img
+                  src={UI_ASSETS.statsLabel}
+                  alt="Stats"
+                  className="h-8 object-contain"
+                  style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+                />
+              </button>
             </div>
           );
         })()}
 
         {/* Hero row: LAST, LV, TARGET - primary focus */}
-        <div className="w-full max-w-md flex justify-center items-end gap-6 text-center">
-          <div>
-            <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Last</p>
+        <div className="w-full max-w-md flex justify-center items-start gap-6 text-center">
+          <div className="flex flex-col items-center min-w-[80px]">
+            <img
+              src={UI_ASSETS.lastLabel}
+              alt="Last"
+              className="h-5 object-contain"
+              style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+            />
             <p className="text-2xl font-bold font-mono">
               {fellOff ? (
                 <span style={{ color: theme.danger }}>FELL</span>
@@ -913,32 +958,52 @@ const Game = () => {
                 <span style={{ color: theme.uiText, opacity: 0.4 }}>-</span>
               )}
             </p>
-            {lastDist !== null && !fellOff && (
-              <p className="text-xs font-mono" style={{ color: theme.accent2, opacity: 0.8 }}>
-                x{lastMultiplier.toFixed(1)}
-              </p>
-            )}
+            <p className="text-xs font-mono h-4" style={{ color: theme.accent2, opacity: lastDist !== null && !fellOff ? 0.8 : 0 }}>
+              x{lastMultiplier.toFixed(1)}
+            </p>
           </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Lv</p>
+          <div className="flex flex-col items-center min-w-[50px]">
+            <img
+              src={UI_ASSETS.vsLabel}
+              alt="Level"
+              className="h-5 object-contain"
+              style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+            />
             <p className="text-2xl font-bold font-mono" style={{ color: theme.highlight }}>{zenoLevel}</p>
+            <p className="text-xs h-4">&nbsp;</p>
           </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Target</p>
-            <p className="text-xl font-bold font-mono" style={{ color: theme.accent2 }}>
+          <div className="flex flex-col items-center min-w-[80px]">
+            <img
+              src={UI_ASSETS.targetLabel}
+              alt="Target"
+              className="h-5 object-contain"
+              style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+            />
+            <p className="text-2xl font-bold font-mono" style={{ color: theme.accent2 }}>
               {formatScore(zenoTarget).int}<span className="text-sm opacity-60">.{formatScore(zenoTarget).dec}</span>
             </p>
+            <p className="text-xs h-4">&nbsp;</p>
           </div>
         </div>
 
         {/* Secondary row: SCORE, BEST */}
         <div className="w-full max-w-md flex justify-center gap-6 text-center">
-          <div>
-            <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Score</p>
+          <div className="flex flex-col items-center">
+            <img
+              src={UI_ASSETS.scoreLabel}
+              alt="Score"
+              className="h-4 object-contain"
+              style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+            />
             <p className="text-base font-bold font-mono" style={{ color: theme.accent4 }}>{Math.floor(totalScore).toLocaleString()}</p>
           </div>
-          <div>
-            <p className="text-xs uppercase" style={{ color: theme.uiText, opacity: 0.6 }}>Best</p>
+          <div className="flex flex-col items-center">
+            <img
+              src={UI_ASSETS.bestLabel}
+              alt="Best"
+              className="h-4 object-contain"
+              style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+            />
             <p className="text-base font-bold font-mono" style={{ color: theme.accent2 }}>
               {formatScore(bestScore).int}<span className="text-xs opacity-60">.{formatScore(bestScore).dec}</span>
             </p>
