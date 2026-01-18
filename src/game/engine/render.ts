@@ -341,7 +341,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   }
 
   // Precision bar (above stamina bar when active)
-  if (state.precisionBarActive || (state.fellOff && state.lastValidPx >= 419)) {
+  if (state.precisionBarActive || (state.fellOff && state.lastValidPx >= 410)) {
     drawPrecisionBar(ctx, state, zenoX, zenoY, COLORS, nowMs);
   }
 
@@ -637,7 +637,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   }
 
   // Precision zone fall overlay
-  if (state.fellOff && state.lastValidPx >= 419 && state.precisionBarTriggeredThisThrow) {
+  if (state.fellOff && state.lastValidPx >= 410 && state.precisionBarTriggeredThisThrow) {
     drawPrecisionFallOverlay(ctx, state, W, H, COLORS, nowMs);
   }
 }
@@ -773,7 +773,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   }
 
   // Precision bar (above stamina bar when active)
-  if (state.precisionBarActive || (state.fellOff && state.lastValidPx >= 419)) {
+  if (state.precisionBarActive || (state.fellOff && state.lastValidPx >= 410)) {
     drawPrecisionBar(ctx, state, state.px, zenoY, COLORS, nowMs);
   }
 
@@ -959,7 +959,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   }
 
   // Precision zone fall overlay
-  if (state.fellOff && state.lastValidPx >= 419 && state.precisionBarTriggeredThisThrow) {
+  if (state.fellOff && state.lastValidPx >= 410 && state.precisionBarTriggeredThisThrow) {
     drawPrecisionFallOverlay(ctx, state, W, H, COLORS, nowMs);
   }
 

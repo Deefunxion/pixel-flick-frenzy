@@ -2,22 +2,19 @@ import { CLIFF_EDGE } from '@/game/constants';
 import type { GameState } from './types';
 
 // Precision bar trigger thresholds
-const PRECISION_X_THRESHOLD = 418.9;  // 0.1 before competitive zone
+const PRECISION_X_THRESHOLD = 409.9;  // 0.1 before precision zone
 const PRECISION_Y_THRESHOLD = 5;      // Near ground
-const PRECISION_ZONE_START = 419;
+const PRECISION_ZONE_START = 410;     // Start of precision zone
 const PRECISION_ZONE_END = CLIFF_EDGE; // 420
 
 /**
  * Check if precision bar should be active.
  * Requires:
- * - px >= 418.9 (approaching competitive zone)
+ * - px >= 409.9 (approaching precision zone)
  * - py < 5 (near ground)
- * - bullet_time achievement unlocked
+ * No achievement requirement - always available
  */
 export function shouldActivatePrecisionBar(state: GameState): boolean {
-  const hasBulletTime = state.achievements.has('bullet_time');
-  if (!hasBulletTime) return false;
-
   return state.px >= PRECISION_X_THRESHOLD && state.py < PRECISION_Y_THRESHOLD;
 }
 

@@ -91,7 +91,7 @@ export function drawPrecisionBar(
   ctx.shadowBlur = 0;
 
   // "NEW!" indicator when passing PB
-  if (hasPassedPb(state.px, state.best) && state.best >= 419) {
+  if (hasPassedPb(state.px, state.best) && state.best >= 410) {
     const blink = Math.floor(nowMs / 200) % 2;
     if (blink) {
       ctx.fillStyle = '#FFD700';
@@ -113,7 +113,7 @@ export function drawPrecisionFallOverlay(
   theme: Theme,
   nowMs: number
 ): void {
-  if (!state.fellOff || state.lastValidPx < 419) return;
+  if (!state.fellOff || state.lastValidPx < 410) return;
 
   const centerX = W / 2;
   const centerY = H / 2 - 20;
@@ -191,9 +191,9 @@ export function drawPrecisionSuccessOverlay(
   nowMs: number,
   previousBest: number
 ): void {
-  if (state.dist < 419 || state.fellOff) return;
+  if (state.dist < 410 || state.fellOff) return;
 
-  const isNewPb = state.dist > previousBest && previousBest >= 419;
+  const isNewPb = state.dist > previousBest && previousBest >= 410;
   if (!isNewPb) return;
 
   const centerX = W / 2;

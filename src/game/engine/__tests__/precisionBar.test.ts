@@ -21,47 +21,47 @@ function createMockState(overrides: Partial<GameState> = {}): GameState {
 
 describe('precisionBar', () => {
   describe('shouldActivatePrecisionBar', () => {
-    it('returns false when px < 418.9', () => {
-      const state = createMockState({ px: 418, py: 2, achievements: new Set(['bullet_time']) });
+    it('returns false when px < 409.9', () => {
+      const state = createMockState({ px: 409, py: 2 });
       expect(shouldActivatePrecisionBar(state)).toBe(false);
     });
 
     it('returns false when py >= 5', () => {
-      const state = createMockState({ px: 419, py: 10, achievements: new Set(['bullet_time']) });
+      const state = createMockState({ px: 410, py: 10 });
       expect(shouldActivatePrecisionBar(state)).toBe(false);
     });
 
-    it('returns false without bullet_time achievement', () => {
-      const state = createMockState({ px: 419, py: 2, achievements: new Set() });
-      expect(shouldActivatePrecisionBar(state)).toBe(false);
+    it('returns true without any achievement (no gate)', () => {
+      const state = createMockState({ px: 410, py: 2, achievements: new Set() });
+      expect(shouldActivatePrecisionBar(state)).toBe(true);
     });
 
     it('returns true when all conditions met', () => {
-      const state = createMockState({ px: 419, py: 2, achievements: new Set(['bullet_time']) });
+      const state = createMockState({ px: 415, py: 2 });
       expect(shouldActivatePrecisionBar(state)).toBe(true);
     });
 
     it('returns true at exact threshold', () => {
-      const state = createMockState({ px: 418.9, py: 4.9, achievements: new Set(['bullet_time']) });
+      const state = createMockState({ px: 409.9, py: 4.9 });
       expect(shouldActivatePrecisionBar(state)).toBe(true);
     });
   });
 
   describe('calculatePrecisionProgress', () => {
-    it('returns 0 at px=419', () => {
-      expect(calculatePrecisionProgress(419)).toBe(0);
+    it('returns 0 at px=410', () => {
+      expect(calculatePrecisionProgress(410)).toBe(0);
     });
 
-    it('returns 0.5 at px=419.5', () => {
-      expect(calculatePrecisionProgress(419.5)).toBe(0.5);
+    it('returns 0.5 at px=415', () => {
+      expect(calculatePrecisionProgress(415)).toBe(0.5);
     });
 
     it('returns 1 at px=420', () => {
       expect(calculatePrecisionProgress(420)).toBe(1);
     });
 
-    it('clamps below 419 to 0', () => {
-      expect(calculatePrecisionProgress(418)).toBe(0);
+    it('clamps below 410 to 0', () => {
+      expect(calculatePrecisionProgress(409)).toBe(0);
     });
 
     it('clamps above 420 to 1', () => {
@@ -70,12 +70,12 @@ describe('precisionBar', () => {
   });
 
   describe('calculatePrecisionTimeScale', () => {
-    it('returns 1.0 at px=419', () => {
-      expect(calculatePrecisionTimeScale(419)).toBeCloseTo(1.0);
+    it('returns 1.0 at px=410', () => {
+      expect(calculatePrecisionTimeScale(410)).toBeCloseTo(1.0);
     });
 
-    it('returns ~0.55 at px=419.5', () => {
-      expect(calculatePrecisionTimeScale(419.5)).toBeCloseTo(0.55, 1);
+    it('returns ~0.55 at px=415', () => {
+      expect(calculatePrecisionTimeScale(415)).toBeCloseTo(0.55, 1);
     });
 
     it('returns ~0.1 at px=420', () => {
@@ -105,19 +105,19 @@ describe('precisionBar', () => {
   });
 
   describe('getPbMarkerPosition', () => {
-    it('returns 0 when no PB in range', () => {
+    it('returns null when no PB in range', () => {
       expect(getPbMarkerPosition(0, 60)).toBe(null);
-      expect(getPbMarkerPosition(418, 60)).toBe(null);
+      expect(getPbMarkerPosition(409, 60)).toBe(null);
     });
 
-    it('returns correct position for PB at 419.5', () => {
-      // 419.5 is 50% between 419 and 420
-      expect(getPbMarkerPosition(419.5, 60)).toBe(30);
+    it('returns correct position for PB at 415', () => {
+      // 415 is 50% between 410 and 420
+      expect(getPbMarkerPosition(415, 60)).toBe(30);
     });
 
-    it('returns correct position for PB at 419.81', () => {
-      // 419.81 is 81% between 419 and 420
-      expect(getPbMarkerPosition(419.81, 60)).toBeCloseTo(48.6, 1);
+    it('returns correct position for PB at 418', () => {
+      // 418 is 80% between 410 and 420
+      expect(getPbMarkerPosition(418, 60)).toBeCloseTo(48, 1);
     });
 
     it('clamps PB above 420', () => {

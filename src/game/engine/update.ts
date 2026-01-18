@@ -493,7 +493,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
     }
 
     // Apply precision time scale when active
-    if (state.precisionBarActive && state.px >= 419) {
+    if (state.precisionBarActive && state.px >= 410) {
       state.precisionTimeScale = calculatePrecisionTimeScale(state.px);
     }
 
