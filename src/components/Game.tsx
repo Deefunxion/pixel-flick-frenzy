@@ -836,7 +836,7 @@ const Game = () => {
                   className={buttonClass}
                   style={{
                     ...buttonStyle,
-                    padding: '4px',
+                    padding: '2px 4px',
                   }}
                   onClick={() => {
                     resetTutorialProgress();
@@ -849,7 +849,12 @@ const Game = () => {
                   aria-label="Replay tutorial"
                   title="Replay tutorial"
                 >
-                  ?
+                  <img
+                    src={UI_ASSETS.helpIcon}
+                    alt="Help"
+                    className="h-8 object-contain"
+                    style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+                  />
                 </button>
                 <button
                   className={buttonClass}
