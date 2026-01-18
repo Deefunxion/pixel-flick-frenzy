@@ -717,32 +717,13 @@ const Game = () => {
         <div className="flex items-center justify-between w-full max-w-md px-2">
           <img src={assetPath('/assets/icons/logo.png')} alt="one more flick." className="h-8" />
           <div className="flex items-center gap-2">
-            {/* Precision control tips - with background for visibility */}
-            <div
-              className="flex flex-col gap-0.5 text-[8px] font-bold px-2 py-1 rounded"
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.85)',
-                color: '#1e3a5f',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-              }}
-            >
-              <div className="flex items-center gap-1">
-                <img src={assetPath('/assets/icons/airplane-flying.png')} alt="flying" className="w-4 h-4" />
-                <span className="text-[7px] opacity-60">TAP</span>
-                <span>FLOAT</span>
-                <span className="opacity-40">|</span>
-                <span className="text-[7px] opacity-60">HOLD</span>
-                <span>BRAKE</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <img src={assetPath('/assets/icons/airplane-landing.png')} alt="landing" className="w-4 h-4" />
-                <span className="text-[7px] opacity-60">TAP</span>
-                <span>SLIDE</span>
-                <span className="opacity-40">|</span>
-                <span className="text-[7px] opacity-60">HOLD</span>
-                <span>BRAKE</span>
-              </div>
-            </div>
+            {/* Precision control tips - hand-drawn */}
+            <img
+              src={UI_ASSETS.directions}
+              alt="Controls: TAP FLOAT | HOLD BRAKE"
+              className="h-12 object-contain"
+              style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+            />
             {profile && (
               <span className="text-xs font-mono" style={{ color: theme.highlight }}>
                 {profile.nickname}
