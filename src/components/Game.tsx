@@ -921,8 +921,13 @@ const Game = () => {
 
         {/* Hero row: LAST, LV, TARGET - primary focus */}
         <div className="w-full max-w-md flex justify-center items-end gap-6 text-center">
-          <div>
-            <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Last</p>
+          <div className="flex flex-col items-center">
+            <img
+              src={UI_ASSETS.lastLabel}
+              alt="Last"
+              className="h-5 object-contain"
+              style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+            />
             <p className="text-2xl font-bold font-mono">
               {fellOff ? (
                 <span style={{ color: theme.danger }}>FELL</span>
@@ -945,8 +950,13 @@ const Game = () => {
             <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Lv</p>
             <p className="text-2xl font-bold font-mono" style={{ color: theme.highlight }}>{zenoLevel}</p>
           </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Target</p>
+          <div className="flex flex-col items-center">
+            <img
+              src={UI_ASSETS.targetLabel}
+              alt="Target"
+              className="h-5 object-contain"
+              style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+            />
             <p className="text-xl font-bold font-mono" style={{ color: theme.accent2 }}>
               {formatScore(zenoTarget).int}<span className="text-sm opacity-60">.{formatScore(zenoTarget).dec}</span>
             </p>

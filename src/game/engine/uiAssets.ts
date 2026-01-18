@@ -17,4 +17,8 @@ export const UI_ASSETS = {
   gear: assetPath('/assets/ui/elements/transparent/15.png'),
   volumeOn: assetPath('/assets/ui/elements/transparent/16.png'),
   volumeOff: assetPath('/assets/ui/elements/transparent/17.png'),
+  // Hand-drawn labels
+  lastLabel: assetPath('/assets/ui/elements/transparent/last.png'),
+  targetLabel: assetPath('/assets/ui/elements/transparent/target.png'),
+  vsLabel: assetPath('/assets/ui/elements/transparent/vs.png'),
 };
