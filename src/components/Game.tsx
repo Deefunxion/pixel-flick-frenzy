@@ -920,8 +920,8 @@ const Game = () => {
         })()}
 
         {/* Hero row: LAST, LV, TARGET - primary focus */}
-        <div className="w-full max-w-md flex justify-center items-end gap-6 text-center">
-          <div className="flex flex-col items-center">
+        <div className="w-full max-w-md flex justify-center items-start gap-6 text-center">
+          <div className="flex flex-col items-center min-w-[80px]">
             <img
               src={UI_ASSETS.lastLabel}
               alt="Last"
@@ -940,26 +940,26 @@ const Game = () => {
                 <span style={{ color: theme.uiText, opacity: 0.4 }}>-</span>
               )}
             </p>
-            {lastDist !== null && !fellOff && (
-              <p className="text-xs font-mono" style={{ color: theme.accent2, opacity: 0.8 }}>
-                x{lastMultiplier.toFixed(1)}
-              </p>
-            )}
+            <p className="text-xs font-mono h-4" style={{ color: theme.accent2, opacity: lastDist !== null && !fellOff ? 0.8 : 0 }}>
+              x{lastMultiplier.toFixed(1)}
+            </p>
           </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide" style={{ color: theme.uiText, opacity: 0.7 }}>Lv</p>
+          <div className="flex flex-col items-center min-w-[50px]">
+            <p className="text-xs uppercase tracking-wide h-5 flex items-center" style={{ color: theme.uiText, opacity: 0.7 }}>Lv</p>
             <p className="text-2xl font-bold font-mono" style={{ color: theme.highlight }}>{zenoLevel}</p>
+            <p className="text-xs h-4">&nbsp;</p>
           </div>
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center min-w-[80px]">
             <img
               src={UI_ASSETS.targetLabel}
               alt="Target"
               className="h-5 object-contain"
               style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
             />
-            <p className="text-xl font-bold font-mono" style={{ color: theme.accent2 }}>
+            <p className="text-2xl font-bold font-mono" style={{ color: theme.accent2 }}>
               {formatScore(zenoTarget).int}<span className="text-sm opacity-60">.{formatScore(zenoTarget).dec}</span>
             </p>
+            <p className="text-xs h-4">&nbsp;</p>
           </div>
         </div>
 
