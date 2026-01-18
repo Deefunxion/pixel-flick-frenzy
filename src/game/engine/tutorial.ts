@@ -1,7 +1,7 @@
 import type { GameState, TutorialPhase } from './types';
 
-const TUTORIAL_DURATION = 2.0; // seconds
-const TUTORIAL_SLOWMO = 0.1;
+const TUTORIAL_DURATION = 4.0; // seconds
+const TUTORIAL_SLOWMO = 0.05; // 5% speed (very slow)
 
 export interface TutorialContent {
   lines: string[];
