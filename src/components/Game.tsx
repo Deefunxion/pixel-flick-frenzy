@@ -945,7 +945,7 @@ const Game = () => {
           </div>
           <div className="flex flex-col items-center min-w-[50px]">
             <img
-              src={UI_ASSETS.vsLabel}
+              src={UI_ASSETS.lvLabel}
               alt="Level"
               className="h-5 object-contain"
               style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
