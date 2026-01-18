@@ -77,6 +77,7 @@ import { noirBackgroundRenderer } from '@/game/engine/noirBackgroundRenderer';
 import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { TutorialOverlay } from './TutorialOverlay';
+import { resetTutorialProgress } from '@/game/engine/tutorial';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
 import { captureError } from '@/lib/sentry';
@@ -850,8 +851,28 @@ const Game = () => {
                 Leaderboard
               </button>
 
-              {/* Right: Stats + Sound */}
+              {/* Right: Stats + Sound + Tutorial */}
               <div className="flex items-center gap-2">
+                <button
+                  className={buttonClass}
+                  style={buttonStyle}
+                  onClick={() => {
+                    resetTutorialProgress();
+                    setState(prev => ({
+                      ...prev,
+                      tutorialState: {
+                        ...prev.tutorialState,
+                        hasSeenCharge: false,
+                        hasSeenAir: false,
+                        hasSeenSlide: false,
+                      }
+                    }));
+                  }}
+                  aria-label="Replay tutorial"
+                  title="Replay tutorial"
+                >
+                  ?
+                </button>
                 <button
                   className={buttonClass}
                   style={buttonStyle}
