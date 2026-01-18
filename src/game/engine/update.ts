@@ -32,6 +32,7 @@ import { nextWind, spawnCelebration, spawnParticles } from './state';
 import { ACHIEVEMENTS } from './achievements';
 import { updateAnimator } from './animationController';
 import { applyAirBrake, applySlideControl, applyAirFloat, decayFloatEffect } from './precision';
+import { checkTutorialTrigger, startTutorial, updateTutorial } from './tutorial';
 
 export type GameAudio = {
   startCharge: (power01: number) => void;
@@ -119,6 +120,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
   const { pressed, nowMs, theme, audio, ui } = svc;
 
   if (state.paused) return;
+
+  // Track previous vy for tutorial apex detection
+  const prevVy = state.vy;
 
   // Decay touch feedback
   if (state.touchFeedback > 0) {
@@ -214,9 +218,12 @@ export function updateFrame(state: GameState, svc: GameServices) {
   // Grid
   state.gridOffset = (state.gridOffset + 0.3) % 10;
 
-  // Flying physics (scaled by TIME_SCALE and slowMo for dramatic effects)
+  // Tutorial system - update and get slow-mo multiplier
+  const tutorialSlowMo = updateTutorial(state, 1/60);
+
+  // Flying physics (scaled by TIME_SCALE, slowMo, and tutorial for dramatic effects)
   // slowMo of 0.75 = 4x slower, 0.97 = very slow
-  const effectiveTimeScale = TIME_SCALE * (1 - state.slowMo);
+  const effectiveTimeScale = TIME_SCALE * (1 - state.slowMo) * tutorialSlowMo;
 
   if (state.flying) {
     state.launchFrame++; // Increment for launch burst effect
@@ -726,6 +733,12 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.landed = true;
       svc.scheduleReset(1200); // Slightly longer for failure animation
     }
+  }
+
+  // Tutorial system - check for triggers
+  const tutorialPhase = checkTutorialTrigger(state, prevVy);
+  if (tutorialPhase !== 'none') {
+    startTutorial(state, tutorialPhase);
   }
 
   // Update sprite animation (deltaTime ~16.67ms at 60fps)
