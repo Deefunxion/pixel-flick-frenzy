@@ -76,6 +76,7 @@ import { backgroundRenderer } from '@/game/engine/backgroundRenderer';
 import { noirBackgroundRenderer } from '@/game/engine/noirBackgroundRenderer';
 import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
+import { TutorialOverlay } from './TutorialOverlay';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
 import { captureError } from '@/lib/sentry';
@@ -781,6 +782,13 @@ const Game = () => {
               </div>
             </div>
           )}
+
+          {/* Tutorial overlay */}
+          <TutorialOverlay
+            phase={state.tutorialState.phase}
+            active={state.tutorialState.active}
+            timeRemaining={state.tutorialState.timeRemaining}
+          />
         </div>
 
 
