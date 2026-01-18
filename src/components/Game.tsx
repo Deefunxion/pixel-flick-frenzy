@@ -945,7 +945,12 @@ const Game = () => {
             </p>
           </div>
           <div className="flex flex-col items-center min-w-[50px]">
-            <p className="text-xs uppercase tracking-wide h-5 flex items-center" style={{ color: theme.uiText, opacity: 0.7 }}>Lv</p>
+            <img
+              src={UI_ASSETS.vsLabel}
+              alt="Level"
+              className="h-5 object-contain"
+              style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+            />
             <p className="text-2xl font-bold font-mono" style={{ color: theme.highlight }}>{zenoLevel}</p>
             <p className="text-xs h-4">&nbsp;</p>
           </div>
