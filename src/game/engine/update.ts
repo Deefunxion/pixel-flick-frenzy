@@ -482,37 +482,26 @@ export function updateFrame(state: GameState, svc: GameServices) {
     audio.stopEdgeWarning();
   }
 
-  // DEBUG: Log when px crosses thresholds (outside the flying/sliding check)
-  if (state.px >= 400 && state.px < 401) {
-    console.log('📍 px crossed 400:', { px: state.px.toFixed(2), flying: state.flying, sliding: state.sliding, landed: state.landed });
-  }
-
   // Precision bar activation check
   if ((state.flying || state.sliding) && !state.landed) {
     const shouldActivate = shouldActivatePrecisionBar(state);
 
-    // DEBUG: Log precision bar activation
-    if (state.px >= 405) {
-      console.log('PrecisionBar check:', {
-        px: state.px.toFixed(2),
-        flying: state.flying,
-        sliding: state.sliding,
-        landed: state.landed,
-        shouldActivate,
-        precisionBarActive: state.precisionBarActive
-      });
-    }
-
     if (shouldActivate && !state.precisionBarActive) {
-      console.log('🎯 ACTIVATING PRECISION BAR at px:', state.px.toFixed(2));
       state.precisionBarActive = true;
       state.precisionBarTriggeredThisThrow = true;
       audio.precisionDrone?.(); // Start tension drone
     }
 
-    // Apply precision time scale when active
-    if (state.precisionBarActive && state.px >= 410) {
+    // Apply precision time scale when active (only in 410-420 zone)
+    if (state.precisionBarActive && state.px >= 410 && state.px <= CLIFF_EDGE) {
       state.precisionTimeScale = calculatePrecisionTimeScale(state.px);
+    }
+
+    // Deactivate slow-mo when past cliff edge (420) - player fell off
+    if (state.px > CLIFF_EDGE && state.precisionBarActive) {
+      state.precisionTimeScale = 1; // Reset to normal speed
+      state.precisionBarActive = false;
+      audio.stopPrecisionDrone?.();
     }
 
     // Track if we passed PB
@@ -523,6 +512,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
   } else if (!state.flying && !state.sliding && state.precisionBarActive) {
     // Deactivate when not flying/sliding
     state.precisionBarActive = false;
+    state.precisionTimeScale = 1; // Reset to normal speed
     audio.stopPrecisionDrone?.();
   }
 

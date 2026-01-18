@@ -2,7 +2,48 @@
 
 All notable changes to One-More-Flick are documented in this file.
 
-## [Unreleased] - 2026-01-17
+## [Unreleased] - 2026-01-18
+
+### Added - Tutorial System
+- **Contextual Tutorials**: Speech bubble overlays that appear at key moments
+  - **Charge tutorial**: Triggers on first touch (hold to charge, drag to aim)
+  - **Air tutorial**: Triggers at flight apex (TAP = float, HOLD = brake)
+  - **Slide tutorial**: Triggers on landing (TAP = slide, HOLD = brake)
+  - 4-second duration with 5% game speed (very slow-mo for reading)
+  - Progress bar shows remaining time
+  - localStorage persistence (`tutorial_*_seen` keys)
+  - Replay button (?) to reset all tutorials
+
+### Added - Air Float Mechanic
+- **Tap = Float**: During flight, tapping now reduces gravity (50% for 0.3s) instead of braking
+  - Costs 5 stamina (scaled by edge proximity)
+  - Creates "floaty" feel for precision landing
+- **Hold = Brake**: Still reduces velocity for emergency stops
+
+### Added - Hand-Drawn UI Assets
+- **New UI asset system**: `src/game/engine/uiAssets.ts` with centralized asset paths
+- **Replaced text labels with hand-drawn images**:
+  - LAST, TARGET, VS (level) labels in hero row
+  - SCORE, BEST labels in secondary row
+  - Leaderboard button
+  - Stats button
+  - Help/Tutorial (?) button
+  - Volume on/off icons
+  - Control directions (TAP FLOAT | HOLD BRAKE)
+- **Noir theme support**: `filter: invert(1)` for dark mode compatibility
+- **Assets location**: `public/assets/ui/elements/transparent/`
+
+### Added - Precision Bar System
+- **Visual precision indicator**: Animated bar showing landing accuracy
+  - Appears after successful landing
+  - Color-coded segments (green → yellow → red)
+  - Particle effects on high precision
+- **Audio feedback**: Tension drone, close-call sounds, personal best ding
+- **New files**: `precisionBar.ts`, `precisionRender.ts`
+
+### Changed
+- **Top button row reorganized**: [Help + Sound] | [Leaderboard] | [Stats]
+- **Control tips**: Replaced complex HTML with single hand-drawn image
 
 ### Fixed
 - **First-throw slow-motion frustration**: New players experienced 30+ second slow-motion on their first throw, making the game feel broken
