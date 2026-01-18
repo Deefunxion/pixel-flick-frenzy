@@ -853,12 +853,18 @@ const Game = () => {
                 className={buttonClass}
                 style={{
                   ...buttonStyle,
+                  padding: '4px 8px',
                   borderColor: theme.highlight,
                 }}
                 onClick={() => setShowLeaderboard(true)}
                 aria-label="View leaderboard"
               >
-                Leaderboard
+                <img
+                  src={UI_ASSETS.leaderboard}
+                  alt="Leaderboard"
+                  className="h-6 object-contain"
+                  style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+                />
               </button>
 
               {/* Right: Stats + Sound + Tutorial */}
