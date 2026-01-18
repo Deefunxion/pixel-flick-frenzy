@@ -125,4 +125,7 @@ export interface GameState {
   // Precision mechanics - input state tracking
   precisionInput: PrecisionInput;
   staminaDeniedShake: number; // Frames of shake remaining
+  // Air float (gravity reduction on tap)
+  gravityMultiplier: number;
+  floatDuration: number;
 }
