@@ -482,11 +482,29 @@ export function updateFrame(state: GameState, svc: GameServices) {
     audio.stopEdgeWarning();
   }
 
+  // DEBUG: Log when px crosses thresholds (outside the flying/sliding check)
+  if (state.px >= 400 && state.px < 401) {
+    console.log('📍 px crossed 400:', { px: state.px.toFixed(2), flying: state.flying, sliding: state.sliding, landed: state.landed });
+  }
+
   // Precision bar activation check
   if ((state.flying || state.sliding) && !state.landed) {
     const shouldActivate = shouldActivatePrecisionBar(state);
 
+    // DEBUG: Log precision bar activation
+    if (state.px >= 405) {
+      console.log('PrecisionBar check:', {
+        px: state.px.toFixed(2),
+        flying: state.flying,
+        sliding: state.sliding,
+        landed: state.landed,
+        shouldActivate,
+        precisionBarActive: state.precisionBarActive
+      });
+    }
+
     if (shouldActivate && !state.precisionBarActive) {
+      console.log('🎯 ACTIVATING PRECISION BAR at px:', state.px.toFixed(2));
       state.precisionBarActive = true;
       state.precisionBarTriggeredThisThrow = true;
       audio.precisionDrone?.(); // Start tension drone
