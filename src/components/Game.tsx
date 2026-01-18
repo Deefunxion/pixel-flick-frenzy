@@ -706,10 +706,10 @@ const Game = () => {
               <div className="flex items-center gap-1">
                 <img src={assetPath('/assets/icons/airplane-flying.png')} alt="flying" className="w-4 h-4" />
                 <span className="text-[7px] opacity-60">TAP</span>
-                <span>BRAKE</span>
+                <span>FLOAT</span>
                 <span className="opacity-40">|</span>
                 <span className="text-[7px] opacity-60">HOLD</span>
-                <span className="text-[6px] tracking-tighter">HARD BRAKE</span>
+                <span>BRAKE</span>
               </div>
               <div className="flex items-center gap-1">
                 <img src={assetPath('/assets/icons/airplane-landing.png')} alt="landing" className="w-4 h-4" />
