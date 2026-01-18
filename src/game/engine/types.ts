@@ -47,6 +47,17 @@ export interface PrecisionInput {
   lastPressedState: boolean;   // Previous frame's pressed state
 }
 
+export type TutorialPhase = 'none' | 'idle' | 'charge' | 'air' | 'slide';
+
+export interface TutorialState {
+  phase: TutorialPhase;
+  active: boolean;
+  timeRemaining: number; // seconds
+  hasSeenCharge: boolean;
+  hasSeenAir: boolean;
+  hasSeenSlide: boolean;
+}
+
 export interface GameState {
   px: number;
   py: number;
@@ -125,4 +136,9 @@ export interface GameState {
   // Precision mechanics - input state tracking
   precisionInput: PrecisionInput;
   staminaDeniedShake: number; // Frames of shake remaining
+  // Air float (gravity reduction on tap)
+  gravityMultiplier: number;
+  floatDuration: number;
+  // Tutorial system
+  tutorialState: TutorialState;
 }

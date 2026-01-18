@@ -13,8 +13,19 @@ import {
   loadStringSet,
   todayLocalISODate,
 } from '@/game/storage';
-import type { GameState, Star } from './types';
+import type { GameState, Star, TutorialState } from './types';
 import { ParticleSystem } from './particles';
+
+function loadTutorialProgress(): Pick<TutorialState, 'hasSeenCharge' | 'hasSeenAir' | 'hasSeenSlide'> {
+  if (typeof window === 'undefined') {
+    return { hasSeenCharge: false, hasSeenAir: false, hasSeenSlide: false };
+  }
+  return {
+    hasSeenCharge: localStorage.getItem('tutorial_charge_seen') === 'true',
+    hasSeenAir: localStorage.getItem('tutorial_air_seen') === 'true',
+    hasSeenSlide: localStorage.getItem('tutorial_slide_seen') === 'true',
+  };
+}
 
 export function createInitialState(params: { reduceFx: boolean }): GameState {
   const best = loadNumber('best', 0, 'omf_best');
@@ -105,6 +116,14 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
       lastPressedState: false,
     },
     staminaDeniedShake: 0,
+    gravityMultiplier: 1,
+    floatDuration: 0,
+    tutorialState: {
+      phase: 'none',
+      active: false,
+      timeRemaining: 0,
+      ...loadTutorialProgress(),
+    },
   };
 }
 
@@ -147,6 +166,8 @@ export function resetPhysics(state: GameState) {
     lastPressedState: false,
   };
   state.staminaDeniedShake = 0;
+  state.gravityMultiplier = 1;
+  state.floatDuration = 0;
   if (state.particleSystem) {
     state.particleSystem.clear();
   }

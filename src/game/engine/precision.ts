@@ -10,6 +10,11 @@ const AIR_BRAKE_TAP_BASE_COST = 5;      // Base cost, scaled by edge multiplier
 const AIR_BRAKE_HOLD_REDUCTION = 0.97;  // 3% velocity reduction per frame
 const AIR_BRAKE_HOLD_COST_PER_SEC = 15; // Base cost/sec, scaled by edge multiplier
 
+// Air float constants (gravity reduction on tap)
+const AIR_FLOAT_GRAVITY_MULT = 0.5;
+const AIR_FLOAT_DURATION = 0.3;
+const AIR_FLOAT_BASE_COST = 5;
+
 // Slide control constants
 const SLIDE_EXTEND_VELOCITY = 0.15;
 const SLIDE_EXTEND_BASE_COST = 8;
@@ -115,4 +120,38 @@ export function applySlideControl(
   }
   state.stamina -= frameCost;
   return { applied: true, denied: false, frictionMultiplier: SLIDE_BRAKE_FRICTION_MULT };
+}
+
+/**
+ * Apply air float during flight phase (replaces air brake tap).
+ * Reduces gravity to 50% for 0.3 seconds.
+ * Costs 5 * edgeMultiplier stamina.
+ */
+export function applyAirFloat(state: GameState): PrecisionResult {
+  const edgeMultiplier = calculateEdgeMultiplier(state.px);
+  const cost = Math.ceil(AIR_FLOAT_BASE_COST * edgeMultiplier);
+
+  if (state.stamina < cost) {
+    return { applied: false, denied: true };
+  }
+
+  state.gravityMultiplier = AIR_FLOAT_GRAVITY_MULT;
+  state.floatDuration = AIR_FLOAT_DURATION;
+  state.stamina -= cost;
+
+  return { applied: true, denied: false };
+}
+
+/**
+ * Decay the float effect over time.
+ * Called every frame during flight.
+ */
+export function decayFloatEffect(state: GameState, deltaTime: number): void {
+  if (state.floatDuration > 0) {
+    state.floatDuration -= deltaTime;
+    if (state.floatDuration <= 0) {
+      state.floatDuration = 0;
+      state.gravityMultiplier = 1;
+    }
+  }
 }
