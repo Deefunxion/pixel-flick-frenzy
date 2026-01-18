@@ -20,6 +20,12 @@ import {
   startAmbientFile as startAmbientFileInternal,
   stopAmbientFile as stopAmbientFileInternal,
   updateAmbientVolume as updateAmbientVolumeInternal,
+  // Precision bar sounds
+  startPrecisionDroneFile,
+  stopPrecisionDroneFile,
+  playPbDingFile,
+  playNewRecordFile,
+  playCloseCallFile,
 } from './audioFiles';
 
 export type AudioSettings = {
@@ -659,4 +665,67 @@ export function stopAmbient(): void {
  */
 export function updateAmbient(settings: AudioSettings): void {
   updateAmbientVolumeInternal(settings);
+}
+
+// ============================================
+// PRECISION BAR SOUNDS
+// ============================================
+
+/**
+ * Start precision tension drone (loops while in precision zone)
+ */
+export function startPrecisionDrone(refs: AudioRefs, settings: AudioSettings): void {
+  if (areAudioFilesLoaded()) {
+    startPrecisionDroneFile(refs, settings);
+  }
+  // No synth fallback for drone
+}
+
+/**
+ * Stop precision tension drone
+ */
+export function stopPrecisionDrone(): void {
+  stopPrecisionDroneFile();
+}
+
+/**
+ * Play PB ding sound
+ */
+export function playPbDing(refs: AudioRefs, settings: AudioSettings): void {
+  if (areAudioFilesLoaded()) {
+    playPbDingFile(refs, settings);
+  } else {
+    // Synth fallback - ascending ding
+    playTone(refs, settings, 880, 0.08, 'sine', 0.06);
+    setTimeout(() => playTone(refs, settings, 1100, 0.1, 'sine', 0.08), 80);
+  }
+}
+
+/**
+ * Play new record jingle
+ */
+export function playNewRecord(refs: AudioRefs, settings: AudioSettings): void {
+  if (areAudioFilesLoaded()) {
+    playNewRecordFile(refs, settings);
+  } else {
+    // Synth fallback - celebratory arpeggio
+    playTone(refs, settings, 523, 0.1, 'sine', 0.06);
+    setTimeout(() => playTone(refs, settings, 659, 0.1, 'sine', 0.06), 100);
+    setTimeout(() => playTone(refs, settings, 784, 0.1, 'sine', 0.06), 200);
+    setTimeout(() => playTone(refs, settings, 1047, 0.15, 'sine', 0.08), 300);
+  }
+}
+
+/**
+ * Play close call sound (survived 419.99+)
+ */
+export function playCloseCall(refs: AudioRefs, settings: AudioSettings): void {
+  if (areAudioFilesLoaded()) {
+    playCloseCallFile(refs, settings);
+  } else {
+    // Synth fallback - dramatic chord
+    playTone(refs, settings, 440, 0.15, 'sine', 0.05);
+    playTone(refs, settings, 554, 0.15, 'sine', 0.05);
+    playTone(refs, settings, 659, 0.15, 'sine', 0.05);
+  }
 }
