@@ -1,0 +1,127 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  shouldActivatePrecisionBar,
+  calculatePrecisionProgress,
+  calculatePrecisionTimeScale,
+  getDynamicDecimalPrecision,
+  getPbMarkerPosition,
+} from '../precisionBar';
+import type { GameState } from '../types';
+
+// Minimal mock state
+function createMockState(overrides: Partial<GameState> = {}): GameState {
+  return {
+    px: 0,
+    py: 0,
+    best: 0,
+    achievements: new Set<string>(),
+    ...overrides,
+  } as GameState;
+}
+
+describe('precisionBar', () => {
+  describe('shouldActivatePrecisionBar', () => {
+    it('returns false when px < 418.9', () => {
+      const state = createMockState({ px: 418, py: 2, achievements: new Set(['bullet_time']) });
+      expect(shouldActivatePrecisionBar(state)).toBe(false);
+    });
+
+    it('returns false when py >= 5', () => {
+      const state = createMockState({ px: 419, py: 10, achievements: new Set(['bullet_time']) });
+      expect(shouldActivatePrecisionBar(state)).toBe(false);
+    });
+
+    it('returns false without bullet_time achievement', () => {
+      const state = createMockState({ px: 419, py: 2, achievements: new Set() });
+      expect(shouldActivatePrecisionBar(state)).toBe(false);
+    });
+
+    it('returns true when all conditions met', () => {
+      const state = createMockState({ px: 419, py: 2, achievements: new Set(['bullet_time']) });
+      expect(shouldActivatePrecisionBar(state)).toBe(true);
+    });
+
+    it('returns true at exact threshold', () => {
+      const state = createMockState({ px: 418.9, py: 4.9, achievements: new Set(['bullet_time']) });
+      expect(shouldActivatePrecisionBar(state)).toBe(true);
+    });
+  });
+
+  describe('calculatePrecisionProgress', () => {
+    it('returns 0 at px=419', () => {
+      expect(calculatePrecisionProgress(419)).toBe(0);
+    });
+
+    it('returns 0.5 at px=419.5', () => {
+      expect(calculatePrecisionProgress(419.5)).toBe(0.5);
+    });
+
+    it('returns 1 at px=420', () => {
+      expect(calculatePrecisionProgress(420)).toBe(1);
+    });
+
+    it('clamps below 419 to 0', () => {
+      expect(calculatePrecisionProgress(418)).toBe(0);
+    });
+
+    it('clamps above 420 to 1', () => {
+      expect(calculatePrecisionProgress(421)).toBe(1);
+    });
+  });
+
+  describe('calculatePrecisionTimeScale', () => {
+    it('returns 1.0 at px=419', () => {
+      expect(calculatePrecisionTimeScale(419)).toBeCloseTo(1.0);
+    });
+
+    it('returns ~0.55 at px=419.5', () => {
+      expect(calculatePrecisionTimeScale(419.5)).toBeCloseTo(0.55, 1);
+    });
+
+    it('returns ~0.1 at px=420', () => {
+      expect(calculatePrecisionTimeScale(420)).toBeCloseTo(0.1, 1);
+    });
+  });
+
+  describe('getDynamicDecimalPrecision', () => {
+    it('returns 1 decimal for 419.0-419.89', () => {
+      expect(getDynamicDecimalPrecision(419.5)).toBe(1);
+      expect(getDynamicDecimalPrecision(419.89)).toBe(1);
+    });
+
+    it('returns 2 decimals for 419.9-419.989', () => {
+      expect(getDynamicDecimalPrecision(419.9)).toBe(2);
+      expect(getDynamicDecimalPrecision(419.95)).toBe(2);
+    });
+
+    it('returns 3 decimals for 419.99-419.9989', () => {
+      expect(getDynamicDecimalPrecision(419.99)).toBe(3);
+      expect(getDynamicDecimalPrecision(419.995)).toBe(3);
+    });
+
+    it('returns up to 8 decimals for extreme precision', () => {
+      expect(getDynamicDecimalPrecision(419.9999999)).toBe(8);
+    });
+  });
+
+  describe('getPbMarkerPosition', () => {
+    it('returns 0 when no PB in range', () => {
+      expect(getPbMarkerPosition(0, 60)).toBe(null);
+      expect(getPbMarkerPosition(418, 60)).toBe(null);
+    });
+
+    it('returns correct position for PB at 419.5', () => {
+      // 419.5 is 50% between 419 and 420
+      expect(getPbMarkerPosition(419.5, 60)).toBe(30);
+    });
+
+    it('returns correct position for PB at 419.81', () => {
+      // 419.81 is 81% between 419 and 420
+      expect(getPbMarkerPosition(419.81, 60)).toBeCloseTo(48.6, 1);
+    });
+
+    it('clamps PB above 420', () => {
+      expect(getPbMarkerPosition(420.5, 60)).toBe(60);
+    });
+  });
+});
