@@ -141,3 +141,17 @@ export function applyAirFloat(state: GameState): PrecisionResult {
 
   return { applied: true, denied: false };
 }
+
+/**
+ * Decay the float effect over time.
+ * Called every frame during flight.
+ */
+export function decayFloatEffect(state: GameState, deltaTime: number): void {
+  if (state.floatDuration > 0) {
+    state.floatDuration -= deltaTime;
+    if (state.floatDuration <= 0) {
+      state.floatDuration = 0;
+      state.gravityMultiplier = 1;
+    }
+  }
+}

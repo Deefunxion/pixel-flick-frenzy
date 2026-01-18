@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyAirFloat } from '../precision';
+import { applyAirFloat, decayFloatEffect } from '../precision';
 import { createInitialState } from '../state';
 import { calculateEdgeMultiplier } from '../precision';
 
@@ -60,6 +60,32 @@ describe('Air Float (Gravity Reduction)', () => {
       applyAirFloat(state);
       expect(state.gravityMultiplier).toBe(0.5); // Still 0.5, not 0.25
       expect(state.floatDuration).toBe(0.3); // Reset to 0.3
+    });
+  });
+
+  describe('Gravity Multiplier Decay', () => {
+    it('should decay floatDuration over time', () => {
+      const state = createInitialState({ reduceFx: false });
+      state.gravityMultiplier = 0.5;
+      state.floatDuration = 0.3;
+
+      // Simulate 0.1 seconds passing
+      decayFloatEffect(state, 0.1);
+
+      expect(state.floatDuration).toBeCloseTo(0.2);
+      expect(state.gravityMultiplier).toBe(0.5); // Still active
+    });
+
+    it('should reset gravityMultiplier to 1 when duration expires', () => {
+      const state = createInitialState({ reduceFx: false });
+      state.gravityMultiplier = 0.5;
+      state.floatDuration = 0.1;
+
+      // Simulate 0.15 seconds passing (more than remaining)
+      decayFloatEffect(state, 0.15);
+
+      expect(state.floatDuration).toBe(0);
+      expect(state.gravityMultiplier).toBe(1);
     });
   });
 });
