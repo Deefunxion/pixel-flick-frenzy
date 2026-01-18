@@ -103,7 +103,7 @@ export function drawPrecisionBar(
 }
 
 /**
- * Draw "Almost!" overlay when falling off in precision zone.
+ * Draw "Almost!" overlay on successful landing showing distance from target.
  */
 export function drawPrecisionFallOverlay(
   ctx: CanvasRenderingContext2D,
@@ -113,7 +113,12 @@ export function drawPrecisionFallOverlay(
   theme: Theme,
   nowMs: number
 ): void {
-  if (!state.fellOff || state.lastValidPx < 410) return;
+  // Only show on successful landing (not fell off, and has a valid last distance)
+  if (state.fellOff || state.lastDist === null) return;
+
+  // Only show if didn't reach target yet
+  const distanceFromTarget = state.zenoTarget - state.px;
+  if (distanceFromTarget <= 0) return; // Reached or passed target, no "almost"
 
   const centerX = W / 2;
   const centerY = H / 2 - 20;
@@ -122,61 +127,66 @@ export function drawPrecisionFallOverlay(
   ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
   ctx.fillRect(0, 0, W, H);
 
-  // "ALMOST!" text
+  // "ALMOST!" text with bounce animation
   const bounce = Math.sin(nowMs / 150) * 3;
   ctx.fillStyle = theme.highlight;
   ctx.font = 'bold 20px "Comic Sans MS", cursive, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('ALMOST!', centerX, centerY - 20 + bounce);
 
-  // Mini precision bar showing final position
-  const barWidth = 80;
+  // Distance from target display
+  const barWidth = 100;
   const barHeight = 10;
   const barX = centerX - barWidth / 2;
   const barY = centerY;
+
+  // Progress bar showing how close to target
+  // Full bar = reached target, empty = far from target
+  const maxDistance = 50; // Max distance we show on bar
+  const progress = Math.max(0, 1 - (distanceFromTarget / maxDistance));
+  const fillWidth = progress * barWidth;
 
   // Background
   ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
   ctx.fillRect(barX, barY, barWidth, barHeight);
 
-  // Fill to last valid position
-  const progress = Math.min(1, (state.lastValidPx - 419) / 1);
-  const fillWidth = progress * barWidth;
-  ctx.fillStyle = getPrecisionBarColor(state.lastValidPx);
+  // Fill - color based on how close
+  const fillColor = distanceFromTarget < 5 ? theme.highlight :
+                    distanceFromTarget < 15 ? '#FFA500' : theme.accent3;
+  ctx.fillStyle = fillColor;
   ctx.fillRect(barX, barY, fillWidth, barHeight);
 
-  // PB marker if in range
-  const pbPos = getPbMarkerPosition(state.best, barWidth);
-  if (pbPos !== null) {
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(barX + pbPos, barY);
-    ctx.lineTo(barX + pbPos, barY + barHeight);
-    ctx.stroke();
-  }
+  // Target marker at the end
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(barX + barWidth - 1, barY);
+  ctx.lineTo(barX + barWidth - 1, barY + barHeight);
+  ctx.stroke();
 
   // Border
   ctx.strokeStyle = theme.accent3;
   ctx.lineWidth = 1;
   ctx.strokeRect(barX, barY, barWidth, barHeight);
 
-  // Score text
+  // Distance text
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = 'bold 10px monospace';
+  ctx.font = 'bold 12px monospace';
   ctx.textAlign = 'center';
-  ctx.fillText(state.lastValidPx.toFixed(4), centerX, barY + barHeight + 15);
+  ctx.fillText(`${distanceFromTarget.toFixed(2)} to target`, centerX, barY + barHeight + 18);
 
   // Contextual message
   let message = '';
-  if (state.lastValidPx >= 419.99) {
+  if (distanceFromTarget < 2) {
     message = 'So close!';
+  } else if (distanceFromTarget < 10) {
+    message = 'Almost there!';
   } else {
-    message = 'Keep practicing!';
+    message = 'Keep going!';
   }
   ctx.fillStyle = theme.accent3;
   ctx.font = '10px sans-serif';
-  ctx.fillText(message, centerX, barY + barHeight + 30);
+  ctx.fillText(message, centerX, barY + barHeight + 35);
 }
 
 /**
