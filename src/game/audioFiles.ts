@@ -22,6 +22,11 @@ export const AUDIO_FILES = {
   lateHold: assetPath('/assets/audio/game/late_hold.wav'),            // Hold brake (air/ground)
   lateHold2: assetPath('/assets/audio/game/late_hold2.wav'),          // Alternate hold sound
   backgroundAmbient: assetPath('/assets/audio/game/background-ambient.wav'), // Background ambient loop
+  // Precision bar sounds
+  tensionDrone: assetPath('/assets/audio/precision/tension-drone.ogg'),
+  pbDing: assetPath('/assets/audio/precision/pb-ding.ogg'),
+  newRecord: assetPath('/assets/audio/precision/new-record.ogg'),
+  closeCall: assetPath('/assets/audio/precision/close-call.ogg'),
 } as const;
 
 export type AudioFileName = keyof typeof AUDIO_FILES;
@@ -428,5 +433,88 @@ export function stopAmbientFile(): void {
 export function updateAmbientVolume(settings: AudioSettingsLike): void {
   if (ambientGainNode) {
     ambientGainNode.gain.value = settings.muted ? 0 : 0.15 * settings.volume;
+  }
+}
+
+// ============================================
+// PRECISION BAR SOUNDS (file-based)
+// ============================================
+
+let precisionDroneSource: AudioBufferSourceNode | null = null;
+let precisionDroneGainNode: GainNode | null = null;
+
+/**
+ * Start precision tension drone (loops while in precision zone)
+ */
+export function startPrecisionDroneFile(refs: AudioRefsLike, settings: AudioSettingsLike): void {
+  stopPrecisionDroneFile();
+
+  const buffer = audioBuffers.get('tensionDrone');
+  if (!buffer || settings.muted || settings.volume <= 0) return;
+
+  try {
+    const ctx = getContext(refs);
+    precisionDroneSource = ctx.createBufferSource();
+    precisionDroneSource.buffer = buffer;
+    precisionDroneSource.loop = true;
+
+    precisionDroneGainNode = ctx.createGain();
+    precisionDroneGainNode.gain.value = 0.3 * settings.volume;
+
+    precisionDroneSource.connect(precisionDroneGainNode);
+    precisionDroneGainNode.connect(ctx.destination);
+    precisionDroneSource.start(0);
+
+    precisionDroneSource.onended = () => {
+      precisionDroneSource = null;
+      precisionDroneGainNode = null;
+    };
+  } catch (err) {
+    console.warn('[AudioFiles] Error starting precision drone:', err);
+  }
+}
+
+/**
+ * Stop precision tension drone
+ */
+export function stopPrecisionDroneFile(): void {
+  if (precisionDroneSource) {
+    try {
+      precisionDroneSource.stop();
+    } catch {
+      // Already stopped
+    }
+    precisionDroneSource = null;
+  }
+  precisionDroneGainNode = null;
+}
+
+/**
+ * Play PB ding sound
+ */
+export function playPbDingFile(refs: AudioRefsLike, settings: AudioSettingsLike): void {
+  const buffer = audioBuffers.get('pbDing');
+  if (buffer) {
+    playBuffer(refs, settings, buffer, 0.6);
+  }
+}
+
+/**
+ * Play new record jingle
+ */
+export function playNewRecordFile(refs: AudioRefsLike, settings: AudioSettingsLike): void {
+  const buffer = audioBuffers.get('newRecord');
+  if (buffer) {
+    playBuffer(refs, settings, buffer, 0.7);
+  }
+}
+
+/**
+ * Play close call sound (survived 419.99+)
+ */
+export function playCloseCallFile(refs: AudioRefsLike, settings: AudioSettingsLike): void {
+  const buffer = audioBuffers.get('closeCall');
+  if (buffer) {
+    playBuffer(refs, settings, buffer, 0.6);
   }
 }

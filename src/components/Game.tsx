@@ -58,6 +58,12 @@ import {
   startAmbient,
   stopAmbient,
   updateAmbient,
+  // Precision bar sounds
+  startPrecisionDrone,
+  stopPrecisionDrone,
+  playPbDing,
+  playNewRecord,
+  playCloseCall,
   type AudioRefs,
   type AudioSettings,
   type AudioState,
@@ -447,6 +453,12 @@ const Game = () => {
       slideBrake: () => playSlideBrake(audioRefs.current, audioSettingsRef.current),
       staminaLow: () => playStaminaLow(audioRefs.current, audioSettingsRef.current),
       actionDenied: () => playActionDenied(audioRefs.current, audioSettingsRef.current),
+      // Precision bar sounds
+      precisionDrone: () => startPrecisionDrone(audioRefs.current, audioSettingsRef.current),
+      stopPrecisionDrone: () => stopPrecisionDrone(),
+      pbDing: () => playPbDing(audioRefs.current, audioSettingsRef.current),
+      newRecordJingle: () => playNewRecord(audioRefs.current, audioSettingsRef.current),
+      closeCall: () => playCloseCall(audioRefs.current, audioSettingsRef.current),
     };
 
     const scheduleReset = (ms: number) => {
@@ -776,6 +788,7 @@ const Game = () => {
 
           {/* Tutorial overlay */}
           <TutorialOverlay
+
             phase={tutorialPhase}
             active={tutorialActive}
             timeRemaining={tutorialTimeRemaining}
