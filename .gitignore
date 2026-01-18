@@ -689,3 +689,17 @@ public/assets/audio/Shapeforms Audio Free Sound Effects/Shapeforms Audio Free So
 
 # Development assets (audio packs, sprite sources)
 dev-assets/
+
+# Python virtual environment
+.venv/
+
+# Firebase cache
+.firebase/
+
+# Screenshots in root
+Screenshot*.png
+
+# UI asset extraction temp files
+public/assets/ui/elements/element_*.png
+public/assets/ui/elements/manifest.txt
+public/assets/ui/elements/selection_ui_assets/

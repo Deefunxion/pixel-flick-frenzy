@@ -265,14 +265,17 @@ export class BackgroundRenderer {
   }
 
   private drawTerrain(ctx: CanvasRenderingContext2D): void {
-    const groundY = H - 20;
+    const groundY = H - 19;
+
+    // Offset to align cliff tip with physics edge (CLIFF_EDGE = 420)
+    const TERRAIN_OFFSET_X = -50; // TODO: adjust after visual testing
 
     // Draw terrain ground strip
     const groundImg = assetLoader.getImage(BACKGROUND_ASSETS.terrain.ground);
     if (groundImg) {
       const w = ASSET_DIMENSIONS.terrainGround.width * ASSET_SCALE;
       const h = ASSET_DIMENSIONS.terrainGround.height * ASSET_SCALE;
-      ctx.drawImage(groundImg, 0, groundY - h + 20, w, h);
+      ctx.drawImage(groundImg, TERRAIN_OFFSET_X, groundY - h + 28, w, h);
     }
 
     // Draw cliff edge detail
@@ -281,7 +284,7 @@ export class BackgroundRenderer {
       const w = ASSET_DIMENSIONS.cliffEdge.width * ASSET_SCALE;
       const h = ASSET_DIMENSIONS.cliffEdge.height * ASSET_SCALE;
       // Position cliff edge at CLIFF_EDGE x coordinate
-      ctx.drawImage(cliffImg, CLIFF_EDGE - w * 0.3, groundY - h * 0.3, w, h);
+      ctx.drawImage(cliffImg, CLIFF_EDGE - w * 0.3 + TERRAIN_OFFSET_X, groundY - h * 0.18, w, h);
     }
   }
 
