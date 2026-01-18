@@ -829,52 +829,17 @@ const Game = () => {
             : 'rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 hover:opacity-90 active:translate-y-px transition-all';
 
           return (
-            <div className="w-full max-w-md flex items-center justify-between gap-2 text-xs px-2" style={{ color: theme.uiText }}>
-              {/* Theme toggle removed - Noir is early-stage
-              <button
-                className={buttonClass}
-                style={{
-                  ...buttonStyle,
-                  borderColor: theme.accent1,
-                }}
-                onClick={() => {
-                  const currentIndex = THEME_IDS.indexOf(themeId);
-                  const nextIndex = (currentIndex + 1) % THEME_IDS.length;
-                  setThemeId(THEME_IDS[nextIndex]);
-                }}
-                aria-label="Switch theme"
-              >
-                {isNoir ? 'Noir' : 'Flipbook'}
-              </button>
-              */}
-
-              {/* Leaderboard */}
-              <button
-                className={buttonClass}
-                style={{
-                  ...buttonStyle,
-                  padding: '2px 4px',
-                  borderColor: theme.highlight,
-                }}
-                onClick={() => setShowLeaderboard(true)}
-                aria-label="View leaderboard"
-              >
-                <img
-                  src={UI_ASSETS.leaderboard}
-                  alt="Leaderboard"
-                  className="h-8 object-contain"
-                  style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
-                />
-              </button>
-
-              {/* Right: Stats + Sound + Tutorial */}
-              <div className="flex items-center gap-2">
+            <div className="w-full max-w-md flex items-center justify-center gap-3 text-xs px-2" style={{ color: theme.uiText }}>
+              {/* Left: Tutorial + Sound */}
+              <div className="flex items-center gap-1">
                 <button
                   className={buttonClass}
-                  style={buttonStyle}
+                  style={{
+                    ...buttonStyle,
+                    padding: '4px',
+                  }}
                   onClick={() => {
                     resetTutorialProgress();
-                    // Reset tutorial flags in game state
                     if (stateRef.current) {
                       stateRef.current.tutorialState.hasSeenCharge = false;
                       stateRef.current.tutorialState.hasSeenAir = false;
@@ -885,14 +850,6 @@ const Game = () => {
                   title="Replay tutorial"
                 >
                   ?
-                </button>
-                <button
-                  className={buttonClass}
-                  style={buttonStyle}
-                  onClick={() => setShowStats(true)}
-                  aria-label="View stats"
-                >
-                  Stats
                 </button>
                 <button
                   className={buttonClass}
@@ -921,6 +878,43 @@ const Game = () => {
                   />
                 </button>
               </div>
+
+              {/* Center: Leaderboard */}
+              <button
+                className={buttonClass}
+                style={{
+                  ...buttonStyle,
+                  padding: '2px 4px',
+                  borderColor: theme.highlight,
+                }}
+                onClick={() => setShowLeaderboard(true)}
+                aria-label="View leaderboard"
+              >
+                <img
+                  src={UI_ASSETS.leaderboard}
+                  alt="Leaderboard"
+                  className="h-8 object-contain"
+                  style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+                />
+              </button>
+
+              {/* Right: Stats */}
+              <button
+                className={buttonClass}
+                style={{
+                  ...buttonStyle,
+                  padding: '2px 4px',
+                }}
+                onClick={() => setShowStats(true)}
+                aria-label="View stats"
+              >
+                <img
+                  src={UI_ASSETS.statsLabel}
+                  alt="Stats"
+                  className="h-8 object-contain"
+                  style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
+                />
+              </button>
             </div>
           );
         })()}

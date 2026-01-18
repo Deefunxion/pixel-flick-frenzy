@@ -21,4 +21,5 @@ export const UI_ASSETS = {
   lastLabel: assetPath('/assets/ui/elements/transparent/last.png'),
   targetLabel: assetPath('/assets/ui/elements/transparent/target.png'),
   vsLabel: assetPath('/assets/ui/elements/transparent/vs.png'),
+  statsLabel: assetPath('/assets/ui/elements/transparent/stats.png'),
 };
