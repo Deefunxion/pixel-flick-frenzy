@@ -821,7 +821,7 @@ const Game = () => {
 
           return (
             <div className="w-full max-w-md flex items-center justify-between gap-2 text-xs px-2" style={{ color: theme.uiText }}>
-              {/* Left: Theme picker */}
+              {/* Theme toggle removed - Noir is early-stage
               <button
                 className={buttonClass}
                 style={{
@@ -837,8 +837,9 @@ const Game = () => {
               >
                 {isNoir ? 'Noir' : 'Flipbook'}
               </button>
+              */}
 
-              {/* Center: Leaderboard */}
+              {/* Leaderboard */}
               <button
                 className={buttonClass}
                 style={{
