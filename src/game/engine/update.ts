@@ -66,6 +66,12 @@ export type GameAudio = {
   slideBrake?: () => void;
   staminaLow?: () => void;
   actionDenied?: () => void;
+  // Precision bar sounds
+  precisionDrone?: () => void;
+  stopPrecisionDrone?: () => void;
+  pbDing?: () => void;
+  newRecordJingle?: () => void;
+  closeCall?: () => void;
 };
 
 export type GameUI = {
@@ -483,6 +489,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
     if (shouldActivate && !state.precisionBarActive) {
       state.precisionBarActive = true;
       state.precisionBarTriggeredThisThrow = true;
+      audio.precisionDrone?.(); // Start tension drone
     }
 
     // Apply precision time scale when active
@@ -493,8 +500,12 @@ export function updateFrame(state: GameState, svc: GameServices) {
     // Track if we passed PB
     if (state.precisionBarActive && !state.passedPbThisThrow && hasPassedPb(state.px, state.best)) {
       state.passedPbThisThrow = true;
-      // Audio trigger will be added in Task 6
+      audio.pbDing?.(); // Play PB ding
     }
+  } else if (!state.flying && !state.sliding && state.precisionBarActive) {
+    // Deactivate when not flying/sliding
+    state.precisionBarActive = false;
+    audio.stopPrecisionDrone?.();
   }
 
   if ((state.flying || state.sliding) && state.px > 50) {

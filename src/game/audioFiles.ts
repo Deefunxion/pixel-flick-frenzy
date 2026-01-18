@@ -22,6 +22,11 @@ export const AUDIO_FILES = {
   lateHold: assetPath('/assets/audio/game/late_hold.wav'),            // Hold brake (air/ground)
   lateHold2: assetPath('/assets/audio/game/late_hold2.wav'),          // Alternate hold sound
   backgroundAmbient: assetPath('/assets/audio/game/background-ambient.wav'), // Background ambient loop
+  // Precision bar sounds
+  tensionDrone: assetPath('/assets/audio/precision/tension-drone.ogg'),
+  pbDing: assetPath('/assets/audio/precision/pb-ding.ogg'),
+  newRecord: assetPath('/assets/audio/precision/new-record.ogg'),
+  closeCall: assetPath('/assets/audio/precision/close-call.ogg'),
 } as const;
 
 export type AudioFileName = keyof typeof AUDIO_FILES;
