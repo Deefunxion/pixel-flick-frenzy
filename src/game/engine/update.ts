@@ -31,7 +31,7 @@ import type { GameState } from './types';
 import { nextWind, spawnCelebration, spawnParticles } from './state';
 import { ACHIEVEMENTS } from './achievements';
 import { updateAnimator } from './animationController';
-import { applyAirBrake, applySlideControl } from './precision';
+import { applyAirBrake, applySlideControl, applyAirFloat, decayFloatEffect } from './precision';
 
 export type GameAudio = {
   startCharge: (power01: number) => void;
@@ -225,11 +225,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
     if (!state.landed && !precisionAppliedThisFrame) {
       const deltaTime = 1/60;
       if (state.precisionInput.pressedThisFrame) {
-        // Tap: single reduction
-        const result = applyAirBrake(state, 'tap');
+        // Tap: gravity reduction (float)
+        const result = applyAirFloat(state);
         if (result.applied) {
           precisionAppliedThisFrame = true;
-          audio.airBrakeTap?.();
+          audio.airBrakeTap?.(); // TODO: add airFloat sound
         } else if (result.denied) {
           audio.actionDenied?.();
           state.staminaDeniedShake = 8;
@@ -257,7 +257,12 @@ export function updateFrame(state: GameState, svc: GameServices) {
       }
     }
 
-    state.vy += BASE_GRAV * effectiveTimeScale;
+    const effectiveGravity = BASE_GRAV * state.gravityMultiplier;
+    state.vy += effectiveGravity * effectiveTimeScale;
+
+    // Decay float effect
+    decayFloatEffect(state, effectiveTimeScale / 60);
+
     state.vx += state.wind * 0.3 * effectiveTimeScale;
 
     state.px += state.vx * effectiveTimeScale;

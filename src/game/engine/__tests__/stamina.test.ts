@@ -133,8 +133,8 @@ describe('Input Edge Detection', () => {
   });
 });
 
-describe('Air Brake Integration', () => {
-  it('applies air brake tap when pressed during flight', () => {
+describe('Air Float/Brake Integration', () => {
+  it('applies air float (gravity reduction) when tapped during flight', () => {
     const state = createInitialState({ reduceFx: false });
     state.flying = true;
     state.px = 300;
@@ -143,15 +143,14 @@ describe('Air Brake Integration', () => {
     state.stamina = 100;
     state.precisionInput.lastPressedState = false;
 
-    // First frame with press (tap)
+    // First frame with press (tap) - now applies air float instead of brake
     updateFrame(state, createMockServices(true));
 
-    // Velocity should be reduced by tap (5%), then physics applied
-    // Air brake: vx = 5 * 0.95 = 4.75, vy = -3 * 0.95 = -2.85
-    // Physics: gravity 0.15 * 0.55 = 0.0825 added to vy, wind affects vx
-    // Final vy approx -2.85 + 0.0825 = -2.7675
-    expect(state.vx).toBeCloseTo(4.75, 1);
-    expect(state.vy).toBeCloseTo(-2.77, 1); // After gravity applied
+    // Air float: gravityMultiplier = 0.5, floatDuration = 0.3
+    // Velocity NOT reduced (float doesn't brake), but gravity is halved
+    // Physics: gravity 0.15 * 0.5 * 0.55 = 0.04125 added to vy
+    expect(state.gravityMultiplier).toBe(0.5);
+    expect(state.floatDuration).toBeGreaterThan(0);
     expect(state.stamina).toBe(95);
   });
 
