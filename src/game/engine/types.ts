@@ -141,4 +141,10 @@ export interface GameState {
   floatDuration: number;
   // Tutorial system
   tutorialState: TutorialState;
+  // Precision bar system (419-420 zone)
+  precisionBarActive: boolean;
+  lastValidPx: number;
+  precisionTimeScale: number;
+  precisionBarTriggeredThisThrow: boolean;
+  passedPbThisThrow: boolean;
 }

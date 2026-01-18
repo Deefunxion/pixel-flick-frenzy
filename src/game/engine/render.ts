@@ -20,6 +20,7 @@ import {
   drawStyledTrajectory,
   LINE_WEIGHTS,
 } from './sketchy';
+import { drawPrecisionBar, drawPrecisionFallOverlay } from './precisionRender';
 // TODO: Import sprite-based effects when assets are ready
 // import { renderParticles } from './particles';
 
@@ -339,6 +340,11 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     drawStaminaBar(ctx, zenoX, zenoY - 25, state.stamina, nowMs, COLORS, state.staminaDeniedShake || 0);
   }
 
+  // Precision bar (above stamina bar when active)
+  if (state.precisionBarActive || (state.fellOff && state.lastValidPx >= 410)) {
+    drawPrecisionBar(ctx, state, zenoX, zenoY, COLORS, nowMs);
+  }
+
   // Funny failure text
   if (state.failureAnimating && state.failureFrame < 30) {
     const texts = ['NOOO!', 'AHHH!', 'OOF!', 'YIKES!'];
@@ -629,6 +635,11 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.textAlign = 'left';
     ctx.fillText('NEW!', achX + 32, achY + 18);
   }
+
+  // Precision zone fall overlay
+  if (state.fellOff && state.lastValidPx >= 410 && state.precisionBarTriggeredThisThrow) {
+    drawPrecisionFallOverlay(ctx, state, W, H, COLORS, nowMs);
+  }
 }
 
 // Noir Ink theme renderer - high contrast, minimal, film noir aesthetic
@@ -759,6 +770,11 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   // Stamina bar (only during flight/slide when stamina used)
   if ((state.flying || state.sliding) && state.stamina < 100) {
     drawStaminaBar(ctx, state.px, zenoY - 25, state.stamina, nowMs, COLORS, state.staminaDeniedShake || 0);
+  }
+
+  // Precision bar (above stamina bar when active)
+  if (state.precisionBarActive || (state.fellOff && state.lastValidPx >= 410)) {
+    drawPrecisionBar(ctx, state, state.px, zenoY, COLORS, nowMs);
   }
 
   // Failure text
@@ -940,6 +956,11 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.font = '10px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('★ NEW', achX + 50, achY + 15);
+  }
+
+  // Precision zone fall overlay
+  if (state.fellOff && state.lastValidPx >= 410 && state.precisionBarTriggeredThisThrow) {
+    drawPrecisionFallOverlay(ctx, state, W, H, COLORS, nowMs);
   }
 
   // Apply film grain and vignette (always on for Noir, intensity varies with reduceFx)

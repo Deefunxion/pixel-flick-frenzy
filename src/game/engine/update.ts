@@ -33,6 +33,11 @@ import { ACHIEVEMENTS } from './achievements';
 import { updateAnimator } from './animationController';
 import { applyAirBrake, applySlideControl, applyAirFloat, decayFloatEffect } from './precision';
 import { checkTutorialTrigger, startTutorial, updateTutorial } from './tutorial';
+import {
+  shouldActivatePrecisionBar,
+  calculatePrecisionTimeScale,
+  hasPassedPb,
+} from './precisionBar';
 
 export type GameAudio = {
   startCharge: (power01: number) => void;
@@ -61,6 +66,12 @@ export type GameAudio = {
   slideBrake?: () => void;
   staminaLow?: () => void;
   actionDenied?: () => void;
+  // Precision bar sounds
+  precisionDrone?: () => void;
+  stopPrecisionDrone?: () => void;
+  pbDing?: () => void;
+  newRecordJingle?: () => void;
+  closeCall?: () => void;
 };
 
 export type GameUI = {
@@ -221,9 +232,10 @@ export function updateFrame(state: GameState, svc: GameServices) {
   // Tutorial system - update and get slow-mo multiplier
   const tutorialSlowMo = updateTutorial(state, 1/60);
 
-  // Flying physics (scaled by TIME_SCALE, slowMo, and tutorial for dramatic effects)
+  // Flying physics (scaled by TIME_SCALE, slowMo, tutorial, and precision bar for dramatic effects)
   // slowMo of 0.75 = 4x slower, 0.97 = very slow
-  const effectiveTimeScale = TIME_SCALE * (1 - state.slowMo) * tutorialSlowMo;
+  const precisionSlowdown = state.precisionBarActive ? state.precisionTimeScale : 1;
+  const effectiveTimeScale = TIME_SCALE * (1 - state.slowMo) * tutorialSlowMo * precisionSlowdown;
 
   if (state.flying) {
     state.launchFrame++; // Increment for launch burst effect
@@ -324,6 +336,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
       audio.impact(Math.min(1, impactVelocity / 4));
       audio.stopFly?.(); // Stop fly sound when landing
       audio.slide?.(); // Play slide sound when landing
+    }
+
+    // Track last valid position for precision bar
+    if (state.px < CLIFF_EDGE) {
+      state.lastValidPx = state.px;
     }
   }
 
@@ -465,6 +482,50 @@ export function updateFrame(state: GameState, svc: GameServices) {
     audio.stopEdgeWarning();
   }
 
+  // DEBUG: Log when px crosses thresholds (outside the flying/sliding check)
+  if (state.px >= 400 && state.px < 401) {
+    console.log('📍 px crossed 400:', { px: state.px.toFixed(2), flying: state.flying, sliding: state.sliding, landed: state.landed });
+  }
+
+  // Precision bar activation check
+  if ((state.flying || state.sliding) && !state.landed) {
+    const shouldActivate = shouldActivatePrecisionBar(state);
+
+    // DEBUG: Log precision bar activation
+    if (state.px >= 405) {
+      console.log('PrecisionBar check:', {
+        px: state.px.toFixed(2),
+        flying: state.flying,
+        sliding: state.sliding,
+        landed: state.landed,
+        shouldActivate,
+        precisionBarActive: state.precisionBarActive
+      });
+    }
+
+    if (shouldActivate && !state.precisionBarActive) {
+      console.log('🎯 ACTIVATING PRECISION BAR at px:', state.px.toFixed(2));
+      state.precisionBarActive = true;
+      state.precisionBarTriggeredThisThrow = true;
+      audio.precisionDrone?.(); // Start tension drone
+    }
+
+    // Apply precision time scale when active
+    if (state.precisionBarActive && state.px >= 410) {
+      state.precisionTimeScale = calculatePrecisionTimeScale(state.px);
+    }
+
+    // Track if we passed PB
+    if (state.precisionBarActive && !state.passedPbThisThrow && hasPassedPb(state.px, state.best)) {
+      state.passedPbThisThrow = true;
+      audio.pbDing?.(); // Play PB ding
+    }
+  } else if (!state.flying && !state.sliding && state.precisionBarActive) {
+    // Deactivate when not flying/sliding
+    state.precisionBarActive = false;
+    audio.stopPrecisionDrone?.();
+  }
+
   if ((state.flying || state.sliding) && state.px > 50) {
     const riskFactor = (state.px - 50) / (CLIFF_EDGE - 50);
     state.currentMultiplier = 1 + riskFactor * riskFactor * 4;
@@ -526,6 +587,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
     const pastTarget = state.px >= state.zenoTarget;
     state.trail.push({ x: state.px, y: state.py, age: 0, pastTarget });
+
+    // Track last valid position for precision bar (during slide)
+    if (state.px < CLIFF_EDGE) {
+      state.lastValidPx = state.px;
+    }
 
     if (Math.abs(state.vx) < 0.1) {
       state.sliding = false;

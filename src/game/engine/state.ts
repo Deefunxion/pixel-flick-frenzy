@@ -124,6 +124,12 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
       timeRemaining: 0,
       ...loadTutorialProgress(),
     },
+    // Precision bar
+    precisionBarActive: false,
+    lastValidPx: 0,
+    precisionTimeScale: 1,
+    precisionBarTriggeredThisThrow: false,
+    passedPbThisThrow: false,
   };
 }
 
@@ -168,6 +174,12 @@ export function resetPhysics(state: GameState) {
   state.staminaDeniedShake = 0;
   state.gravityMultiplier = 1;
   state.floatDuration = 0;
+  // Precision bar reset
+  state.precisionBarActive = false;
+  state.lastValidPx = 0;
+  state.precisionTimeScale = 1;
+  state.precisionBarTriggeredThisThrow = false;
+  state.passedPbThisThrow = false;
   if (state.particleSystem) {
     state.particleSystem.clear();
   }
