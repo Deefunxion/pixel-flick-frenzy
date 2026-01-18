@@ -22,27 +22,28 @@ function createMockState(overrides: Partial<GameState> = {}): GameState {
 describe('precisionBar', () => {
   describe('shouldActivatePrecisionBar', () => {
     it('returns false when px < 409.9', () => {
-      const state = createMockState({ px: 409, py: 2 });
+      const state = createMockState({ px: 409 });
       expect(shouldActivatePrecisionBar(state)).toBe(false);
     });
 
-    it('returns false when py >= 5', () => {
-      const state = createMockState({ px: 410, py: 10 });
-      expect(shouldActivatePrecisionBar(state)).toBe(false);
-    });
-
-    it('returns true without any achievement (no gate)', () => {
-      const state = createMockState({ px: 410, py: 2, achievements: new Set() });
+    it('returns true when px >= 409.9 (no py check)', () => {
+      // py check removed - flying/sliding is checked by caller in update.ts
+      const state = createMockState({ px: 410, py: 220 }); // py=220 is ground level
       expect(shouldActivatePrecisionBar(state)).toBe(true);
     });
 
-    it('returns true when all conditions met', () => {
-      const state = createMockState({ px: 415, py: 2 });
+    it('returns true without any achievement (no gate)', () => {
+      const state = createMockState({ px: 410, achievements: new Set() });
+      expect(shouldActivatePrecisionBar(state)).toBe(true);
+    });
+
+    it('returns true when in precision zone', () => {
+      const state = createMockState({ px: 415 });
       expect(shouldActivatePrecisionBar(state)).toBe(true);
     });
 
     it('returns true at exact threshold', () => {
-      const state = createMockState({ px: 409.9, py: 4.9 });
+      const state = createMockState({ px: 409.9 });
       expect(shouldActivatePrecisionBar(state)).toBe(true);
     });
   });

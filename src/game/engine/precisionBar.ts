@@ -3,7 +3,6 @@ import type { GameState } from './types';
 
 // Precision bar trigger thresholds
 const PRECISION_X_THRESHOLD = 409.9;  // 0.1 before precision zone
-const PRECISION_Y_THRESHOLD = 5;      // Near ground
 const PRECISION_ZONE_START = 410;     // Start of precision zone
 const PRECISION_ZONE_END = CLIFF_EDGE; // 420
 
@@ -11,11 +10,11 @@ const PRECISION_ZONE_END = CLIFF_EDGE; // 420
  * Check if precision bar should be active.
  * Requires:
  * - px >= 409.9 (approaching precision zone)
- * - py < 5 (near ground)
+ * - Flying or sliding (checked by caller in update.ts)
  * No achievement requirement - always available
  */
 export function shouldActivatePrecisionBar(state: GameState): boolean {
-  return state.px >= PRECISION_X_THRESHOLD && state.py < PRECISION_Y_THRESHOLD;
+  return state.px >= PRECISION_X_THRESHOLD;
 }
 
 /**
