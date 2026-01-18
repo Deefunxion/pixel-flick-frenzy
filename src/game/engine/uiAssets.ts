@@ -23,4 +23,5 @@ export const UI_ASSETS = {
   vsLabel: assetPath('/assets/ui/elements/transparent/vs.png'),
   statsLabel: assetPath('/assets/ui/elements/transparent/stats.png'),
   helpIcon: assetPath('/assets/ui/elements/transparent/25.png'),
+  directions: assetPath('/assets/ui/elements/transparent/directions.png'),
 };
