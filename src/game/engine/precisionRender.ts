@@ -104,6 +104,7 @@ export function drawPrecisionBar(
 
 /**
  * Draw "Almost!" overlay on successful landing showing distance from target.
+ * Uses frozen distance stored in state.almostOverlayDistance.
  */
 export function drawPrecisionFallOverlay(
   ctx: CanvasRenderingContext2D,
@@ -113,12 +114,9 @@ export function drawPrecisionFallOverlay(
   theme: Theme,
   nowMs: number
 ): void {
-  // Only show on successful landing (not fell off, and has a valid last distance)
-  if (state.fellOff || state.lastDist === null) return;
-
-  // Only show if didn't reach target yet
-  const distanceFromTarget = state.zenoTarget - state.px;
-  if (distanceFromTarget <= 0) return; // Reached or passed target, no "almost"
+  // Use the frozen distance from landing
+  const distanceFromTarget = state.almostOverlayDistance;
+  if (distanceFromTarget <= 0) return;
 
   const centerX = W / 2;
   const centerY = H / 2 - 20;
@@ -129,7 +127,7 @@ export function drawPrecisionFallOverlay(
 
   // "ALMOST!" text with bounce animation
   const bounce = Math.sin(nowMs / 150) * 3;
-  ctx.fillStyle = theme.highlight;
+  ctx.fillStyle = '#f08c1d';
   ctx.font = 'bold 20px "Comic Sans MS", cursive, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('ALMOST!', centerX, centerY - 20 + bounce);
@@ -151,7 +149,7 @@ export function drawPrecisionFallOverlay(
   ctx.fillRect(barX, barY, barWidth, barHeight);
 
   // Fill - color based on how close
-  const fillColor = distanceFromTarget < 5 ? theme.highlight :
+  const fillColor = distanceFromTarget < 5 ? '#f08c1d' :
                     distanceFromTarget < 15 ? '#FFA500' : theme.accent3;
   ctx.fillStyle = fillColor;
   ctx.fillRect(barX, barY, fillWidth, barHeight);

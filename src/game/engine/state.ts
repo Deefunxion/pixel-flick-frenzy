@@ -130,6 +130,8 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     precisionTimeScale: 1,
     precisionBarTriggeredThisThrow: false,
     passedPbThisThrow: false,
+    almostOverlayActive: false,
+    almostOverlayDistance: 0,
   };
 }
 
@@ -180,6 +182,7 @@ export function resetPhysics(state: GameState) {
   state.precisionTimeScale = 1;
   state.precisionBarTriggeredThisThrow = false;
   state.passedPbThisThrow = false;
+  // Note: almostOverlayActive is NOT reset here - it clears when charging starts
   if (state.particleSystem) {
     state.particleSystem.clear();
   }

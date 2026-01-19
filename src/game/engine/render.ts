@@ -596,48 +596,10 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.stroke();
   }
 
-  // Achievement popup
-  if (state.newAchievement) {
-    const achBlink = Math.floor(nowMs / 250) % 2;
-    const achX = W / 2 - 60;
-    const achY = 10;
+  // Achievement popup removed - now handled by React component in Game.tsx
 
-    // Banner background
-    ctx.fillStyle = COLORS.background;
-    ctx.fillRect(achX, achY, 120, 28);
-
-    // Banner border
-    ctx.strokeStyle = COLORS.highlight;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(achX, achY, 120, 28);
-
-    // Star
-    if (achBlink) {
-      const starX = achX + 18;
-      const starY = achY + 14;
-      ctx.strokeStyle = COLORS.highlight;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      for (let i = 0; i < 5; i++) {
-        const angle = (i * 144 - 90) * Math.PI / 180;
-        const px = starX + Math.cos(angle) * 6;
-        const py = starY + Math.sin(angle) * 6;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      ctx.closePath();
-      ctx.stroke();
-    }
-
-    // Achievement text
-    ctx.fillStyle = COLORS.uiText;
-    ctx.font = '10px "Comic Sans MS", cursive, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('NEW!', achX + 32, achY + 18);
-  }
-
-  // Precision zone fall overlay
-  if (state.fellOff && state.lastValidPx >= 410 && state.precisionBarTriggeredThisThrow) {
+  // "Almost!" overlay - stays visible until next throw starts
+  if (state.almostOverlayActive) {
     drawPrecisionFallOverlay(ctx, state, W, H, COLORS, nowMs);
   }
 }
@@ -941,25 +903,10 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.stroke();
   }
 
-  // Achievement popup
-  if (state.newAchievement) {
-    const achX = W / 2 - 50;
-    const achY = 8;
+  // Achievement popup removed - now handled by React component in Game.tsx
 
-    ctx.fillStyle = COLORS.background;
-    ctx.fillRect(achX, achY, 100, 22);
-    ctx.strokeStyle = COLORS.highlight;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(achX, achY, 100, 22);
-
-    ctx.fillStyle = COLORS.highlight;
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('★ NEW', achX + 50, achY + 15);
-  }
-
-  // Precision zone fall overlay
-  if (state.fellOff && state.lastValidPx >= 410 && state.precisionBarTriggeredThisThrow) {
+  // "Almost!" overlay - stays visible until next throw starts
+  if (state.almostOverlayActive) {
     drawPrecisionFallOverlay(ctx, state, W, H, COLORS, nowMs);
   }
 

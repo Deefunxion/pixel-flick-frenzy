@@ -147,4 +147,7 @@ export interface GameState {
   precisionTimeScale: number;
   precisionBarTriggeredThisThrow: boolean;
   passedPbThisThrow: boolean;
+  // "Almost!" overlay - stays visible until next throw
+  almostOverlayActive: boolean;
+  almostOverlayDistance: number; // Frozen distance from target at landing
 }
