@@ -150,4 +150,7 @@ export interface GameState {
   // "Almost!" overlay - stays visible until next throw
   almostOverlayActive: boolean;
   almostOverlayDistance: number; // Frozen distance from target at landing
+  // Streak tracking (session-volatile, for achievements)
+  sessionThrows: number;        // Resets on page load
+  landingsWithoutFall: number;  // Resets on fall
 }

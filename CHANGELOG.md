@@ -2,7 +2,18 @@
 
 All notable changes to One-More-Flick are documented in this file.
 
-## [Unreleased] - 2026-01-18
+## [Unreleased] - 2026-01-20
+
+### Added - Streak Achievements (Phase 1)
+- **4 new achievements** expanding the achievement system from 10 to 14:
+  - `hot_streak_5` (Hot Streak): Land 5 consecutive throws at 419+
+  - `hot_streak_10` (On Fire): Land 10 consecutive throws at 419+
+  - `untouchable` (Untouchable): Land 10 times without falling
+  - `marathon` (Marathon): Make 50 throws in one session
+- **New state tracking**:
+  - `sessionThrows`: Session-volatile counter (resets on page load)
+  - `landingsWithoutFall`: Streak counter (resets on fall)
+- **Phase 2 (Ring achievements) and Phase 3 (Challenge achievements)** planned for after respective systems are implemented
 
 ### Added - Tutorial System
 - **Contextual Tutorials**: Speech bubble overlays that appear at key moments

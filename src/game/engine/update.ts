@@ -607,6 +607,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
         saveNumber('total_falls', state.totalFalls);
         ui.onFall?.(state.totalFalls);
 
+        // Reset landingsWithoutFall streak on fall
+        state.landingsWithoutFall = 0;
+
         // Trigger comedic failure
         state.failureAnimating = true;
         state.failureFrame = 0;
@@ -708,6 +711,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
         if (isPerfect) state.stats.perfectLandings++;
         if (finalMultiplier > state.stats.maxMultiplier) state.stats.maxMultiplier = finalMultiplier;
 
+        // Increment landingsWithoutFall streak
+        state.landingsWithoutFall++;
+
         // Play win sound on successful landing
         audio.win?.();
         audio.stopSlide?.();
@@ -717,6 +723,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
       }
 
       state.stats.totalThrows++;
+      state.sessionThrows++; // Session-volatile counter for Marathon achievement
       saveJson('stats', state.stats);
       ui.setStats({ ...state.stats });
 
@@ -776,6 +783,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.totalFalls++;
       saveNumber('total_falls', state.totalFalls);
       ui.onFall?.(state.totalFalls);
+
+      // Reset landingsWithoutFall streak on fall
+      state.landingsWithoutFall = 0;
 
       // Comedic failure
       state.failureAnimating = true;

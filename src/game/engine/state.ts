@@ -132,6 +132,9 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     passedPbThisThrow: false,
     almostOverlayActive: false,
     almostOverlayDistance: 0,
+    // Streak tracking (session-volatile)
+    sessionThrows: 0,
+    landingsWithoutFall: 0,
   };
 }
 
