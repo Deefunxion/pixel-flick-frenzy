@@ -704,3 +704,26 @@ public/assets/ui/elements/element_*.png
 public/assets/ui/elements/manifest.txt
 public/assets/ui/elements/selection_ui_assets/
 .worktrees/
+
+# ============================================
+# Local development assets (not for deployment)
+# ============================================
+
+# Plan documents (keep locally, don't deploy)
+docs/plans/*.md
+
+# Root level temp images
+/*.png
+
+# Unused/source asset folders
+public/assets/background/Background_assets/
+public/assets/sprites/clean_grid/
+public/assets/sprites/sprites_for_sheets/
+
+# Firebase cache
+.firebase/
+
+# Review documents
+*REVIEW*.md
+*_REVIEW*.md
+COPILOT_*.md
