@@ -39,6 +39,15 @@ export interface WindSwoosh {
   lifetime: number;
 }
 
+export interface BirdState {
+  x: number;
+  y: number;
+  baseY: number;
+  vx: number;          // Horizontal velocity
+  wingPhase: number;   // For wing flap animation
+  asset: 'dove' | 'seagull';
+}
+
 export interface BackgroundState {
   // Clouds drift with wind
   clouds: CloudState[];
@@ -51,6 +60,9 @@ export interface BackgroundState {
 
   // Wind swoosh effects
   windSwooshes: WindSwoosh[];
+
+  // Animated birds
+  birds: BirdState[];
 
   // Flag animation
   flagFrame: number;          // Current frame 0-3
@@ -75,6 +87,10 @@ export function createBackgroundState(): BackgroundState {
     ],
     windParticles: [],
     windSwooshes: [],
+    birds: [
+      { x: 350, y: 60, baseY: 60, vx: 0.8, wingPhase: 0, asset: 'dove' },
+      { x: 150, y: 45, baseY: 45, vx: 0.5, wingPhase: Math.PI, asset: 'seagull' },
+    ],
     flagFrame: 0,
     flagFrameTimer: 0,
     lastUpdateTime: 0,

@@ -44,6 +44,18 @@ export const BACKGROUND_ASSETS = {
     particleDust1: assetPath('/assets/background/wind/particle-dust-1.png'),
     particleDust2: assetPath('/assets/background/wind/particle-dust-2.png'),
   },
+
+  // Decorative elements
+  decor: {
+    sun: assetPath('/assets/background/Background_assets/4.png'),
+    birdDove: assetPath('/assets/background/Background_assets/8.png'),
+    birdSeagull: assetPath('/assets/background/Background_assets/10.png'),
+    tree: assetPath('/assets/background/Background_assets/11.png'),
+    bush: assetPath('/assets/background/Background_assets/12.png'),
+    rocks: assetPath('/assets/background/Background_assets/13.png'),
+    grass: assetPath('/assets/background/Background_assets/14.png'),
+    signpost: assetPath('/assets/background/Background_assets/17.png'),
+  },
 };
 
 /** Noir theme background asset paths */
@@ -95,6 +107,7 @@ export function getAllBackgroundAssetPaths(): string[] {
   paths.push(...Object.values(BACKGROUND_ASSETS.void));
   paths.push(...Object.values(BACKGROUND_ASSETS.flag));
   paths.push(...Object.values(BACKGROUND_ASSETS.wind));
+  paths.push(...Object.values(BACKGROUND_ASSETS.decor));
 
   return paths;
 }
@@ -124,6 +137,14 @@ export const ASSET_DIMENSIONS = {
   voidLayer: { width: 1920, height: 200 },
   flag: { width: 80, height: 120 },
   swoosh: { width: 300, height: 60 },
+  // Decor elements (approximate sizes from PNGs)
+  sun: { width: 120, height: 120 },
+  bird: { width: 60, height: 40 },
+  tree: { width: 80, height: 100 },
+  bush: { width: 70, height: 50 },
+  rocks: { width: 100, height: 50 },
+  grass: { width: 50, height: 40 },
+  signpost: { width: 60, height: 70 },
 } as const;
 
 /** Noir asset dimensions at 2x scale */

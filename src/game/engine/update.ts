@@ -163,6 +163,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
   if (!state.flying && !state.sliding && !state.landed && pressed && !state.charging) {
     state.charging = true;
     state.chargeStart = nowMs;
+    state.almostOverlayActive = false; // Hide "Almost!" overlay when starting new throw
     ui.setFellOff(false);
     audio.startCharge(0);
   }
@@ -755,6 +756,13 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
       // Mark as landed to prevent new inputs, then quick reset
       state.landed = true;
+
+      // Show "Almost!" overlay if didn't reach target
+      if (!state.fellOff && state.dist < state.zenoTarget) {
+        state.almostOverlayActive = true;
+        state.almostOverlayDistance = state.zenoTarget - state.dist; // Freeze the distance
+      }
+
       svc.scheduleReset(400);
     }
 

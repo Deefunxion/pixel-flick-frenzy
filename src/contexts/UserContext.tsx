@@ -45,7 +45,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
 
       // Check if user already completed onboarding (survives page refresh)
-      const cachedOnboarding = loadString(ONBOARDING_COMPLETE_KEY, '');
+      // Legacy key fallback for users who completed onboarding before storage version bump
+      const cachedOnboarding = loadString(ONBOARDING_COMPLETE_KEY, '', 'onboarding_complete');
       const hasCompletedBefore = cachedOnboarding === 'true';
 
       const [{ subscribeToAuthState, getUserProfile, hasUserProfile }, { syncScoreToFirebase }] =

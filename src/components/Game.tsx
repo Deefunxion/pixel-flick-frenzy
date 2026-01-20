@@ -1009,18 +1009,28 @@ const Game = () => {
         </div>
 
         {/* Achievement popup */}
-        {newAchievement && (
-          <div
-            className="fixed top-2 left-1/2 transform -translate-x-1/2 px-3 py-1 rounded animate-pulse"
-            style={{
-              background: theme.background,
-              border: `1px solid ${theme.highlight}`,
-              boxShadow: `0 0 10px ${theme.highlight}80`,
-            }}
-          >
-            <p className="text-xs font-bold" style={{ color: theme.highlight }}>★ {newAchievement}</p>
-          </div>
-        )}
+        {newAchievement && (() => {
+          const achievement = Object.values(ACHIEVEMENTS).find(a => a.name === newAchievement);
+          return (
+            <div
+              className="fixed top-16 left-1/2 transform -translate-x-1/2 px-4 py-3 rounded-lg z-50 animate-in slide-in-from-top-4 duration-300"
+              style={{
+                backgroundColor: '#1e3a5f',
+                border: '3px solid #F5A623',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.3), 0 0 15px rgba(245,166,35,0.4)',
+              }}
+            >
+              <p className="text-base font-bold text-center" style={{ color: '#2563eb' }}>
+                ★ {newAchievement}
+              </p>
+              {achievement && (
+                <p className="text-sm text-center mt-1" style={{ color: '#f08c1d' }}>
+                  {achievement.desc}
+                </p>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Stats overlay */}
         {showStats && (

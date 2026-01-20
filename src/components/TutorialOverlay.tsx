@@ -19,23 +19,58 @@ export function TutorialOverlay({ phase, active, timeRemaining }: TutorialOverla
       {/* Dim background */}
       <div className="absolute inset-0 bg-black/50" />
 
-      {/* Speech bubble */}
-      <div className="relative z-10 bg-white border-2 border-blue-500 rounded-lg p-4 max-w-xs shadow-lg">
-        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-0 h-0
-                        border-l-8 border-r-8 border-t-8
-                        border-l-transparent border-r-transparent border-t-blue-500" />
+      {/* Speech bubble - hand-drawn style */}
+      <div
+        className="relative z-10 rounded-lg p-4 max-w-xs"
+        style={{
+          backgroundColor: '#FFF8E7',
+          border: '3px solid #1e3a5f',
+          boxShadow: '4px 4px 0 rgba(0,0,0,0.2)',
+        }}
+      >
+        {/* Hand-drawn style pointer */}
+        <div
+          className="absolute -bottom-4 left-1/2 -translate-x-1/2"
+          style={{
+            width: 0,
+            height: 0,
+            borderLeft: '12px solid transparent',
+            borderRight: '12px solid transparent',
+            borderTop: '16px solid #1e3a5f',
+          }}
+        />
+        <div
+          className="absolute -bottom-2 left-1/2 -translate-x-1/2"
+          style={{
+            width: 0,
+            height: 0,
+            borderLeft: '10px solid transparent',
+            borderRight: '10px solid transparent',
+            borderTop: '14px solid #FFF8E7',
+          }}
+        />
 
         {content.lines.map((line, i) => (
-          <p key={i} className="text-center text-blue-800 font-medium text-sm">
+          <p
+            key={i}
+            className="text-center font-bold text-base"
+            style={{ color: '#1e3a5f' }}
+          >
             {line}
           </p>
         ))}
 
-        {/* Progress bar */}
-        <div className="mt-2 h-1 bg-gray-200 rounded-full overflow-hidden">
+        {/* Progress bar - orange accent */}
+        <div
+          className="mt-3 h-2 rounded-full overflow-hidden"
+          style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}
+        >
           <div
-            className="h-full bg-blue-500 transition-all"
-            style={{ width: `${progress * 100}%` }}
+            className="h-full transition-all rounded-full"
+            style={{
+              width: `${progress * 100}%`,
+              backgroundColor: '#F5A623',
+            }}
           />
         </div>
       </div>
