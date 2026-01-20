@@ -23,127 +23,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-public/assets/audio/Helton Yan's Old-School Shonen SFX/ELECSprk_Anime Spark 1.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/ELECSprk_Anime Spark 2.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/ELECSprk_Anime Spark 3.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/ELECSprk_Anime Spark 4.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/EXPLDsgn_Anime Explosion 1.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/EXPLDsgn_Anime Explosion 2.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/EXPLDsgn_Anime Explosion 3.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/EXPLDsgn_Anime Explosion 4.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/EXPLDsgn_Anime Explosion 5.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/EXPLDsgn_Anime Explosion 6.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/EXPLDsgn_Anime Explosion 7.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/EXPLDsgn_Anime Explosion 8.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/EXPLDsgn_Anime Explosion 9.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/EXPLDsgn_Anime Explosion 10.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/EXPLDsgn_Anime Explosion 11.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTBf_Anime Land 1.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTBf_Anime Land 2.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTBf_Anime Land 3.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTBf_Anime Land 4.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTBf_Anime Land 5.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTBf_Anime Land 6.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTBf_Anime Land 7.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTBf_Anime Land 8.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTBf_Anime Land 11.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTBf_Anime Land 12.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTBf_Anime Land 13.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTClth_Anime Swing 1.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTClth_Anime Swing 2.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTClth_Anime Swing 3.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTClth_Anime Swing 4.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTClth_Anime Swing 5.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee 1.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee 2.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee 3.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee 4.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee 5.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee 6.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee 7.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee 8.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee 9.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee 10.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee 11.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee Gore 1.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee Gore 2.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee Gore 3.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee Gore 4.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee Gore 5.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTImpt_Anime Melee Gore 6.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Dodge 1.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Dodge 2.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Dodge 3.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Dodge 4.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Dodge 5.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Dodge 6.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Dodge 7.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Dodge 8.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Dodge 9.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Jump 1.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Jump 2.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Jump 3.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Jump 4.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Jump 5.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Throw 1.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Throw 2.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Throw 3.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Throw 4.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FGHTMisc_Anime Throw 5.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/FRWKMisc_Anime Falling 6.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/LICENSE.txt
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 1.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 2.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 3.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 4.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 5.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 6.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 7.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 8.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 9.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 10.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 11.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 12.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 13.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 14.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 15.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 16.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 17.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 18.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Charge 19.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Ready 1.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Ready 2.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Ready 3.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Ready 4.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Ready 5.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Ready 6.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Ready 7.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Ready 8.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Release 1.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Release 2.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Release 3.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Release 4.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Release 5.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Release 6.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Release 7.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Release 8.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Release 9.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Release 10.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Release 11.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Release 12.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Release 13.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Release 14.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/MAGSpel_Anime Ability Release 15.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/SWSH_Anime Fly 1.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/SWSH_Anime Fly 2.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/SWSH_Anime Fly 3.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/SWSH_Anime Fly 4.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/SWSH_Anime Fly 5.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/TOONWhis_Anime Falling 1.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/TOONWhis_Anime Falling 2.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/TOONWhis_Anime Falling 3.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/TOONWhis_Anime Falling 4.wav
-public/assets/audio/Helton Yan's Old-School Shonen SFX/TOONWhis_Anime Falling 5.wav
 public/assets/audio/kenney_digital-audio/License.txt
 public/assets/audio/kenney_digital-audio/Preview.ogg
 public/assets/audio/kenney_digital-audio/Visit Kenney.url
@@ -727,3 +606,6 @@ public/assets/sprites/sprites_for_sheets/
 *REVIEW*.md
 *_REVIEW*.md
 COPILOT_*.md
+
+# Unused audio library (entire folder)
+public/assets/audio/Helton Yan's Old-School Shonen SFX/
