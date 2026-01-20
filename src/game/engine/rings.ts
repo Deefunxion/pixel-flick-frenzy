@@ -57,11 +57,18 @@ export interface Ring {
   passedAt: number;
 }
 
-// Ring colors by difficulty
+// Ring colors by difficulty (fallback for particles)
 export const RING_COLORS = {
   easy: '#7FD858',    // Green-Gold
   medium: '#FFD700',  // Gold
   hard: '#FFA500',    // Orange-Gold
+};
+
+// Ring sprite assets
+export const RING_SPRITES = {
+  easy: '/assets/rings/6.png',    // Green glow
+  medium: '/assets/rings/5.png',  // Gold glow
+  hard: '/assets/rings/4.png',    // Orange
 };
 
 // Ring multipliers (escalating)

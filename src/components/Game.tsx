@@ -87,6 +87,7 @@ import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { TutorialOverlay } from './TutorialOverlay';
 import { resetTutorialProgress } from '@/game/engine/tutorial';
+import { loadRingSprites } from '@/game/engine/ringsRender';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
 import { captureError } from '@/lib/sentry';
@@ -386,6 +387,13 @@ const Game = () => {
           }
         }).catch((err) => {
           console.warn('[Game] Audio files failed to load, using synth fallback:', err);
+        });
+
+        // Load ring sprites (non-blocking, will fallback to procedural if fails)
+        loadRingSprites().then(() => {
+          console.log('[Game] Ring sprites loaded');
+        }).catch((err) => {
+          console.warn('[Game] Ring sprites failed to load, using procedural fallback:', err);
         });
 
         // Create animator based on current theme
