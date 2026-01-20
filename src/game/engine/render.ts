@@ -273,17 +273,19 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   // Animated wind lines in the sky showing direction
   ctx.strokeStyle = COLORS.accent3;
   ctx.lineWidth = 1;
-  const lineCount = Math.max(2, Math.ceil(windStrength * 25));
+  ctx.globalAlpha = 0.4;
+  const lineCount = Math.max(2, Math.min(5, Math.ceil(windStrength * 10)));
   for (let i = 0; i < lineCount; i++) {
-    const lineX = (100 + i * 80 + (nowMs / 20) * windDir) % (W + 100) - 50;
-    const lineY = 50 + (i % 3) * 25 + Math.sin(i * 2) * 10;
-    const lineLen = 15 + windStrength * 80;
+    const lineX = (100 + i * 100 + (nowMs / 25) * windDir) % (W + 100) - 50;
+    const lineY = 40 + (i % 3) * 30;  // Fixed Y positions, no wobble
+    const lineLen = 20 + windStrength * 40;
 
     ctx.beginPath();
     ctx.moveTo(lineX, lineY);
     ctx.lineTo(lineX + lineLen * windDir, lineY);
     ctx.stroke();
   }
+  ctx.globalAlpha = 1;
 
   // Decorative birds
   drawBird(ctx, 150 + Math.sin(nowMs / 2000) * 30, 90, 6, COLORS.accent3, 1.5, nowMs);

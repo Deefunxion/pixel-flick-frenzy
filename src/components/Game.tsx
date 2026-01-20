@@ -721,7 +721,7 @@ const Game = () => {
             <img
               src={UI_ASSETS.directions}
               alt="Controls: TAP FLOAT | HOLD BRAKE"
-              className="h-16 object-contain"
+              className="h-12 object-contain"
               style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
             />
             {profile && (

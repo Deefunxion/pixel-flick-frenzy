@@ -127,9 +127,15 @@
 @media (max-height: 500px) and (orientation: landscape) {
   .game-canvas {
     width: auto;
-    height: 60vh;
+    height: 70vh;
     aspect-ratio: 2 / 1;
-    max-width: 95vw;
+    max-width: 100vw;
+  }
+
+  /* Compact UI in landscape */
+  .landscape-compact {
+    transform: scale(0.85);
+    transform-origin: top center;
   }
 }
 
