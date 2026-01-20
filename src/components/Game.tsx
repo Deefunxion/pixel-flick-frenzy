@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useCallback, useState } from 'react';
 import {
   CLIFF_EDGE,
+  FREE_THROWS_CAP,
   H,
   LAUNCH_PAD_X,
   MAX_ANGLE,
@@ -86,9 +87,14 @@ import { UI_ASSETS } from '@/game/engine/uiAssets';
 import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { TutorialOverlay } from './TutorialOverlay';
+import { ThrowCounter } from './ThrowCounter';
+import { PracticeModeOverlay } from './PracticeModeOverlay';
+import type { ThrowState, DailyTasks, MilestonesClaimed } from '@/game/engine/types';
+import { calculateThrowRegen, formatRegenTime, getMsUntilNextThrow } from '@/game/engine/throws';
 import { resetTutorialProgress } from '@/game/engine/tutorial';
 import { loadRingSprites } from '@/game/engine/ringsRender';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
+import { claimDailyTask } from '@/game/engine/dailyTasks';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
 import { captureError } from '@/lib/sentry';
 import type { Theme } from '@/game/themes';
@@ -223,6 +229,36 @@ const Game = () => {
   const [tutorialActive, setTutorialActive] = useState(false);
   const [tutorialTimeRemaining, setTutorialTimeRemaining] = useState(0);
 
+  // Throw/Energy system state
+  const [throwState, setThrowState] = useState<ThrowState>(() => {
+    const saved = loadJson<ThrowState>('throw_state', {
+      freeThrows: FREE_THROWS_CAP,
+      permanentThrows: 0,
+      lastRegenTimestamp: Date.now(),
+      isPremium: false,
+    });
+    return calculateThrowRegen(saved);
+  });
+  const [practiceMode, setPracticeMode] = useState(false);
+
+  // Daily tasks state
+  const [dailyTasks, setDailyTasks] = useState<DailyTasks>(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const defaultTasks: DailyTasks = {
+      date: today,
+      landCount: 0,
+      zenoTargetCount: 0,
+      landed400: false,
+      airTime3s: false,
+      airTime4s: false,
+      airTime5s: false,
+      claimed: [],
+    };
+    const saved = loadJson<DailyTasks>('daily_tasks', defaultTasks);
+    // Reset if it's a new day
+    return saved.date === today ? saved : defaultTasks;
+  });
+
   useEffect(() => {
     saveJson('reduce_fx', reduceFx);
     if (stateRef.current) stateRef.current.reduceFx = reduceFx;
@@ -335,6 +371,16 @@ const Game = () => {
     }
   }, [firebaseUser, profile]);
 
+  // Claim daily task reward
+  const handleClaimTask = useCallback((taskId: string) => {
+    if (stateRef.current) {
+      const success = claimDailyTask(stateRef.current, taskId, { setThrowState });
+      if (success) {
+        setDailyTasks({ ...stateRef.current.dailyTasks });
+      }
+    }
+  }, []);
+
   // Mobile UX: Detect if user is on mobile
   const isMobileRef = useRef(
     typeof window !== 'undefined' &&
@@ -434,6 +480,9 @@ const Game = () => {
       setHotStreak: (current, best) => setHotStreakState({ current, best }),
       onNewPersonalBest: handleNewPersonalBest,
       onFall: handleFall,
+      setThrowState,
+      setPracticeMode,
+      setDailyTasks,
     };
 
     const audio: GameAudio = {
@@ -1003,6 +1052,15 @@ const Game = () => {
           </div>
         </div>
 
+        {/* Throw Counter Row */}
+        <div className="flex justify-center mt-1">
+          <ThrowCounter
+            throwState={throwState}
+            practiceMode={practiceMode}
+            onShopClick={() => {/* TODO: Open shop modal */}}
+          />
+        </div>
+
         {/* Extra touch area for comfortable thumb reach on mobile */}
         <div
           ref={extraInputPadRef}
@@ -1044,9 +1102,21 @@ const Game = () => {
           );
         })()}
 
+        {/* Practice Mode Overlay */}
+        <PracticeModeOverlay
+          visible={practiceMode && !hudFlying}
+          regenTime={formatRegenTime(getMsUntilNextThrow(throwState))}
+          onBuyThrows={() => {/* TODO: Open shop modal */}}
+        />
+
         {/* Stats overlay */}
         {showStats && (
-          <StatsOverlay theme={theme} onClose={() => setShowStats(false)} />
+          <StatsOverlay
+            theme={theme}
+            onClose={() => setShowStats(false)}
+            dailyTasks={dailyTasks}
+            onClaimTask={handleClaimTask}
+          />
         )}
 
         {/* Leaderboard screen */}

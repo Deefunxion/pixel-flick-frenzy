@@ -1,4 +1,5 @@
 import {
+  ACHIEVEMENT_REWARDS,
   BASE_GRAV,
   CHARGE_MS,
   CLIFF_EDGE,
@@ -27,7 +28,7 @@ import { addToPersonalLeaderboard } from '@/game/leaderboard';
 import { updateDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 import { updateGoals, type SessionGoal } from '@/game/goals';
 import type { DailyStats } from '@/game/storage';
-import type { GameState } from './types';
+import type { DailyTasks, GameState, ThrowState } from './types';
 import { nextWind, spawnCelebration, spawnParticles } from './state';
 import { ACHIEVEMENTS } from './achievements';
 import { updateAnimator } from './animationController';
@@ -43,6 +44,9 @@ import {
   checkRingCollision,
   RING_MULTIPLIERS,
 } from './rings';
+import { addPermanentThrows, consumeThrow } from './throws';
+import { checkMilestones, awardZenoLevelUp } from './milestones';
+import { updateDailyProgress } from './dailyTasks';
 
 export type GameAudio = {
   startCharge: (power01: number) => void;
@@ -97,6 +101,9 @@ export type GameUI = {
   setDailyStats: (v: DailyStats) => void;
   setDailyChallenge: (v: DailyChallenge) => void;
   setHotStreak: (current: number, best: number) => void;
+  setThrowState: (state: ThrowState) => void;
+  setPracticeMode: (mode: boolean) => void;
+  setDailyTasks: (tasks: DailyTasks) => void;
   onNewPersonalBest?: (totalScore: number, bestThrow: number) => void;
   onFall?: (totalFalls: number) => void;
 };
@@ -120,6 +127,19 @@ function checkAchievements(state: GameState, ui: GameUI, audio: GameAudio, clear
       ui.setAchievements(new Set(state.achievements));
       ui.setNewAchievement(achievement.name);
       saveJson('achievements', [...state.achievements]);
+
+      // Award throws if reward exists for this achievement
+      const reward = ACHIEVEMENT_REWARDS[id];
+      if (reward) {
+        // Check not already claimed (prevent double-dipping on reload)
+        if (!state.milestonesClaimed.achievements.includes(id)) {
+          state.throwState = addPermanentThrows(state.throwState, reward);
+          state.milestonesClaimed.achievements.push(id);
+          saveJson('throw_state', state.throwState);
+          saveJson('milestones_claimed', state.milestonesClaimed);
+          ui.setThrowState(state.throwState);
+        }
+      }
 
       audio.tone(523, 0.1, 'sine', 0.06);
       setTimeout(() => audio.tone(659, 0.1, 'sine', 0.06), 80);
@@ -194,7 +214,19 @@ export function updateFrame(state: GameState, svc: GameServices) {
   // Launch
   if (state.charging && !pressed) {
     state.charging = false;
+
+    // Consume a throw when launching
+    const { newState: newThrowState, practiceMode, throwConsumed } = consumeThrow(state.throwState);
+    state.throwState = newThrowState;
+    state.practiceMode = practiceMode;
+
+    // Save throw state
+    if (throwConsumed) {
+      saveJson('throw_state', state.throwState);
+    }
+
     state.flying = true;
+    state.launchTimestamp = nowMs; // Track launch time for air time calculation
     const power = MIN_POWER + (MAX_POWER - MIN_POWER) * state.chargePower;
     const angleRad = (state.angle * Math.PI) / 180;
     state.vx = power * Math.cos(angleRad);
@@ -645,13 +677,15 @@ export function updateFrame(state: GameState, svc: GameServices) {
         audio.stopSlide?.();
         audio.stopFly?.();
 
-        // Increment and sync total falls
-        state.totalFalls++;
-        saveNumber('total_falls', state.totalFalls);
-        ui.onFall?.(state.totalFalls);
+        // Increment and sync total falls - only if NOT in practice mode
+        if (!state.practiceMode) {
+          state.totalFalls++;
+          saveNumber('total_falls', state.totalFalls);
+          ui.onFall?.(state.totalFalls);
 
-        // Reset landingsWithoutFall streak on fall
-        state.landingsWithoutFall = 0;
+          // Reset landingsWithoutFall streak on fall
+          state.landingsWithoutFall = 0;
+        }
 
         // Trigger comedic failure
         state.failureAnimating = true;
@@ -683,131 +717,159 @@ export function updateFrame(state: GameState, svc: GameServices) {
         const perfectBonus = isPerfect ? 10 : 0;
         const scoreGained = multipliedPoints + perfectBonus;
 
-        // Track ring stats
-        state.stats.totalRingsPassed += state.ringsPassedThisThrow;
-        if (state.ringsPassedThisThrow > state.stats.maxRingsInThrow) {
-          state.stats.maxRingsInThrow = state.ringsPassedThisThrow;
-        }
-        if (state.ringsPassedThisThrow === 3) {
-          state.stats.perfectRingThrows++;
-        }
-
-        state.totalScore += scoreGained;
-        saveNumber('total_score', state.totalScore);
-        ui.setTotalScore(state.totalScore);
-
-        const today = todayLocalISODate();
-        const cachedDaily = svc.getDailyStats();
-        const daily = cachedDaily.date === today ? cachedDaily : loadDailyStats();
-        const nextDaily: DailyStats = {
-          date: today,
-          bestDistance: Math.max(daily.bestDistance, state.dist),
-          bestScore: Math.max(daily.bestScore, state.totalScore),
-        };
-        saveDailyStats(nextDaily);
-        ui.setDailyStats(nextDaily);
-
-        if (state.dist >= state.zenoTarget) {
-          state.zenoLevel++;
-          state.best = state.dist;
-          state.zenoTarget = (state.best + CLIFF_EDGE) / 2;
-
-          saveNumber('best', state.best);
-          saveNumber('zeno_target', state.zenoTarget);
-          saveNumber('zeno_level', state.zenoLevel);
-
-          ui.setBestScore(state.best);
-          ui.setZenoTarget(state.zenoTarget);
-          ui.setZenoLevel(state.zenoLevel);
-
-          state.screenFlash = state.reduceFx ? 0 : 1;
-          state.celebrationBurst = true;
-          spawnCelebration(state, state.px, state.py, [theme.accent2, theme.accent1, theme.highlight, theme.accent4, theme.accent3]);
-
-          audio.zenoJingle();
-          audio.stopEdgeWarning();
-
-          if (state.runTrail.length > 0) {
-            state.bestTrail = state.runTrail.slice(0, 240);
-            saveJson('best_trail', state.bestTrail);
+        // Only update stats/progression if NOT in practice mode
+        if (!state.practiceMode) {
+          // Track ring stats
+          state.stats.totalRingsPassed += state.ringsPassedThisThrow;
+          if (state.ringsPassedThisThrow > state.stats.maxRingsInThrow) {
+            state.stats.maxRingsInThrow = state.ringsPassedThisThrow;
+          }
+          if (state.ringsPassedThisThrow === 3) {
+            state.stats.perfectRingThrows++;
           }
 
-          ui.setSessionGoals((prev) => updateGoals(prev, { beat_target_once: 1 }));
+          state.totalScore += scoreGained;
+          saveNumber('total_score', state.totalScore);
+          ui.setTotalScore(state.totalScore);
 
-          // Sync new personal best to Firebase
-          ui.onNewPersonalBest?.(state.totalScore, state.best);
-        } else if (state.dist > state.best) {
-          state.best = state.dist;
-          saveNumber('best', state.best);
-          ui.setBestScore(state.best);
-          audio.tone(660, 0.08, 'sine', 0.08);
+          const today = todayLocalISODate();
+          const cachedDaily = svc.getDailyStats();
+          const daily = cachedDaily.date === today ? cachedDaily : loadDailyStats();
+          const nextDaily: DailyStats = {
+            date: today,
+            bestDistance: Math.max(daily.bestDistance, state.dist),
+            bestScore: Math.max(daily.bestScore, state.totalScore),
+          };
+          saveDailyStats(nextDaily);
+          ui.setDailyStats(nextDaily);
+        }
 
-          if (state.runTrail.length > 0) {
-            state.bestTrail = state.runTrail.slice(0, 240);
-            saveJson('best_trail', state.bestTrail);
+        // Only update personal best/Zeno progression if NOT in practice mode
+        if (!state.practiceMode) {
+          if (state.dist >= state.zenoTarget) {
+            state.zenoLevel++;
+            state.best = state.dist;
+            state.zenoTarget = (state.best + CLIFF_EDGE) / 2;
+
+            saveNumber('best', state.best);
+            saveNumber('zeno_target', state.zenoTarget);
+            saveNumber('zeno_level', state.zenoLevel);
+
+            ui.setBestScore(state.best);
+            ui.setZenoTarget(state.zenoTarget);
+            ui.setZenoLevel(state.zenoLevel);
+
+            // Award Zeno level up bonus
+            awardZenoLevelUp(state, state.zenoLevel, ui);
+
+            state.screenFlash = state.reduceFx ? 0 : 1;
+            state.celebrationBurst = true;
+            spawnCelebration(state, state.px, state.py, [theme.accent2, theme.accent1, theme.highlight, theme.accent4, theme.accent3]);
+
+            audio.zenoJingle();
+            audio.stopEdgeWarning();
+
+            if (state.runTrail.length > 0) {
+              state.bestTrail = state.runTrail.slice(0, 240);
+              saveJson('best_trail', state.bestTrail);
+            }
+
+            ui.setSessionGoals((prev) => updateGoals(prev, { beat_target_once: 1 }));
+
+            // Sync new personal best to Firebase
+            ui.onNewPersonalBest?.(state.totalScore, state.best);
+          } else if (state.dist > state.best) {
+            state.best = state.dist;
+            saveNumber('best', state.best);
+            ui.setBestScore(state.best);
+            audio.tone(660, 0.08, 'sine', 0.08);
+
+            if (state.runTrail.length > 0) {
+              state.bestTrail = state.runTrail.slice(0, 240);
+              saveJson('best_trail', state.bestTrail);
+            }
+
+            // Sync new personal best to Firebase
+            ui.onNewPersonalBest?.(state.totalScore, state.best);
           }
-
-          // Sync new personal best to Firebase
-          ui.onNewPersonalBest?.(state.totalScore, state.best);
         }
 
         audio.stopEdgeWarning();
 
+        // Perfect landing audio feedback plays in all modes
         if (isPerfect) {
           setTimeout(() => audio.tone(1320, 0.05, 'sine', 0.06), 50);
           setTimeout(() => audio.tone(1760, 0.04, 'sine', 0.05), 100);
-          ui.setSessionGoals((prev) => updateGoals(prev, { two_perfects: 1 }));
         }
 
-        state.stats.successfulLandings++;
-        state.stats.totalDistance += state.dist;
-        if (isPerfect) state.stats.perfectLandings++;
-        if (finalMultiplier > state.stats.maxMultiplier) state.stats.maxMultiplier = finalMultiplier;
+        // Stats, streaks, goals, achievements - only if NOT in practice mode
+        if (!state.practiceMode) {
+          if (isPerfect) {
+            ui.setSessionGoals((prev) => updateGoals(prev, { two_perfects: 1 }));
+          }
 
-        // Increment landingsWithoutFall streak
-        state.landingsWithoutFall++;
+          state.stats.successfulLandings++;
+          state.stats.totalDistance += state.dist;
+          if (isPerfect) state.stats.perfectLandings++;
+          if (finalMultiplier > state.stats.maxMultiplier) state.stats.maxMultiplier = finalMultiplier;
 
-        // Play win sound on successful landing
+          // Increment landingsWithoutFall streak
+          state.landingsWithoutFall++;
+
+          ui.setSessionGoals((prev) => updateGoals(prev, { land_5_times: 1 }));
+          if (finalMultiplier >= 3) ui.setSessionGoals((prev) => updateGoals(prev, { reach_multiplier_3: 1 }));
+        }
+
+        // Play win sound on successful landing (plays in all modes)
         audio.win?.();
         audio.stopSlide?.();
-
-        ui.setSessionGoals((prev) => updateGoals(prev, { land_5_times: 1 }));
-        if (finalMultiplier >= 3) ui.setSessionGoals((prev) => updateGoals(prev, { reach_multiplier_3: 1 }));
       }
 
-      state.stats.totalThrows++;
-      state.sessionThrows++; // Session-volatile counter for Marathon achievement
-      saveJson('stats', state.stats);
-      ui.setStats({ ...state.stats });
+      // Stats tracking and progression - only if NOT in practice mode
+      if (!state.practiceMode) {
+        state.stats.totalThrows++;
+        state.sessionThrows++; // Session-volatile counter for Marathon achievement
+        saveJson('stats', state.stats);
+        ui.setStats({ ...state.stats });
 
-      // Update history tracking for stats page
-      updateTodayHistory(state.best, state.stats.totalThrows, state.totalScore);
+        // Update history tracking for stats page
+        updateTodayHistory(state.best, state.stats.totalThrows, state.totalScore);
 
-      // Add to personal leaderboard (only meaningful distances)
-      if (state.dist > 50) {
-        addToPersonalLeaderboard(state.dist);
-      }
-
-      // Update daily challenge
-      const updatedChallenge = updateDailyChallenge(state.dist, state.lastMultiplier, state.fellOff);
-      ui.setDailyChallenge(updatedChallenge);
-
-      // Hot streak tracking (consecutive 419+ throws)
-      if (!state.fellOff && state.dist >= 419) {
-        state.hotStreak++;
-        if (state.hotStreak > state.bestHotStreak) {
-          state.bestHotStreak = state.hotStreak;
-          saveNumber('best_hot_streak', state.bestHotStreak);
+        // Add to personal leaderboard (only meaningful distances)
+        if (state.dist > 50) {
+          addToPersonalLeaderboard(state.dist);
         }
-      } else {
-        state.hotStreak = 0;
+
+        // Update daily challenge
+        const updatedChallenge = updateDailyChallenge(state.dist, state.lastMultiplier, state.fellOff);
+        ui.setDailyChallenge(updatedChallenge);
+
+        // Update daily tasks (only for successful landings)
+        if (!state.fellOff) {
+          const airTimeSeconds = (nowMs - state.launchTimestamp) / 1000;
+          const reachedZeno = state.dist >= state.zenoTarget;
+          updateDailyProgress(state, state.dist, reachedZeno, airTimeSeconds);
+          ui.setDailyTasks({ ...state.dailyTasks });
+        }
+
+        // Hot streak tracking (consecutive 419+ throws)
+        if (!state.fellOff && state.dist >= 419) {
+          state.hotStreak++;
+          if (state.hotStreak > state.bestHotStreak) {
+            state.bestHotStreak = state.hotStreak;
+            saveNumber('best_hot_streak', state.bestHotStreak);
+          }
+        } else {
+          state.hotStreak = 0;
+        }
+        ui.setHotStreak(state.hotStreak, state.bestHotStreak);
+
+        // Check achievements
+        checkAchievements(state, ui, audio, 3000);
+
+        // Check milestones
+        checkMilestones(state, ui);
       }
-      ui.setHotStreak(state.hotStreak, state.bestHotStreak);
-
-      // Session goals
-      // score_250 increments handled by caller by passing score deltas; keep minimal here
-
-      checkAchievements(state, ui, audio, 3000);
 
       ui.setLastDist(state.fellOff ? null : state.dist);
 
@@ -832,13 +894,15 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.dist = 0;
       ui.setFellOff(true);
 
-      // Increment and sync total falls
-      state.totalFalls++;
-      saveNumber('total_falls', state.totalFalls);
-      ui.onFall?.(state.totalFalls);
+      // Increment and sync total falls - only if NOT in practice mode
+      if (!state.practiceMode) {
+        state.totalFalls++;
+        saveNumber('total_falls', state.totalFalls);
+        ui.onFall?.(state.totalFalls);
 
-      // Reset landingsWithoutFall streak on fall
-      state.landingsWithoutFall = 0;
+        // Reset landingsWithoutFall streak on fall
+        state.landingsWithoutFall = 0;
+      }
 
       // Comedic failure
       state.failureAnimating = true;

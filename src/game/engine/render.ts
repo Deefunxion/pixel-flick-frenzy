@@ -161,6 +161,16 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   backgroundRenderer.update(state.wind, nowMs);
   backgroundRenderer.render(ctx);
 
+  // Practice mode badge
+  if (state.practiceMode) {
+    ctx.save();
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255, 165, 0, 0.8)';
+    ctx.fillText('PRACTICE MODE', W / 2, 12);
+    ctx.restore();
+  }
+
   // Best marker - animated flag using background assets
   if (state.best > 0 && state.best <= CLIFF_EDGE) {
     const flagX = Math.floor(state.best);
@@ -631,6 +641,16 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   // Update and render noir background layers using asset-based renderer
   noirBackgroundRenderer.update(state.wind, nowMs);
   noirBackgroundRenderer.render(ctx);
+
+  // Practice mode badge
+  if (state.practiceMode) {
+    ctx.save();
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255, 165, 0, 0.8)';
+    ctx.fillText('PRACTICE MODE', W / 2, 12);
+    ctx.restore();
+  }
 
   // Best marker - animated flag using noir assets
   if (state.best > 0 && state.best <= CLIFF_EDGE) {
