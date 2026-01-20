@@ -64,6 +64,8 @@ import {
   playPbDing,
   playNewRecord,
   playCloseCall,
+  // Ring sounds
+  playRingCollect,
   type AudioRefs,
   type AudioSettings,
   type AudioState,
@@ -459,6 +461,8 @@ const Game = () => {
       pbDing: () => playPbDing(audioRefs.current, audioSettingsRef.current),
       newRecordJingle: () => playNewRecord(audioRefs.current, audioSettingsRef.current),
       closeCall: () => playCloseCall(audioRefs.current, audioSettingsRef.current),
+      // Ring sounds
+      ringCollect: (ringIndex: number) => playRingCollect(audioRefs.current, audioSettingsRef.current, ringIndex),
     };
 
     const scheduleReset = (ms: number) => {

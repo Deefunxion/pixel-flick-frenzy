@@ -729,3 +729,75 @@ export function playCloseCall(refs: AudioRefs, settings: AudioSettings): void {
     playTone(refs, settings, 659, 0.15, 'sine', 0.05);
   }
 }
+
+// ============================================
+// RING COLLECTION SOUNDS
+// ============================================
+
+/**
+ * Play ring collection sound
+ * Each ring has a different pitch (escalating A major chord)
+ * Ring 0: A4 (440Hz) - low
+ * Ring 1: C#5 (554Hz) - medium
+ * Ring 2: E5 (659Hz) - high + bonus flourish
+ */
+export function playRingCollect(refs: AudioRefs, settings: AudioSettings, ringIndex: number): void {
+  if (settings.muted || settings.volume <= 0) return;
+
+  const ctx = ensureAudioContext(refs);
+  const now = ctx.currentTime;
+
+  // A major chord frequencies (escalating)
+  const frequencies = [440, 554, 659]; // A4, C#5, E5
+  const freq = frequencies[Math.min(ringIndex, 2)];
+
+  // Main chime
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.15 * settings.volume, now + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.35);
+
+  // Shimmer overtone
+  const shimmer = ctx.createOscillator();
+  shimmer.type = 'sine';
+  shimmer.frequency.value = freq * 2; // Octave above
+
+  const shimmerGain = ctx.createGain();
+  shimmerGain.gain.setValueAtTime(0, now);
+  shimmerGain.gain.linearRampToValueAtTime(0.06 * settings.volume, now + 0.02);
+  shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+  shimmer.connect(shimmerGain);
+  shimmerGain.connect(ctx.destination);
+  shimmer.start(now);
+  shimmer.stop(now + 0.25);
+
+  // Extra flourish for completing all 3 rings (ring index 2)
+  if (ringIndex === 2) {
+    setTimeout(() => {
+      const bonus = ctx.createOscillator();
+      bonus.type = 'sine';
+      bonus.frequency.value = 880; // A5 - octave above root
+
+      const bonusGain = ctx.createGain();
+      const bonusNow = ctx.currentTime;
+      bonusGain.gain.setValueAtTime(0, bonusNow);
+      bonusGain.gain.linearRampToValueAtTime(0.12 * settings.volume, bonusNow + 0.01);
+      bonusGain.gain.exponentialRampToValueAtTime(0.001, bonusNow + 0.4);
+
+      bonus.connect(bonusGain);
+      bonusGain.connect(ctx.destination);
+      bonus.start(bonusNow);
+      bonus.stop(bonusNow + 0.45);
+    }, 80);
+  }
+}

@@ -38,6 +38,11 @@ import {
   calculatePrecisionTimeScale,
   hasPassedPb,
 } from './precisionBar';
+import {
+  updateRingPosition,
+  checkRingCollision,
+  RING_MULTIPLIERS,
+} from './rings';
 
 export type GameAudio = {
   startCharge: (power01: number) => void;
@@ -72,6 +77,8 @@ export type GameAudio = {
   pbDing?: () => void;
   newRecordJingle?: () => void;
   closeCall?: () => void;
+  // Ring sounds
+  ringCollect?: (ringIndex: number) => void;
 };
 
 export type GameUI = {
@@ -310,6 +317,42 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
     if (state.runTrail.length === 0 || state.runTrail.length % 2 === 0) {
       state.runTrail.push({ x: state.px, y: state.py });
+    }
+
+    // Ring system: update positions and check collisions
+    for (const ring of state.rings) {
+      updateRingPosition(ring, nowMs);
+
+      if (!ring.passed && checkRingCollision(state.px, state.py, ring)) {
+        ring.passed = true;
+        ring.passedAt = nowMs;
+        state.ringsPassedThisThrow++;
+
+        // Apply escalating multiplier
+        state.ringMultiplier *= RING_MULTIPLIERS[ring.ringIndex];
+
+        // Spawn ring collection particles
+        for (let i = 0; i < 10; i++) {
+          const angle = (i / 10) * Math.PI * 2;
+          state.particles.push({
+            x: ring.x,
+            y: ring.y,
+            vx: Math.cos(angle) * 2,
+            vy: Math.sin(angle) * 2,
+            life: 1,
+            maxLife: 20,
+            color: ring.color,
+          });
+        }
+
+        // Play collection sound
+        audio.ringCollect?.(ring.ringIndex);
+
+        // Subtle screen flash on collection
+        if (!state.reduceFx) {
+          state.screenFlash = 0.3;
+        }
+      }
     }
 
     if (state.py >= H - 20) {
@@ -625,7 +668,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
         state.dist = Math.max(0, landedAt);
         ui.setFellOff(false);
 
-        const finalMultiplier = state.currentMultiplier;
+        // Combine risk multiplier with ring multiplier
+        const finalMultiplier = state.currentMultiplier * state.ringMultiplier;
         state.lastMultiplier = finalMultiplier;
         ui.setLastMultiplier(finalMultiplier);
 
@@ -638,6 +682,15 @@ export function updateFrame(state: GameState, svc: GameServices) {
         const multipliedPoints = basePoints * finalMultiplier;
         const perfectBonus = isPerfect ? 10 : 0;
         const scoreGained = multipliedPoints + perfectBonus;
+
+        // Track ring stats
+        state.stats.totalRingsPassed += state.ringsPassedThisThrow;
+        if (state.ringsPassedThisThrow > state.stats.maxRingsInThrow) {
+          state.stats.maxRingsInThrow = state.ringsPassedThisThrow;
+        }
+        if (state.ringsPassedThisThrow === 3) {
+          state.stats.perfectRingThrows++;
+        }
 
         state.totalScore += scoreGained;
         saveNumber('total_score', state.totalScore);

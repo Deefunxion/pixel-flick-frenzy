@@ -15,6 +15,7 @@ import {
 } from '@/game/storage';
 import type { GameState, Star, TutorialState } from './types';
 import { ParticleSystem } from './particles';
+import { generateRings, resetRings } from './rings';
 
 function loadTutorialProgress(): Pick<TutorialState, 'hasSeenCharge' | 'hasSeenAir' | 'hasSeenSlide'> {
   if (typeof window === 'undefined') {
@@ -86,7 +87,16 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     perfectLanding: false,
     totalScore: loadNumber('total_score', 0, 'omf_total_score'),
     totalFalls: loadNumber('total_falls', 0, 'omf_total_falls'),
-    stats: loadJson('stats', { totalThrows: 0, successfulLandings: 0, totalDistance: 0, perfectLandings: 0, maxMultiplier: 1 }, 'omf_stats'),
+    stats: loadJson('stats', {
+      totalThrows: 0,
+      successfulLandings: 0,
+      totalDistance: 0,
+      perfectLandings: 0,
+      maxMultiplier: 1,
+      totalRingsPassed: 0,
+      maxRingsInThrow: 0,
+      perfectRingThrows: 0,
+    }, 'omf_stats'),
     achievements: loadStringSet('achievements', 'omf_achievements'),
     newAchievement: null,
     touchActive: false,
@@ -135,6 +145,10 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     // Streak tracking (session-volatile)
     sessionThrows: 0,
     landingsWithoutFall: 0,
+    // Rings system
+    rings: generateRings(seed),
+    ringsPassedThisThrow: 0,
+    ringMultiplier: 1,
   };
 }
 
@@ -189,6 +203,10 @@ export function resetPhysics(state: GameState) {
   if (state.particleSystem) {
     state.particleSystem.clear();
   }
+  // Rings reset - generate new rings for each throw
+  state.rings = generateRings(state.seed);
+  state.ringsPassedThisThrow = 0;
+  state.ringMultiplier = 1;
 }
 
 export function nextWind(state: GameState) {
