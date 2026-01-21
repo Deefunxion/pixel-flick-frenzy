@@ -51,3 +51,6 @@ export const DAILY_TASK_REWARDS: Record<string, { desc: string; amount: number }
   air_4s: { desc: 'Stay airborne 4+ seconds', amount: 10 },
   air_5s: { desc: 'Stay airborne 5+ seconds', amount: 10 },
 };
+
+// Scoring cap to prevent multiplier runaway
+export const MAX_FINAL_MULTIPLIER = 6.0;  // Risk (5x max) + small ring bonus

@@ -5,6 +5,7 @@ import {
   CLIFF_EDGE,
   H,
   MAX_ANGLE,
+  MAX_FINAL_MULTIPLIER,
   MAX_POWER,
   MIN_ANGLE,
   MIN_POWER,
@@ -705,8 +706,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
         state.dist = Math.max(0, landedAt);
         ui.setFellOff(false);
 
-        // Combine risk multiplier with ring multiplier
-        const finalMultiplier = state.currentMultiplier * state.ringMultiplier;
+        // Combine risk multiplier with ring multiplier (capped to prevent runaway)
+        const rawMultiplier = state.currentMultiplier * state.ringMultiplier;
+        const finalMultiplier = Math.min(MAX_FINAL_MULTIPLIER, rawMultiplier);
         state.lastMultiplier = finalMultiplier;
         ui.setLastMultiplier(finalMultiplier);
 
