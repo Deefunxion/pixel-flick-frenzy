@@ -185,6 +185,7 @@ export interface GameState {
   precisionTimeScale: number;
   precisionBarTriggeredThisThrow: boolean;
   passedPbThisThrow: boolean;
+  pbPaceActive: boolean;  // On track to beat PB during flight
   // "Almost!" overlay - stays visible until next throw
   almostOverlayActive: boolean;
   almostOverlayDistance: number; // Frozen distance from target at landing
@@ -216,6 +217,9 @@ export interface GameState {
   // Charge visual tension
   chargeGlowIntensity: number;  // 0-1, builds with charge
   chargeVignetteActive: boolean;
+  // Air control feedback
+  lastControlAction: 'float' | 'brake' | null;
+  controlActionTime: number;
   // Monetization - Throw system
   throwState: ThrowState;
   dailyTasks: DailyTasks;

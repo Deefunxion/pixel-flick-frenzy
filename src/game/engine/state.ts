@@ -202,6 +202,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     precisionTimeScale: 1,
     precisionBarTriggeredThisThrow: false,
     passedPbThisThrow: false,
+    pbPaceActive: false,
     almostOverlayActive: false,
     almostOverlayDistance: 0,
     // Streak tracking (session-volatile)
@@ -232,6 +233,9 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     // Charge visual tension
     chargeGlowIntensity: 0,
     chargeVignetteActive: false,
+    // Air control feedback
+    lastControlAction: null,
+    controlActionTime: 0,
     // Monetization - Throw system
     throwState,
     dailyTasks,
@@ -291,6 +295,7 @@ export function resetPhysics(state: GameState) {
   state.precisionTimeScale = 1;
   state.precisionBarTriggeredThisThrow = false;
   state.passedPbThisThrow = false;
+  state.pbPaceActive = false;
   // Note: almostOverlayActive is NOT reset here - it clears when charging starts
   if (state.particleSystem) {
     state.particleSystem.clear();
@@ -318,6 +323,9 @@ export function resetPhysics(state: GameState) {
   // Reset charge visual tension
   state.chargeGlowIntensity = 0;
   state.chargeVignetteActive = false;
+  // Reset air control feedback
+  state.lastControlAction = null;
+  state.controlActionTime = 0;
 }
 
 export function nextWind(state: GameState) {

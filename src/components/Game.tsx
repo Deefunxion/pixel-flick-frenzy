@@ -597,6 +597,8 @@ const Game = () => {
       onNewPersonalBest: handleNewPersonalBest,
       onFall: handleFall,
       onLanding: handleLanding,
+      onChargeStart: () => setShowGrade(false), // Dismiss grade immediately on new throw
+      onPbPassed: () => addToast('NEW PERSONAL BEST!', 'complete', 'high'),
       setThrowState,
       setPracticeMode,
       setDailyTasks,

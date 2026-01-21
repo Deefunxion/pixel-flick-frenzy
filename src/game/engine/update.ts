@@ -131,6 +131,8 @@ export type GameUI = {
   onNewPersonalBest?: (totalScore: number, bestThrow: number) => void;
   onFall?: (totalFalls: number) => void;
   onLanding?: (landingX: number, targetX: number, ringsPassedThisThrow: number, landingVelocity: number, fellOff: boolean) => void;
+  onChargeStart?: () => void;
+  onPbPassed?: () => void;  // Triggered when flying past PB position
 };
 
 export type GameServices = {
@@ -249,6 +251,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.chargeStart = nowMs;
     state.almostOverlayActive = false; // Hide "Almost!" overlay when starting new throw
     ui.setFellOff(false);
+    ui.onChargeStart?.(); // Dismiss grade overlay immediately
     audio.startCharge(0);
     audio.startTensionDrone?.();  // Start low tension drone
   }
@@ -384,6 +387,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
         const result = applyAirFloat(state);
         if (result.applied) {
           precisionAppliedThisFrame = true;
+          state.lastControlAction = 'float';
+          state.controlActionTime = nowMs;
           audio.airBrakeTap?.(); // TODO: add airFloat sound
         } else if (result.denied) {
           audio.actionDenied?.();
@@ -394,6 +399,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
         const result = applyAirBrake(state, 'hold', deltaTime);
         if (result.applied) {
           precisionAppliedThisFrame = true;
+          // Track brake action once hold duration reaches threshold
+          if (state.precisionInput.holdDuration === 12) {  // ~200ms at 60fps
+            state.lastControlAction = 'brake';
+            state.controlActionTime = nowMs;
+          }
           // Play hold sound every 6 frames to avoid spam
           if (state.precisionInput.holdDuration % 6 === 0) {
             audio.airBrakeHold?.();
@@ -706,10 +716,16 @@ export function updateFrame(state: GameState, svc: GameServices) {
       audio.stopPrecisionDrone?.();
     }
 
+    // Track PB pace (within 10px of best)
+    if (!state.pbPaceActive && state.px > state.best - 10 && state.best > 0) {
+      state.pbPaceActive = true;
+    }
+
     // Track if we passed PB
     if (state.precisionBarActive && !state.passedPbThisThrow && hasPassedPb(state.px, state.best)) {
       state.passedPbThisThrow = true;
       audio.pbDing?.(); // Play PB ding
+      ui.onPbPassed?.();  // Trigger PB callout
     }
   } else if (!state.flying && !state.sliding && state.precisionBarActive) {
     // Deactivate when not flying/sliding
