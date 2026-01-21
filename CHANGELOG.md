@@ -4,6 +4,21 @@ All notable changes to One-More-Flick are documented in this file.
 
 ## [Unreleased] - 2026-01-17
 
+### Added - Page Flip Transition
+- **Notebook page turn effect** between throws:
+  - Canvas snapshot capture at throw completion
+  - 2D slice-based curl animation (32 slices)
+  - Ruled paper background for flipbook theme
+  - Film strip background for noir theme
+  - Drop shadow under curling page
+  - Specular highlight on fold edge
+  - Corner dog-ear effect
+  - ~450ms duration with easeInOutCubic
+- **Audio feedback**: Paper whoosh and settle sounds
+- **Haptic feedback**: 10ms vibration on mobile
+- **Accessibility**: Respects `reduceFx` setting (skip animation)
+- **New files**: `pageFlip.ts`, `pageFlipRender.ts`
+
 ### Fixed
 - **First-throw slow-motion frustration**: New players experienced 30+ second slow-motion on their first throw, making the game feel broken
   - Slow-motion effects now require unlocking the "Bullet Time" achievement (land beyond 400)
