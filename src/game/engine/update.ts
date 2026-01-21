@@ -728,6 +728,18 @@ export function updateFrame(state: GameState, svc: GameServices) {
             state.stats.perfectRingThrows++;
           }
 
+          // Dev-only: Log ring/multiplier distribution for tuning
+          if (import.meta.env.DEV) {
+            console.log('[DEV] Landing stats:', {
+              ringsPassedThisThrow: state.ringsPassedThisThrow,
+              ringMultiplier: state.ringMultiplier.toFixed(3),
+              riskMultiplier: state.currentMultiplier.toFixed(3),
+              finalMultiplier: finalMultiplier.toFixed(3),
+              basePoints,
+              scoreGained: scoreGained.toFixed(1),
+            });
+          }
+
           state.totalScore += scoreGained;
           saveNumber('total_score', state.totalScore);
           ui.setTotalScore(state.totalScore);
