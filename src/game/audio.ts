@@ -27,6 +27,13 @@ import {
   playNewRecordFile,
   playCloseCallFile,
 } from './audioFiles';
+import {
+  canPlaySound,
+  registerSoundPlay,
+  getRandomPitch,
+  getDecayedVolume,
+  SOUND_COOLDOWNS,
+} from './engine/audioPool';
 
 export type AudioSettings = {
   muted: boolean;
@@ -749,13 +756,22 @@ export function playCloseCall(refs: AudioRefs, settings: AudioSettings): void {
 export function playRingCollect(refs: AudioRefs, settings: AudioSettings, ringIndex: number, ringX: number = 240): void {
   if (settings.muted || settings.volume <= 0) return;
 
+  // Anti-fatigue: Check cooldown before playing
+  if (!canPlaySound('ringCollect', SOUND_COOLDOWNS.ringCollect)) return;
+  registerSoundPlay('ringCollect');
+
   const ctx = ensureAudioContext(refs);
   const now = ctx.currentTime;
 
   // A major chord frequencies (escalating)
   const frequencies = [440, 554, 659]; // A4, C#5, E5
   const pitchMultiplier = 1 + ringIndex * 0.1; // 1.0, 1.1, 1.2
-  const freq = frequencies[Math.min(ringIndex, 2)] * pitchMultiplier;
+  // Anti-fatigue: Add random pitch variation (+/- 10%)
+  const randomPitch = getRandomPitch(0.1);
+  const freq = frequencies[Math.min(ringIndex, 2)] * pitchMultiplier * randomPitch;
+
+  // Anti-fatigue: Apply session volume decay
+  const effectiveVolume = getDecayedVolume(settings.volume);
 
   // Stereo pan based on ring X position (0-480 canvas width, center at 240)
   // Pan range: -1 (left) to +1 (right)
@@ -764,11 +780,11 @@ export function playRingCollect(refs: AudioRefs, settings: AudioSettings, ringIn
   // === COIN SOUND (immediate feedback) ===
   const coinOsc = ctx.createOscillator();
   coinOsc.type = 'square';
-  coinOsc.frequency.setValueAtTime(1200, now);
-  coinOsc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+  coinOsc.frequency.setValueAtTime(1200 * randomPitch, now);
+  coinOsc.frequency.exponentialRampToValueAtTime(800 * randomPitch, now + 0.05);
 
   const coinGain = ctx.createGain();
-  coinGain.gain.setValueAtTime(0.1 * settings.volume, now);
+  coinGain.gain.setValueAtTime(0.1 * effectiveVolume, now);
   coinGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
 
   // Apply stereo pan to coin sound
@@ -788,7 +804,7 @@ export function playRingCollect(refs: AudioRefs, settings: AudioSettings, ringIn
 
   const gain = ctx.createGain();
   gain.gain.setValueAtTime(0, now);
-  gain.gain.linearRampToValueAtTime(0.15 * settings.volume, now + 0.01);
+  gain.gain.linearRampToValueAtTime(0.15 * effectiveVolume, now + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
 
   // Apply stereo pan to main chime
@@ -808,7 +824,7 @@ export function playRingCollect(refs: AudioRefs, settings: AudioSettings, ringIn
 
   const shimmerGain = ctx.createGain();
   shimmerGain.gain.setValueAtTime(0, now);
-  shimmerGain.gain.linearRampToValueAtTime(0.06 * settings.volume, now + 0.02);
+  shimmerGain.gain.linearRampToValueAtTime(0.06 * effectiveVolume, now + 0.02);
   shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
 
   // Apply stereo pan to shimmer
@@ -834,7 +850,7 @@ export function playRingCollect(refs: AudioRefs, settings: AudioSettings, ringIn
         const bonusGain = ctx.createGain();
         const bonusNow = ctx.currentTime;
         bonusGain.gain.setValueAtTime(0, bonusNow);
-        bonusGain.gain.linearRampToValueAtTime(0.10 * settings.volume, bonusNow + 0.01);
+        bonusGain.gain.linearRampToValueAtTime(0.10 * effectiveVolume, bonusNow + 0.01);
         bonusGain.gain.exponentialRampToValueAtTime(0.001, bonusNow + 0.15);
 
         bonus.connect(bonusGain);
