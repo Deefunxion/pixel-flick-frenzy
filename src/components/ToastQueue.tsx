@@ -64,7 +64,8 @@ function ToastItem({ toast, index, onDismiss }: ToastItemProps) {
   useEffect(() => {
     const timer = setTimeout(onDismiss, toast.duration);
     return () => clearTimeout(timer);
-  }, [toast.duration, onDismiss]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast.id, toast.duration]); // Only depend on toast identity, not onDismiss callback
 
   return (
     <div

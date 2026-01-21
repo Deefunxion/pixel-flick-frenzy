@@ -1,15 +1,11 @@
 /**
  * Landing Grade Display
  *
- * Shows grade stamp animation with:
- * - Scale slam effect (0 → 1.2 → 1.0)
- * - Grade letter with color
- * - Coach comment
- * - Confetti for S/A grades
+ * Shows grade for 1 second, then fades out
  */
 
-import React, { useEffect, useState } from 'react';
-import { Grade, GradeResult, GRADE_COLORS, shouldShowConfetti, getRandomTip } from '@/game/engine/gradeSystem';
+import React, { useEffect, useState, useMemo } from 'react';
+import { GradeResult, GRADE_COLORS, shouldShowConfetti, getRandomTip } from '@/game/engine/gradeSystem';
 
 interface LandingGradeProps {
   result: GradeResult | null;
@@ -18,80 +14,58 @@ interface LandingGradeProps {
 }
 
 export function LandingGrade({ result, visible, onDismiss }: LandingGradeProps) {
-  const [animationPhase, setAnimationPhase] = useState<'slam' | 'hold' | 'fade'>('slam');
-  const [scale, setScale] = useState(0);
+  const [fading, setFading] = useState(false);
+
+  // Memoize tip so it doesn't change on every render (must be before early return)
+  const showTip = result && (result.grade === 'C' || result.grade === 'D');
+  const tip = useMemo(() => showTip ? getRandomTip() : null, [showTip]);
 
   useEffect(() => {
     if (!visible || !result) {
-      setAnimationPhase('slam');
-      setScale(0);
+      setFading(false);
       return;
     }
 
-    // Slam animation: 0 → 1.2 → 1.0
-    setAnimationPhase('slam');
-    setScale(0);
+    // Start fade out after 800ms
+    const fadeTimer = setTimeout(() => setFading(true), 800);
 
-    // Start slam
-    const slamStart = setTimeout(() => setScale(1.2), 50);
-
-    // Settle to 1.0
-    const settle = setTimeout(() => {
-      setScale(1.0);
-      setAnimationPhase('hold');
-    }, 200);
-
-    // Start fade after 1.5s
-    const fadeStart = setTimeout(() => {
-      setAnimationPhase('fade');
-    }, 1500);
-
-    // Dismiss after 2s
-    const dismiss = setTimeout(() => {
+    // Dismiss after 1000ms total
+    const dismissTimer = setTimeout(() => {
       onDismiss?.();
-    }, 2000);
+    }, 1000);
 
     return () => {
-      clearTimeout(slamStart);
-      clearTimeout(settle);
-      clearTimeout(fadeStart);
-      clearTimeout(dismiss);
+      clearTimeout(fadeTimer);
+      clearTimeout(dismissTimer);
     };
   }, [visible, result, onDismiss]);
 
   if (!visible || !result) return null;
 
-  const { grade, comment, score } = result;
+  const { grade, comment } = result;
   const color = GRADE_COLORS[grade];
-  const showTip = grade === 'C' || grade === 'D';
 
   return (
     <div
-      className={`
-        fixed inset-0 flex items-center justify-center pointer-events-none
-        transition-opacity duration-300
-        ${animationPhase === 'fade' ? 'opacity-0' : 'opacity-100'}
-      `}
+      className="fixed inset-0 flex items-center justify-center pointer-events-none"
+      style={{
+        opacity: fading ? 0 : 1,
+        transition: 'opacity 200ms ease-out',
+      }}
     >
       {/* Confetti for S/A */}
-      {shouldShowConfetti(grade) && animationPhase !== 'fade' && (
+      {shouldShowConfetti(grade) && !fading && (
         <Confetti />
       )}
 
-      {/* Grade stamp */}
-      <div
-        className="relative"
-        style={{
-          transform: `scale(${scale})`,
-          transition: 'transform 150ms ease-out',
-        }}
-      >
+      {/* Grade display */}
+      <div className="relative text-center">
         {/* Grade letter */}
         <div
-          className="text-8xl font-black text-center"
+          className="text-4xl font-black"
           style={{
             color,
-            textShadow: `0 4px 8px rgba(0,0,0,0.5), 0 0 20px ${color}40`,
+            textShadow: `0 2px 4px rgba(0,0,0,0.5), 0 0 12px ${color}40`,
           }}
         >
           {grade}
@@ -99,21 +73,16 @@ export function LandingGrade({ result, visible, onDismiss }: LandingGradeProps) 
 
         {/* Comment */}
         <div
-          className="text-xl font-bold text-center mt-2"
+          className="text-base font-bold mt-1"
           style={{ color }}
         >
           {comment}
         </div>
 
-        {/* Score breakdown */}
-        <div className="text-sm text-white/60 text-center mt-1">
-          Score: {score}/100
-        </div>
-
         {/* Tip for C/D grades */}
-        {showTip && (
-          <div className="text-xs text-yellow-400 text-center mt-3 max-w-48">
-            {getRandomTip()}
+        {tip && (
+          <div className="text-xs text-yellow-400 mt-2 max-w-48 mx-auto">
+            {tip}
           </div>
         )}
       </div>
