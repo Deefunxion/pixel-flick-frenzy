@@ -237,11 +237,14 @@ function drawStaminaBar(
     fillColor = '#eab308'; // Yellow
   } else {
     fillColor = '#ef4444'; // Red
-    // Flash effect when low
-    if (Math.floor(nowMs / 200) % 2 === 0) {
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
-      ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
-    }
+    // Pulsing glow effect when low (Task 8.2)
+    const pulseAlpha = 0.3 + Math.sin(nowMs * 0.01) * 0.2;
+    ctx.save();
+    ctx.shadowColor = 'red';
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = `rgba(239, 68, 68, ${pulseAlpha})`;
+    ctx.fillRect(barX - 3, barY - 3, barWidth + 6, barHeight + 6);
+    ctx.restore();
   }
 
   // Fill bar
@@ -551,6 +554,14 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       // Idle or other states
       drawStickFigure(ctx, zenoX, zenoY, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
     }
+  }
+
+  // Action denied red pulse on Zeno (Task 8.3)
+  if (state.staminaDeniedShake && state.staminaDeniedShake > 0) {
+    ctx.fillStyle = `rgba(255, 0, 0, ${state.staminaDeniedShake * 0.04})`;
+    ctx.beginPath();
+    ctx.arc(zenoX, zenoY, 25, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   // Stamina bar (only during flight/slide when stamina used)
@@ -988,6 +999,14 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
       // Idle or other states
       drawStickFigure(ctx, state.px, zenoY, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
     }
+  }
+
+  // Action denied red pulse on Zeno (Task 8.3)
+  if (state.staminaDeniedShake && state.staminaDeniedShake > 0) {
+    ctx.fillStyle = `rgba(255, 0, 0, ${state.staminaDeniedShake * 0.04})`;
+    ctx.beginPath();
+    ctx.arc(state.px, zenoY, 25, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   // Stamina bar (only during flight/slide when stamina used)
