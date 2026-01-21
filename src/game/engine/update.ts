@@ -1,5 +1,6 @@
 import {
   ACHIEVEMENT_REWARDS,
+  ACHIEVEMENT_TIER_REWARDS,
   BASE_GRAV,
   CHARGE_MS,
   CLIFF_EDGE,
@@ -160,8 +161,11 @@ function checkAchievements(state: GameState, ui: GameUI, audio: GameAudio, clear
     if (!state.achievements.has(id) && achievement.check(state.stats, state)) {
       state.achievements.add(id);
 
-      // Award throws if reward exists for this achievement
-      const reward = ACHIEVEMENT_REWARDS[id];
+      // Award throws based on tier (fall back to legacy ACHIEVEMENT_REWARDS for backwards compatibility)
+      const legacyReward = ACHIEVEMENT_REWARDS[id];
+      const tierReward = achievement.tier ? ACHIEVEMENT_TIER_REWARDS[achievement.tier] : 0;
+      const reward = legacyReward ?? tierReward;
+
       const rewardText = reward ? ` (+${reward} throws)` : '';
       const toastMessage = `${achievement.name}${rewardText}`;
 
@@ -169,6 +173,7 @@ function checkAchievements(state: GameState, ui: GameUI, audio: GameAudio, clear
       ui.setAchievements(new Set(state.achievements));
       ui.setNewAchievement(toastMessage);
       saveJson('achievements', [...state.achievements]);
+
       if (reward) {
         // Check not already claimed (prevent double-dipping on reload)
         if (!state.milestonesClaimed.achievements.includes(id)) {
