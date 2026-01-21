@@ -13,7 +13,7 @@ import { assetPath } from '@/lib/assetPath';
 import { getTheme, DEFAULT_THEME_ID, THEME_IDS, type ThemeId } from '@/game/themes';
 import { useUser } from '@/contexts/UserContext';
 import { NicknameModal } from './NicknameModal';
-import { MultiplierLadder } from './MultiplierLadder';
+import { ThrowScore } from './ThrowScore';
 import { LandingGrade } from './LandingGrade';
 import { calculateGrade, type GradeResult } from '@/game/engine/gradeSystem';
 import {
@@ -264,7 +264,8 @@ const Game = () => {
 
   const [hudPx, setHudPx] = useState(LAUNCH_PAD_X);
   const [hudFlying, setHudFlying] = useState(false);
-  const [combinedMultiplier, setCombinedMultiplier] = useState(1.0);
+  const [ringMultiplier, setRingMultiplier] = useState(1.0);
+  const [ringsCollected, setRingsCollected] = useState(0);
   // Tutorial overlay state (synced from stateRef)
   const [tutorialPhase, setTutorialPhase] = useState<'none' | 'idle' | 'charge' | 'air' | 'slide'>('none');
   const [tutorialActive, setTutorialActive] = useState(false);
@@ -660,9 +661,9 @@ const Game = () => {
       if (!s) return;
       setHudPx(s.px);
       setHudFlying(s.flying || s.sliding || s.charging);
-      // Sync combined multiplier for HUD
-      const combined = s.currentMultiplier * s.ringMultiplier;
-      setCombinedMultiplier(combined);
+      // Sync ring multiplier and count for HUD
+      setRingMultiplier(s.ringMultiplier);
+      setRingsCollected(s.ringsPassedThisThrow);
       // Sync tutorial state
       setTutorialPhase(s.tutorialState.phase);
       setTutorialActive(s.tutorialState.active);
@@ -1289,11 +1290,12 @@ const Game = () => {
           onBuyThrows={() => {/* TODO: Open shop modal */}}
         />
 
-        {/* Multiplier Ladder HUD */}
-        <MultiplierLadder
-          currentMultiplier={combinedMultiplier}
+        {/* Throw Score HUD */}
+        <ThrowScore
+          distance={hudPx}
+          ringMultiplier={ringMultiplier}
+          ringsCollected={ringsCollected}
           isFlying={hudFlying}
-          reduceFx={reduceFx}
         />
 
         {/* Landing Grade */}

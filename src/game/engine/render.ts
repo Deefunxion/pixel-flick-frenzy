@@ -713,29 +713,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     }
   }
 
-  // Multiplier display when flying
-  if ((state.flying || state.sliding) && state.currentMultiplier > 1.01) {
-    const mult = state.currentMultiplier;
-    const multX = 50;
-    const multY = 35;
-
-    let multColor = COLORS.accent1;
-    if (mult > 3) multColor = COLORS.danger;
-    else if (mult > 2) multColor = COLORS.highlight;
-
-    // Hand-drawn box
-    ctx.strokeStyle = multColor;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(multX, multY, 55, 22, 3);
-    ctx.stroke();
-
-    // Multiplier text
-    ctx.fillStyle = multColor;
-    ctx.font = 'bold 14px "Comic Sans MS", cursive, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(`x${mult.toFixed(1)}`, multX + 27, multY + 16);
-  }
+  // Risk multiplier display removed - rings shown via React HUD
 
   // Slow-mo corners
   if (state.slowMo > 0.1) {
@@ -1116,21 +1094,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     }
   }
 
-  // Multiplier display
-  if ((state.flying || state.sliding) && state.currentMultiplier > 1.01) {
-    const mult = state.currentMultiplier;
-    const multX = 50;
-    const multY = 28;
-
-    let multColor = COLORS.accent1;
-    if (mult > 3) multColor = COLORS.danger;
-    else if (mult > 2) multColor = COLORS.highlight;
-
-    ctx.fillStyle = multColor;
-    ctx.font = 'bold 12px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(`x${mult.toFixed(1)}`, multX, multY);
-  }
+  // Risk multiplier display removed - rings shown via React HUD
 
   // Slow-mo indicator
   if (state.slowMo > 0.1) {

@@ -64,7 +64,10 @@ export function NearMissOverlay({ distance, intensity, visible }: NearMissOverla
   const textSize = intensity === 'extreme' ? 'text-4xl' : intensity === 'close' ? 'text-3xl' : 'text-2xl';
 
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none">
+    <div
+      className="fixed left-1/2 -translate-x-1/2 pointer-events-none z-40 text-center"
+      style={{ top: '40%' }}
+    >
       {/* Main text */}
       <div
         className={`${textSize} font-black text-red-500 animate-pulse`}
@@ -74,14 +77,14 @@ export function NearMissOverlay({ distance, intensity, visible }: NearMissOverla
       </div>
 
       {/* Distance counter */}
-      <div className="text-2xl font-bold text-red-400 mt-2">
+      <div className="text-xl font-bold text-red-400 mt-1">
         {displayDistance.toFixed(2)}px short
       </div>
 
       {/* Recovery prompt */}
       {showRecovery && (
-        <div className="text-lg text-white/80 mt-6 animate-fade-in">
-          So close! Try again?
+        <div className="text-sm text-white/60 mt-3 animate-fade-in">
+          Try again?
         </div>
       )}
     </div>

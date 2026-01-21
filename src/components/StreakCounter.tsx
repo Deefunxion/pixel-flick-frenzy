@@ -59,40 +59,41 @@ export function StreakCounter({ streak, bestStreak, visible }: StreakCounterProp
 
   return (
     <>
-      {/* Streak counter */}
+      {/* Streak counter - positioned below MiniGoalHUD */}
       <div
         className={`
-          fixed top-16 left-4
-          bg-black/60 rounded-lg px-3 py-2
-          border-2 transition-all duration-150
+          fixed left-4 z-20
+          bg-black/60 rounded-lg px-2 py-1
+          border transition-all duration-150
           ${animatePulse ? 'scale-110' : 'scale-100'}
           ${isHot ? 'border-orange-500' : 'border-white/30'}
         `}
+        style={{ top: '60px' }}
       >
         <div
-          className="text-2xl font-bold text-center flex items-center gap-1"
+          className="text-lg font-bold flex items-center gap-1"
           style={{ color: flameColor }}
         >
           <span className={isHot ? 'animate-pulse' : ''}>🔥</span>
           <span>×{streak}</span>
+          {/* Best streak indicator */}
+          {streak >= bestStreak && bestStreak > 0 && (
+            <span className="text-xs text-yellow-400 ml-1">PB!</span>
+          )}
         </div>
-
-        {/* Best streak indicator */}
-        {streak >= bestStreak && bestStreak > 0 && (
-          <div className="text-xs text-yellow-400 text-center">
-            Personal Best!
-          </div>
-        )}
       </div>
 
-      {/* Milestone celebration */}
+      {/* Milestone celebration - compact, below grade area */}
       {showMilestone && (
-        <div className="fixed top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50">
+        <div
+          className="fixed left-1/2 -translate-x-1/2 z-40"
+          style={{ top: '35%' }}
+        >
           <div
-            className="text-3xl font-black text-center animate-bounce"
+            className="text-xl font-black text-center animate-bounce bg-black/40 px-4 py-1 rounded-lg"
             style={{
               color: flameColor,
-              textShadow: `0 0 20px ${flameColor}, 0 0 40px ${flameColor}`,
+              textShadow: `0 0 12px ${flameColor}`,
             }}
           >
             {showMilestone}

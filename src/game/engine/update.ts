@@ -132,7 +132,7 @@ export type GameUI = {
   onFall?: (totalFalls: number) => void;
   onLanding?: (landingX: number, targetX: number, ringsPassedThisThrow: number, landingVelocity: number, fellOff: boolean) => void;
   onChargeStart?: () => void;
-  onPbPassed?: () => void;  // Triggered when flying past PB position
+  onPbPassed?: () => void;  // Triggered on successful landing that beats PB
 };
 
 export type GameServices = {
@@ -751,11 +751,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.pbPaceActive = true;
     }
 
-    // Track if we passed PB
+    // Track if we passed PB position (for precision bar visual only, not notification)
     if (state.precisionBarActive && !state.passedPbThisThrow && hasPassedPb(state.px, state.best)) {
       state.passedPbThisThrow = true;
-      audio.pbDing?.(); // Play PB ding
-      ui.onPbPassed?.();  // Trigger PB callout
+      audio.pbDing?.(); // Play PB ding sound
+      // NOTE: Notification moved to actual landing success path
     }
   } else if (!state.flying && !state.sliding && state.precisionBarActive) {
     // Deactivate when not flying/sliding
@@ -764,12 +764,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
     audio.stopPrecisionDrone?.();
   }
 
-  if ((state.flying || state.sliding) && state.px > 50) {
-    const riskFactor = (state.px - 50) / (CLIFF_EDGE - 50);
-    state.currentMultiplier = 1 + riskFactor * riskFactor * 4;
-  } else {
-    state.currentMultiplier = 1;
-  }
+  // Risk multiplier removed - only ring multiplier affects score now
+  state.currentMultiplier = 1;
 
   // Sliding (scaled by effectiveTimeScale for slowmo support)
   if (state.sliding) {
@@ -910,9 +906,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
         state.dist = Math.max(0, landedAt);
         ui.setFellOff(false);
 
-        // Combine risk multiplier with ring multiplier (capped to prevent runaway)
-        const rawMultiplier = state.currentMultiplier * state.ringMultiplier;
-        const finalMultiplier = Math.min(MAX_FINAL_MULTIPLIER, rawMultiplier);
+        // Ring multiplier only (capped to prevent runaway)
+        const finalMultiplier = Math.min(MAX_FINAL_MULTIPLIER, state.ringMultiplier);
         state.lastMultiplier = finalMultiplier;
         ui.setLastMultiplier(finalMultiplier);
 
@@ -937,13 +932,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
             state.stats.perfectRingThrows++;
           }
 
-          // Dev-only: Log ring/multiplier distribution for tuning
+          // Dev-only: Log scoring for tuning
           if (import.meta.env.DEV) {
             console.log('[DEV] Landing stats:', {
               ringsPassedThisThrow: state.ringsPassedThisThrow,
               ringMultiplier: state.ringMultiplier.toFixed(3),
-              riskMultiplier: state.currentMultiplier.toFixed(3),
-              finalMultiplier: finalMultiplier.toFixed(3),
               basePoints,
               scoreGained: scoreGained.toFixed(1),
             });
@@ -999,6 +992,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
             // Sync new personal best to Firebase
             ui.onNewPersonalBest?.(state.totalScore, state.best);
+            ui.onPbPassed?.();  // Show PB notification on actual successful landing
           } else if (state.dist > state.best) {
             state.best = state.dist;
             saveNumber('best', state.best);
@@ -1012,6 +1006,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
             // Sync new personal best to Firebase
             ui.onNewPersonalBest?.(state.totalScore, state.best);
+            ui.onPbPassed?.();  // Show PB notification on actual successful landing
           }
         }
 
