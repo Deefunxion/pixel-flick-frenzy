@@ -64,6 +64,9 @@ import {
   playPbDing,
   playNewRecord,
   playCloseCall,
+  // Page flip sounds
+  playPaperFlip,
+  playPaperSettle,
   type AudioRefs,
   type AudioSettings,
   type AudioState,
@@ -459,6 +462,9 @@ const Game = () => {
       pbDing: () => playPbDing(audioRefs.current, audioSettingsRef.current),
       newRecordJingle: () => playNewRecord(audioRefs.current, audioSettingsRef.current),
       closeCall: () => playCloseCall(audioRefs.current, audioSettingsRef.current),
+      // Page flip sounds
+      playPaperFlip: () => playPaperFlip(audioRefs.current, audioSettingsRef.current),
+      playPaperSettle: () => playPaperSettle(audioRefs.current, audioSettingsRef.current),
     };
 
     const scheduleReset = (ms: number) => {
