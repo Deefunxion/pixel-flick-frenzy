@@ -153,6 +153,51 @@ function renderOnFireMode(
 }
 
 /**
+ * Render charge glow around Zeno during charge
+ */
+function renderChargeGlow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  intensity: number  // 0-1
+): void {
+  if (intensity <= 0) return;
+
+  const radius = 30 + intensity * 20;  // 30-50px
+  const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+
+  gradient.addColorStop(0, `rgba(255, 215, 0, ${intensity * 0.4})`);
+  gradient.addColorStop(0.5, `rgba(255, 165, 0, ${intensity * 0.2})`);
+  gradient.addColorStop(1, 'rgba(255, 165, 0, 0)');
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+}
+
+/**
+ * Render charge vignette (subtle edge darkening)
+ */
+function renderChargeVignette(
+  ctx: CanvasRenderingContext2D,
+  intensity: number,
+  width: number,
+  height: number
+): void {
+  if (intensity <= 0) return;
+
+  const gradient = ctx.createRadialGradient(
+    width / 2, height / 2, height * 0.3,
+    width / 2, height / 2, height * 0.8
+  );
+
+  gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  gradient.addColorStop(1, `rgba(0, 0, 0, ${intensity * 0.3})`);
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+}
+
+/**
  * Draw stamina bar above Zeno.
  * - Hidden when stamina = 100
  * - Green > 50, Yellow 25-50, Red < 25
@@ -463,6 +508,14 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   // Near-miss spotlight effect
   if (state.nearMissActive && state.nearMissIntensity) {
     renderNearMissSpotlight(ctx, state.zenoTarget, state.nearMissIntensity, W, H);
+  }
+
+  // Charge visual tension effects (before Zeno for glow effect behind character)
+  if (state.charging && !state.reduceFx) {
+    renderChargeGlow(ctx, zenoX, zenoY, state.chargeGlowIntensity);
+    if (state.chargeVignetteActive) {
+      renderChargeVignette(ctx, state.chargeGlowIntensity - 0.5, W, H);
+    }
   }
 
   // Player rendering - prefer sprites, fallback to procedural (using zenoX/zenoY for visual offset)
@@ -901,6 +954,14 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   // Near-miss spotlight effect
   if (state.nearMissActive && state.nearMissIntensity) {
     renderNearMissSpotlight(ctx, state.zenoTarget, state.nearMissIntensity, W, H);
+  }
+
+  // Charge visual tension effects (before Zeno for glow effect behind character)
+  if (state.charging && !state.reduceFx) {
+    renderChargeGlow(ctx, state.px, zenoY, state.chargeGlowIntensity);
+    if (state.chargeVignetteActive) {
+      renderChargeVignette(ctx, state.chargeGlowIntensity - 0.5, W, H);
+    }
   }
 
   // Player rendering - prefer sprites, fallback to procedural (using zenoY for visual offset)

@@ -213,6 +213,9 @@ export interface GameState {
   // Charge sweet spot
   chargeSweetSpot: boolean;  // True when in optimal range (70-85%)
   sweetSpotJustEntered: boolean;  // For one-time feedback
+  // Charge visual tension
+  chargeGlowIntensity: number;  // 0-1, builds with charge
+  chargeVignetteActive: boolean;
   // Monetization - Throw system
   throwState: ThrowState;
   dailyTasks: DailyTasks;

@@ -251,15 +251,31 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
     state.chargeSweetSpot = inSweetSpot;
 
-    // Emit charging swirls every 4 frames
+    // Build charge visual intensity
+    state.chargeGlowIntensity = dt;
+    state.chargeVignetteActive = dt > 0.5;
+
+    // Emit charging swirls every 4 frames (intensified with charge level)
     if (Math.floor(nowMs / 64) % 4 === 0 && state.particleSystem) {
       state.particleSystem.emitChargingSwirls(state.px, state.py, dt, theme.accent1);
+    }
+
+    // Extra particles at high charge
+    if (dt > 0.6 && !state.reduceFx && state.particleSystem) {
+      const particleChance = dt * 0.3;  // Up to 30% chance per frame
+      if (Math.random() < particleChance) {
+        state.particleSystem.emitChargingSwirls(state.px, state.py, dt, '#FFD700');
+      }
     }
   }
 
   // Launch
   if (state.charging && !pressed) {
     state.charging = false;
+
+    // Reset charge visual tension
+    state.chargeGlowIntensity = 0;
+    state.chargeVignetteActive = false;
 
     // Consume a throw when launching
     const { newState: newThrowState, practiceMode, throwConsumed } = consumeThrow(state.throwState);

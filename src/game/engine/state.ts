@@ -229,6 +229,9 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     // Charge sweet spot
     chargeSweetSpot: false,
     sweetSpotJustEntered: false,
+    // Charge visual tension
+    chargeGlowIntensity: 0,
+    chargeVignetteActive: false,
     // Monetization - Throw system
     throwState,
     dailyTasks,
@@ -312,6 +315,9 @@ export function resetPhysics(state: GameState) {
   // Reset charge sweet spot
   state.chargeSweetSpot = false;
   state.sweetSpotJustEntered = false;
+  // Reset charge visual tension
+  state.chargeGlowIntensity = 0;
+  state.chargeVignetteActive = false;
 }
 
 export function nextWind(state: GameState) {
