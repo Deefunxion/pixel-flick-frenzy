@@ -729,3 +729,83 @@ export function playCloseCall(refs: AudioRefs, settings: AudioSettings): void {
     playTone(refs, settings, 659, 0.15, 'sine', 0.05);
   }
 }
+
+// ============================================
+// PAGE FLIP TRANSITION SOUNDS
+// ============================================
+
+/**
+ * Play paper flip/whoosh sound
+ */
+export function playPaperFlip(
+  refs: AudioRefs,
+  settings: AudioSettings
+): void {
+  if (settings.muted || !refs.ctx) return;
+
+  const ctx = ensureAudioContext(refs);
+  const now = ctx.currentTime;
+  const vol = settings.volume * 0.3;
+
+  // White noise burst for paper texture
+  const bufferSize = ctx.sampleRate * 0.25; // 250ms
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < bufferSize; i++) {
+    // Shaped noise - starts loud, fades quickly
+    const t = i / bufferSize;
+    const envelope = Math.pow(1 - t, 2);
+    data[i] = (Math.random() * 2 - 1) * envelope;
+  }
+
+  const noise = ctx.createBufferSource();
+  noise.buffer = buffer;
+
+  // Bandpass filter for paper-like timbre
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 2000;
+  filter.Q.value = 0.5;
+
+  // Gain envelope
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(vol, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+  noise.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+
+  noise.start(now);
+  noise.stop(now + 0.25);
+}
+
+/**
+ * Play soft paper settle tick
+ */
+export function playPaperSettle(
+  refs: AudioRefs,
+  settings: AudioSettings
+): void {
+  if (settings.muted || !refs.ctx) return;
+
+  const ctx = ensureAudioContext(refs);
+  const now = ctx.currentTime;
+  const vol = settings.volume * 0.15;
+
+  // Short click/tick
+  const osc = ctx.createOscillator();
+  osc.frequency.value = 800;
+  osc.type = 'sine';
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(vol, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.start(now);
+  osc.stop(now + 0.05);
+}
