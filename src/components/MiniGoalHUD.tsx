@@ -24,8 +24,10 @@ export function MiniGoalHUD({ goalText, progress, target, current, visible }: Mi
 
   return (
     <div
-      className="fixed top-4 left-4 rounded-lg px-2 py-1 text-xs border-2"
+      className="absolute rounded-lg px-2 py-1 text-xs border-2"
       style={{
+        top: '4%',
+        left: '2%',
         backgroundColor: 'rgba(33, 87, 158, 0.9)',
         borderColor: '#21579e',
       }}

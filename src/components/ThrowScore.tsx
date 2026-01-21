@@ -47,12 +47,10 @@ export function ThrowScore({
 
   return (
     <div
-      className={`
-        fixed top-16 right-4
-        rounded-lg px-3 py-2
-        border-2 transition-all duration-150
-      `}
+      className="absolute rounded-lg px-2 py-1 border-2 transition-all duration-150"
       style={{
+        top: '8%',
+        right: '2%',
         backgroundColor: 'rgba(33, 87, 158, 0.9)',
         borderColor: glowActive ? '#ed8818' : '#21579e',
         boxShadow: glowActive ? '0 0 12px rgba(237, 136, 24, 0.5)' : 'none',

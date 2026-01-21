@@ -454,7 +454,10 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
     state.vy += BASE_GRAV * effectiveTimeScale;
 
-    state.vx += state.wind * 0.3 * effectiveTimeScale;
+    // Wind effect with 50% resistance when air-braking (holding)
+    const isAirBraking = pressed && state.precisionInput.holdDuration > 0;
+    const windResistance = isAirBraking ? 0.5 : 1.0;
+    state.vx += state.wind * 0.3 * effectiveTimeScale * windResistance;
 
     state.px += state.vx * effectiveTimeScale;
     state.py += state.vy * effectiveTimeScale;

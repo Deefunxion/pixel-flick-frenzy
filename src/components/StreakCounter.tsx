@@ -62,13 +62,13 @@ export function StreakCounter({ streak, bestStreak, visible }: StreakCounterProp
       {/* Streak counter - positioned below MiniGoalHUD */}
       <div
         className={`
-          fixed left-4 z-20
-          rounded-lg px-2 py-1
+          absolute rounded-lg px-2 py-1
           border-2 transition-all duration-150
           ${animatePulse ? 'scale-110' : 'scale-100'}
         `}
         style={{
-          top: '60px',
+          top: '28%',
+          left: '2%',
           backgroundColor: 'rgba(33, 87, 158, 0.9)',
           borderColor: isHot ? '#ed8818' : '#21579e',
         }}
@@ -89,11 +89,11 @@ export function StreakCounter({ streak, bestStreak, visible }: StreakCounterProp
       {/* Milestone celebration - compact, below grade area */}
       {showMilestone && (
         <div
-          className="fixed left-1/2 -translate-x-1/2 z-40"
-          style={{ top: '35%' }}
+          className="absolute left-1/2 -translate-x-1/2"
+          style={{ top: '40%' }}
         >
           <div
-            className="text-xl font-black text-center animate-bounce px-4 py-1 rounded-lg border-2"
+            className="text-base font-black text-center animate-bounce px-3 py-1 rounded-lg border-2"
             style={{
               color: '#FFFFFF',
               backgroundColor: 'rgba(237, 136, 24, 0.9)',

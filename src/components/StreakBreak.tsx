@@ -19,8 +19,8 @@ export function StreakBreak({ lostStreak, visible }: StreakBreakProps) {
 
   return (
     <div
-      className="fixed left-1/2 -translate-x-1/2 z-30 text-center"
-      style={{ bottom: '30%' }}
+      className="absolute left-1/2 -translate-x-1/2 text-center"
+      style={{ bottom: '25%' }}
     >
       {/* Compact streak break display with brand colors */}
       <div

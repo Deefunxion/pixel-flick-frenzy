@@ -47,9 +47,9 @@ export function LandingGrade({ result, visible, onDismiss }: LandingGradeProps) 
 
   return (
     <div
-      className="fixed left-1/2 -translate-x-1/2 pointer-events-none z-30"
+      className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
       style={{
-        top: '25%',
+        top: '20%',
         opacity: fading ? 0 : 1,
         transition: 'opacity 200ms ease-out',
       }}
