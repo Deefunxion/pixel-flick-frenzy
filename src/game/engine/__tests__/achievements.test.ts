@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createInitialState } from '../state';
 import type { Stats } from '../types';
+import { ACHIEVEMENTS } from '../achievements';
 
 describe('Extended Stats Interface', () => {
   it('initializes new stats fields to default values', () => {
@@ -47,5 +48,33 @@ describe('Air Time Tracking', () => {
     }
 
     expect(state.stats.maxAirTime).toBe(3.5);
+  });
+});
+
+describe('ACHIEVEMENTS constant', () => {
+  it('contains at least 150 achievements', () => {
+    expect(Object.keys(ACHIEVEMENTS).length).toBeGreaterThanOrEqual(150);
+  });
+
+  it('contains distance achievements for 400-419', () => {
+    expect(ACHIEVEMENTS['dist_400']).toBeDefined();
+    expect(ACHIEVEMENTS['dist_410']).toBeDefined();
+    expect(ACHIEVEMENTS['dist_419']).toBeDefined();
+  });
+
+  it('contains decimal distance achievements', () => {
+    expect(ACHIEVEMENTS['dist_419_5']).toBeDefined();
+    expect(ACHIEVEMENTS['dist_419_99']).toBeDefined();
+    expect(ACHIEVEMENTS['dist_419_999']).toBeDefined();
+  });
+
+  it('contains air time achievements', () => {
+    expect(ACHIEVEMENTS['air_3s']).toBeDefined();
+    expect(ACHIEVEMENTS['air_5s']).toBeDefined();
+  });
+
+  it('contains falls achievements', () => {
+    expect(ACHIEVEMENTS['falls_1']).toBeDefined();
+    expect(ACHIEVEMENTS['falls_100']).toBeDefined();
   });
 });
