@@ -93,6 +93,15 @@ import { PracticeModeOverlay } from './PracticeModeOverlay';
 import type { ThrowState, DailyTasks, MilestonesClaimed } from '@/game/engine/types';
 import { calculateThrowRegen, formatRegenTime, getMsUntilNextThrow } from '@/game/engine/throws';
 import { resetTutorialProgress } from '@/game/engine/tutorial';
+import {
+  hasHapticSupport,
+  getHapticsEnabled,
+  setHapticsEnabled,
+  hapticRingCollect,
+  hapticFail,
+  hapticRelease,
+  hapticLandingImpact,
+} from '@/game/engine/haptics';
 import { loadRingSprites } from '@/game/engine/ringsRender';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 import { claimDailyTask } from '@/game/engine/dailyTasks';
@@ -243,6 +252,9 @@ const Game = () => {
   });
   const [practiceMode, setPracticeMode] = useState(false);
 
+  // Haptics state (for Android vibration feedback)
+  const [hapticsEnabled, setHapticsEnabledState] = useState(() => getHapticsEnabled());
+
   // Daily tasks state
   const [dailyTasks, setDailyTasks] = useState<DailyTasks>(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -331,16 +343,26 @@ const Game = () => {
     });
   }, []);
 
-  // Mobile UX: Haptic feedback helper
+  // Mobile UX: Haptic feedback helper (uses haptics module with user preferences)
   const triggerHaptic = useCallback((pattern: number | number[] = 10) => {
-    if ('vibrate' in navigator) {
-      try {
-        navigator.vibrate(pattern);
-      } catch {
-        // Vibration not supported or blocked
-      }
+    if (!getHapticsEnabled() || !hasHapticSupport()) return;
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      // Vibration not supported or blocked
     }
   }, []);
+
+  // Haptics toggle handler
+  const toggleHaptics = useCallback(() => {
+    const newValue = !hapticsEnabled;
+    setHapticsEnabled(newValue);
+    setHapticsEnabledState(newValue);
+    // Give feedback on toggle
+    if (newValue && hasHapticSupport()) {
+      navigator.vibrate(30);
+    }
+  }, [hapticsEnabled]);
 
   // iOS Audio: Retry handler for blocked audio
   const handleAudioRetry = useCallback(async () => {
@@ -942,6 +964,22 @@ const Game = () => {
                     style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
                   />
                 </button>
+                {/* Haptics toggle - only show if device supports haptics */}
+                {hasHapticSupport() && (
+                  <button
+                    className={buttonClass}
+                    style={{
+                      ...buttonStyle,
+                      padding: '4px 6px',
+                      fontSize: '16px',
+                    }}
+                    onClick={toggleHaptics}
+                    aria-label="Toggle haptic feedback"
+                    title={hapticsEnabled ? 'Haptics on' : 'Haptics off'}
+                  >
+                    {hapticsEnabled ? '📳' : '📴'}
+                  </button>
+                )}
               </div>
 
               {/* Center: Leaderboard */}
