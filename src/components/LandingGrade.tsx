@@ -61,18 +61,21 @@ export function LandingGrade({ result, visible, onDismiss }: LandingGradeProps) 
 
       {/* Grade display - compact inline with brand colors */}
       <div
-        className="flex items-center gap-2 px-3 py-1 rounded-lg border-2"
+        className="flex items-center rounded"
         style={{
-          backgroundColor: 'rgba(33, 87, 158, 0.9)',
-          borderColor: '#21579e',
+          gap: '4px',
+          padding: '2px 6px',
+          backgroundColor: 'rgba(33, 87, 158, 0.85)',
+          border: '1px solid #21579e',
         }}
       >
         {/* Grade letter */}
         <span
-          className="text-3xl font-black"
           style={{
+            fontSize: '14px',
+            fontWeight: 900,
             color,
-            textShadow: `0 0 8px ${color}60`,
+            textShadow: `0 0 4px ${color}60`,
           }}
         >
           {grade}
@@ -80,8 +83,11 @@ export function LandingGrade({ result, visible, onDismiss }: LandingGradeProps) 
 
         {/* Comment */}
         <span
-          className="text-sm font-bold"
-          style={{ color }}
+          style={{
+            fontSize: '9px',
+            fontWeight: 700,
+            color,
+          }}
         >
           {comment}
         </span>
@@ -89,7 +95,7 @@ export function LandingGrade({ result, visible, onDismiss }: LandingGradeProps) 
 
       {/* Tip for C/D grades - below */}
       {tip && (
-        <div className="text-xs mt-1 text-center max-w-48 mx-auto" style={{ color: '#ef8819' }}>
+        <div style={{ fontSize: '7px', marginTop: '2px', textAlign: 'center', color: '#ef8819', maxWidth: '80px', margin: '2px auto 0' }}>
           {tip}
         </div>
       )}

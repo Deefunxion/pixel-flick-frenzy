@@ -61,27 +61,24 @@ export function StreakCounter({ streak, bestStreak, visible }: StreakCounterProp
     <>
       {/* Streak counter - positioned below MiniGoalHUD */}
       <div
-        className={`
-          absolute rounded-lg px-2 py-1
-          border-2 transition-all duration-150
-          ${animatePulse ? 'scale-110' : 'scale-100'}
-        `}
+        className={`absolute rounded transition-all duration-150 ${animatePulse ? 'scale-110' : 'scale-100'}`}
         style={{
-          top: '28%',
+          top: '18%',
           left: '2%',
-          backgroundColor: 'rgba(33, 87, 158, 0.9)',
-          borderColor: isHot ? '#ed8818' : '#21579e',
+          padding: '1px 4px',
+          backgroundColor: 'rgba(33, 87, 158, 0.85)',
+          border: `1px solid ${isHot ? '#ed8818' : '#21579e'}`,
         }}
       >
         <div
-          className="text-lg font-bold flex items-center gap-1"
-          style={{ color: flameColor }}
+          className="flex items-center"
+          style={{ color: flameColor, fontSize: '9px', fontWeight: 700, gap: '2px' }}
         >
-          <span className={isHot ? 'animate-pulse' : ''}>🔥</span>
+          <span className={isHot ? 'animate-pulse' : ''} style={{ fontSize: '8px' }}>🔥</span>
           <span>×{streak}</span>
           {/* Best streak indicator */}
           {streak >= bestStreak && bestStreak > 0 && (
-            <span className="text-xs ml-1" style={{ color: '#ed8818' }}>PB!</span>
+            <span style={{ fontSize: '6px', marginLeft: '2px', color: '#ed8818' }}>PB!</span>
           )}
         </div>
       </div>
@@ -90,15 +87,18 @@ export function StreakCounter({ streak, bestStreak, visible }: StreakCounterProp
       {showMilestone && (
         <div
           className="absolute left-1/2 -translate-x-1/2"
-          style={{ top: '40%' }}
+          style={{ top: '35%' }}
         >
           <div
-            className="text-base font-black text-center animate-bounce px-3 py-1 rounded-lg border-2"
+            className="text-center animate-bounce rounded"
             style={{
+              fontSize: '10px',
+              fontWeight: 900,
+              padding: '2px 6px',
               color: '#FFFFFF',
               backgroundColor: 'rgba(237, 136, 24, 0.9)',
-              borderColor: '#ed8818',
-              textShadow: '0 0 8px rgba(0,0,0,0.5)',
+              border: '1px solid #ed8818',
+              textShadow: '0 0 4px rgba(0,0,0,0.5)',
             }}
           >
             {showMilestone}

@@ -20,18 +20,20 @@ export function StreakBreak({ lostStreak, visible }: StreakBreakProps) {
   return (
     <div
       className="absolute left-1/2 -translate-x-1/2 text-center"
-      style={{ bottom: '25%' }}
+      style={{ bottom: '20%' }}
     >
       {/* Compact streak break display with brand colors */}
       <div
-        className="flex items-center gap-2 px-3 py-1 rounded-lg border-2"
+        className="flex items-center rounded"
         style={{
-          backgroundColor: 'rgba(33, 87, 158, 0.9)',
-          borderColor: '#21579e',
+          gap: '3px',
+          padding: '2px 5px',
+          backgroundColor: 'rgba(33, 87, 158, 0.85)',
+          border: '1px solid #21579e',
         }}
       >
-        <span className="text-2xl opacity-80">💔</span>
-        <span className="text-base font-bold" style={{ color: '#ed8818' }}>
+        <span style={{ fontSize: '10px', opacity: 0.8 }}>💔</span>
+        <span style={{ fontSize: '9px', fontWeight: 700, color: '#ed8818' }}>
           Streak: {lostStreak}
         </span>
       </div>

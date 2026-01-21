@@ -24,27 +24,32 @@ export function MiniGoalHUD({ goalText, progress, target, current, visible }: Mi
 
   return (
     <div
-      className="absolute rounded-lg px-2 py-1 text-xs border-2"
+      className="absolute rounded"
       style={{
-        top: '4%',
+        top: '3%',
         left: '2%',
-        backgroundColor: 'rgba(33, 87, 158, 0.9)',
-        borderColor: '#21579e',
+        padding: '2px 4px',
+        backgroundColor: 'rgba(33, 87, 158, 0.85)',
+        border: '1px solid #21579e',
+        fontSize: '8px',
+        lineHeight: 1.2,
       }}
     >
-      <div className="flex items-center gap-2">
-        <span>🎯</span>
+      <div className="flex items-center" style={{ gap: '3px' }}>
+        <span style={{ fontSize: '7px' }}>🎯</span>
         <span className="text-white font-medium">{goalText}</span>
-        <span className="text-white/80">({current}/{target})</span>
+        <span style={{ color: 'rgba(255,255,255,0.7)' }}>({current}/{target})</span>
       </div>
 
       {/* Progress bar */}
-      <div className="flex gap-0.5 mt-1">
+      <div className="flex" style={{ gap: '1px', marginTop: '2px' }}>
         {Array.from({ length: segments }).map((_, i) => (
           <div
             key={i}
-            className="w-3 h-1.5 rounded-sm"
             style={{
+              width: '6px',
+              height: '2px',
+              borderRadius: '1px',
               backgroundColor: i < filledSegments ? '#ed8818' : 'rgba(255,255,255,0.2)',
             }}
           />

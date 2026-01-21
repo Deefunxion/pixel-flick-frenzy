@@ -47,38 +47,46 @@ export function ThrowScore({
 
   return (
     <div
-      className="absolute rounded-lg px-2 py-1 border-2 transition-all duration-150"
+      className="absolute rounded transition-all duration-150"
       style={{
-        top: '8%',
+        top: '3%',
         right: '2%',
-        backgroundColor: 'rgba(33, 87, 158, 0.9)',
-        borderColor: glowActive ? '#ed8818' : '#21579e',
-        boxShadow: glowActive ? '0 0 12px rgba(237, 136, 24, 0.5)' : 'none',
+        padding: '2px 4px',
+        backgroundColor: 'rgba(33, 87, 158, 0.85)',
+        border: `1px solid ${glowActive ? '#ed8818' : '#21579e'}`,
+        boxShadow: glowActive ? '0 0 6px rgba(237, 136, 24, 0.4)' : 'none',
       }}
     >
       {/* Score display */}
       <div
-        className="text-2xl font-bold text-center tabular-nums"
-        style={{ color: ringsCollected > 0 ? '#FFD700' : '#FFFFFF' }}
+        className="text-center tabular-nums"
+        style={{
+          fontSize: '12px',
+          fontWeight: 700,
+          color: ringsCollected > 0 ? '#FFD700' : '#FFFFFF',
+        }}
       >
         {throwScore}
       </div>
 
       {/* Ring indicators */}
-      <div className="flex gap-1.5 mt-1 justify-center">
+      <div className="flex justify-center" style={{ gap: '2px', marginTop: '1px' }}>
         {[0, 1, 2].map((index) => (
           <div
             key={index}
-            className="w-3 h-3 rounded-full transition-colors duration-200"
-            style={{ backgroundColor: getRingColor(index) }}
-            title={`Ring ${index + 1}`}
+            className="rounded-full transition-colors duration-200"
+            style={{
+              width: '4px',
+              height: '4px',
+              backgroundColor: getRingColor(index),
+            }}
           />
         ))}
       </div>
 
       {/* Multiplier (only show if > 1) */}
       {ringMultiplier > 1.01 && (
-        <div className="text-xs text-center mt-1" style={{ color: '#ed8818' }}>
+        <div style={{ fontSize: '7px', textAlign: 'center', marginTop: '1px', color: '#ed8818' }}>
           ×{ringMultiplier.toFixed(2)}
         </div>
       )}
