@@ -230,7 +230,7 @@ export function stopChargeFile(): void {
 }
 
 /**
- * Start fly sound (loops while flying)
+ * Start fly sound (plays once per jump)
  */
 export function startFlyFile(refs: AudioRefsLike, settings: AudioSettingsLike): void {
   stopFlyFile();
@@ -242,7 +242,7 @@ export function startFlyFile(refs: AudioRefsLike, settings: AudioSettingsLike): 
     const ctx = getContext(refs);
     flySource = ctx.createBufferSource();
     flySource.buffer = buffer;
-    flySource.loop = true; // Loop while flying
+    flySource.loop = false; // Play once per jump
 
     flyGainNode = ctx.createGain();
     flyGainNode.gain.value = 0.4 * settings.volume;
