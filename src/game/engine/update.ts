@@ -45,6 +45,14 @@ import {
   checkRingCollision,
   RING_MULTIPLIERS,
 } from './rings';
+import {
+  createRingPopup,
+  updateRingPopups,
+  shouldMicroFreeze,
+  getEdgeGlowIntensity,
+  shouldScreenFlash,
+  MICRO_FREEZE_MS,
+} from './ringJuice';
 import { addPermanentThrows, consumeThrow } from './throws';
 import { checkMilestones, awardZenoLevelUp } from './milestones';
 import { updateDailyProgress } from './dailyTasks';
@@ -365,6 +373,31 @@ export function updateFrame(state: GameState, svc: GameServices) {
         // Apply escalating multiplier
         state.ringMultiplier *= RING_MULTIPLIERS[ring.ringIndex];
 
+        // === RING JUICE ===
+
+        // 1. Create text popup
+        state.ringJuicePopups.push(
+          createRingPopup(ring.x, ring.y, state.ringsPassedThisThrow - 1, nowMs)
+        );
+
+        // 2. Micro-freeze (if not already in slow-mo)
+        if (shouldMicroFreeze(state.slowMo)) {
+          state.slowMo = Math.max(state.slowMo, 0.95);  // Brief pause
+          state.lastRingCollectTime = nowMs;
+        }
+
+        // 3. Screen flash (stronger on 3rd ring)
+        if (!state.reduceFx) {
+          if (shouldScreenFlash(state.ringsPassedThisThrow)) {
+            state.screenFlash = 0.5;  // Stronger flash for 3rd ring
+          } else {
+            state.screenFlash = 0.3;  // Normal flash
+          }
+        }
+
+        // 4. Edge glow (stored for render)
+        state.edgeGlowIntensity = getEdgeGlowIntensity(state.ringsPassedThisThrow);
+
         // Spawn ring collection particles
         for (let i = 0; i < 10; i++) {
           const angle = (i / 10) * Math.PI * 2;
@@ -381,13 +414,15 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
         // Play collection sound
         audio.ringCollect?.(ring.ringIndex);
-
-        // Subtle screen flash on collection
-        if (!state.reduceFx) {
-          state.screenFlash = 0.3;
-        }
       }
     }
+
+    // Update ring juice popups (outside collision check, every frame)
+    state.ringJuicePopups = updateRingPopups(
+      state.ringJuicePopups,
+      effectiveDeltaMs,
+      nowMs
+    );
 
     if (state.py >= H - 20) {
       state.flying = false;

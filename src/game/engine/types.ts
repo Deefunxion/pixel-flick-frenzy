@@ -1,6 +1,7 @@
 import type { ParticleSystem } from './particles';
 import type { Animator } from './animator';
 import type { Ring } from './rings';
+import type { RingJuicePopup } from './ringJuice';
 
 export interface Star {
   x: number;
@@ -188,6 +189,10 @@ export interface GameState {
   rings: Ring[];
   ringsPassedThisThrow: number;
   ringMultiplier: number;
+  // Ring juice state
+  ringJuicePopups: RingJuicePopup[];
+  lastRingCollectTime: number;
+  edgeGlowIntensity: number;  // 0-1 for screen edge glow effect
   // Monetization - Throw system
   throwState: ThrowState;
   dailyTasks: DailyTasks;

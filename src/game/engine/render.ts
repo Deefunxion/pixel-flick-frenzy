@@ -23,8 +23,67 @@ import {
 import { drawPrecisionBar, drawPrecisionFallOverlay } from './precisionRender';
 import { drawRings, drawRingMultiplierIndicator } from './ringsRender';
 import { updateRingPosition } from './rings';
+import type { RingJuicePopup } from './ringJuice';
 // TODO: Import sprite-based effects when assets are ready
 // import { renderParticles } from './particles';
+
+/**
+ * Render ring juice text popups ("Nice!", "Great!", "PERFECT!")
+ * Popups rise and fade out over time
+ */
+function renderRingPopups(
+  ctx: CanvasRenderingContext2D,
+  popups: RingJuicePopup[]
+): void {
+  for (const popup of popups) {
+    ctx.save();
+    ctx.globalAlpha = popup.opacity;
+    ctx.translate(popup.x, popup.y);
+    ctx.scale(popup.scale, popup.scale);
+
+    // Draw text with outline for visibility
+    ctx.font = 'bold 14px "Comic Sans MS", cursive';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Outline
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.strokeText(popup.text, 0, 0);
+
+    // Fill
+    ctx.fillStyle = popup.color;
+    ctx.fillText(popup.text, 0, 0);
+
+    ctx.restore();
+  }
+}
+
+/**
+ * Render screen edge glow effect when collecting multiple rings
+ */
+function renderEdgeGlow(
+  ctx: CanvasRenderingContext2D,
+  intensity: number,
+  width: number,
+  height: number
+): void {
+  if (intensity <= 0) return;
+
+  // Left edge glow
+  const leftGradient = ctx.createLinearGradient(0, 0, 30, 0);
+  leftGradient.addColorStop(0, `rgba(255, 215, 0, ${intensity * 0.4})`);
+  leftGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+  ctx.fillStyle = leftGradient;
+  ctx.fillRect(0, 0, 30, height);
+
+  // Right edge glow (mirror)
+  const rightGradient = ctx.createLinearGradient(width - 30, 0, width, 0);
+  rightGradient.addColorStop(0, 'rgba(255, 215, 0, 0)');
+  rightGradient.addColorStop(1, `rgba(255, 215, 0, ${intensity * 0.4})`);
+  ctx.fillStyle = rightGradient;
+  ctx.fillRect(width - 30, 0, 30, height);
+}
 
 /**
  * Draw stamina bar above Zeno.
@@ -324,6 +383,10 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   if (state.flying && state.ringsPassedThisThrow > 0) {
     drawRingMultiplierIndicator(ctx, state.ringMultiplier, state.ringsPassedThisThrow, COLORS);
   }
+
+  // Ring juice effects
+  renderEdgeGlow(ctx, state.edgeGlowIntensity, W, H);
+  renderRingPopups(ctx, state.ringJuicePopups);
 
   // Player rendering - prefer sprites, fallback to procedural (using zenoX/zenoY for visual offset)
   const spriteDrawn = drawZenoSprite(ctx, state, zenoX, zenoY);
@@ -748,6 +811,10 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   if (state.flying && state.ringsPassedThisThrow > 0) {
     drawRingMultiplierIndicator(ctx, state.ringMultiplier, state.ringsPassedThisThrow, COLORS);
   }
+
+  // Ring juice effects
+  renderEdgeGlow(ctx, state.edgeGlowIntensity, W, H);
+  renderRingPopups(ctx, state.ringJuicePopups);
 
   // Player rendering - prefer sprites, fallback to procedural (using zenoY for visual offset)
   const spriteDrawnNoir = drawZenoSprite(ctx, state, state.px, zenoY);

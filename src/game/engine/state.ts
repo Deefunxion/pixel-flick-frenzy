@@ -206,6 +206,10 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     rings: generateRings(seed),
     ringsPassedThisThrow: 0,
     ringMultiplier: 1,
+    // Ring juice
+    ringJuicePopups: [],
+    lastRingCollectTime: 0,
+    edgeGlowIntensity: 0,
     // Monetization - Throw system
     throwState,
     dailyTasks,
@@ -271,6 +275,10 @@ export function resetPhysics(state: GameState) {
   state.rings = generateRings(state.seed + state.stats.totalThrows);
   state.ringsPassedThisThrow = 0;
   state.ringMultiplier = 1;
+  // Reset ring juice
+  state.ringJuicePopups = [];
+  state.lastRingCollectTime = 0;
+  state.edgeGlowIntensity = 0;
 }
 
 export function nextWind(state: GameState) {
