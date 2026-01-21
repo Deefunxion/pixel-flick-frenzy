@@ -129,6 +129,7 @@ import {
 import { loadRingSprites } from '@/game/engine/ringsRender';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 import { claimDailyTask } from '@/game/engine/dailyTasks';
+import { claimAchievement } from '@/game/engine/achievementClaim';
 import { getClosestGoal } from '@/game/engine/achievementProgress';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
 import { captureError } from '@/lib/sentry';
@@ -337,6 +338,15 @@ const Game = () => {
     return saved.date === today ? saved : defaultTasks;
   });
 
+  // Milestones claimed state (for achievement rewards)
+  const [milestonesClaimed, setMilestonesClaimed] = useState<MilestonesClaimed>(() =>
+    loadJson<MilestonesClaimed>('milestones_claimed', {
+      achievements: [],
+      milestones: [],
+      newPlayerBonus: false,
+    })
+  );
+
   useEffect(() => {
     saveJson('reduce_fx', reduceFx);
     if (stateRef.current) stateRef.current.reduceFx = reduceFx;
@@ -465,6 +475,16 @@ const Game = () => {
       const success = claimDailyTask(stateRef.current, taskId, { setThrowState });
       if (success) {
         setDailyTasks({ ...stateRef.current.dailyTasks });
+      }
+    }
+  }, []);
+
+  // Claim achievement reward
+  const handleClaimAchievement = useCallback((achievementId: string) => {
+    if (stateRef.current) {
+      const success = claimAchievement(stateRef.current, achievementId, { setThrowState });
+      if (success) {
+        setMilestonesClaimed({ ...stateRef.current.milestonesClaimed });
       }
     }
   }, []);
@@ -1368,6 +1388,8 @@ const Game = () => {
             onClose={() => setShowStats(false)}
             dailyTasks={dailyTasks}
             onClaimTask={handleClaimTask}
+            milestonesClaimed={milestonesClaimed}
+            onClaimAchievement={handleClaimAchievement}
           />
         )}
 

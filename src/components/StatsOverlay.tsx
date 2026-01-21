@@ -4,16 +4,19 @@ import { ACHIEVEMENTS } from '@/game/engine/achievements';
 import { getClosestAchievements } from '@/game/engine/achievementProgress';
 import { getPersonalLeaderboard, getCurrentPrecision, getMaxAtPrecision } from '@/game/leaderboard';
 import { useUser } from '@/contexts/UserContext';
-import type { DailyTasks, Stats } from '@/game/engine/types';
+import type { DailyTasks, MilestonesClaimed, Stats } from '@/game/engine/types';
 import type { Theme } from '@/game/themes';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
 import { DailyTasksPanel } from './DailyTasksPanel';
+import { AchievementsPanel } from './AchievementsPanel';
 
 type StatsOverlayProps = {
   theme: Theme;
   onClose: () => void;
   dailyTasks: DailyTasks;
   onClaimTask: (taskId: string) => void;
+  milestonesClaimed: MilestonesClaimed;
+  onClaimAchievement: (achievementId: string) => void;
 };
 
 type HistoryEntry = {
@@ -23,7 +26,7 @@ type HistoryEntry = {
   score: number;
 };
 
-export function StatsOverlay({ theme, onClose, dailyTasks, onClaimTask }: StatsOverlayProps) {
+export function StatsOverlay({ theme, onClose, dailyTasks, onClaimTask, milestonesClaimed, onClaimAchievement }: StatsOverlayProps) {
   const { profile, firebaseUser, refreshProfile } = useUser();
   const [stats] = useState<Stats>(() =>
     loadJson('stats', {
@@ -252,28 +255,13 @@ export function StatsOverlay({ theme, onClose, dailyTasks, onClaimTask }: StatsO
           </div>
         )}
 
-        {/* Achievement list */}
+        {/* Achievements Panel with Claim Buttons */}
         <div className="mb-4">
-          <h3 className="text-sm font-bold mb-2" style={{ color: theme.accent2 }}>
-            Achievements
-          </h3>
-          <div className="grid grid-cols-1 gap-1">
-            {Object.entries(ACHIEVEMENTS).map(([id, ach]) => (
-              <div
-                key={id}
-                className="flex items-center gap-2 text-xs p-1 rounded"
-                style={{
-                  background: achievements.has(id) ? `${theme.highlight}20` : 'transparent',
-                  color: achievements.has(id) ? theme.highlight : theme.uiText,
-                  opacity: achievements.has(id) ? 1 : 0.5,
-                }}
-              >
-                <span>{achievements.has(id) ? '★' : '☆'}</span>
-                <span className="font-bold">{ach.name}</span>
-                <span className="opacity-70">— {ach.desc}</span>
-              </div>
-            ))}
-          </div>
+          <AchievementsPanel
+            achievements={achievements}
+            claimedAchievements={milestonesClaimed.achievements}
+            onClaimAchievement={onClaimAchievement}
+          />
         </div>
 
         {/* History (last 7 days) */}

@@ -1,6 +1,4 @@
 import {
-  ACHIEVEMENT_REWARDS,
-  ACHIEVEMENT_TIER_REWARDS,
   BASE_GRAV,
   CHARGE_MS,
   CLIFF_EDGE,
@@ -59,7 +57,7 @@ import {
   shouldScreenFlash,
   MICRO_FREEZE_MS,
 } from './ringJuice';
-import { addPermanentThrows, consumeThrow } from './throws';
+import { consumeThrow } from './throws';
 import { checkMilestones, awardZenoLevelUp } from './milestones';
 import { updateDailyProgress } from './dailyTasks';
 import {
@@ -161,29 +159,13 @@ function checkAchievements(state: GameState, ui: GameUI, audio: GameAudio, clear
     if (!state.achievements.has(id) && achievement.check(state.stats, state)) {
       state.achievements.add(id);
 
-      // Award throws based on tier (fall back to legacy ACHIEVEMENT_REWARDS for backwards compatibility)
-      const legacyReward = ACHIEVEMENT_REWARDS[id];
-      const tierReward = achievement.tier ? ACHIEVEMENT_TIER_REWARDS[achievement.tier] : 0;
-      const reward = legacyReward ?? tierReward;
-
-      const rewardText = reward ? ` (+${reward} throws)` : '';
-      const toastMessage = `${achievement.name}${rewardText}`;
+      // Rewards now claimed manually via Stats UI - just show unlock notification
+      const toastMessage = `${achievement.name} - Claim in Stats!`;
 
       state.newAchievement = toastMessage;
       ui.setAchievements(new Set(state.achievements));
       ui.setNewAchievement(toastMessage);
       saveJson('achievements', [...state.achievements]);
-
-      if (reward) {
-        // Check not already claimed (prevent double-dipping on reload)
-        if (!state.milestonesClaimed.achievements.includes(id)) {
-          state.throwState = addPermanentThrows(state.throwState, reward);
-          state.milestonesClaimed.achievements.push(id);
-          saveJson('throw_state', state.throwState);
-          saveJson('milestones_claimed', state.milestonesClaimed);
-          ui.setThrowState(state.throwState);
-        }
-      }
 
       audio.tone(523, 0.1, 'sine', 0.06);
       setTimeout(() => audio.tone(659, 0.1, 'sine', 0.06), 80);
