@@ -1007,3 +1007,32 @@ function playGradeWomp(ctx: AudioContext, volume: number): void {
   osc2.start(now + 0.2);
   osc2.stop(now + 0.65);
 }
+
+/**
+ * Streak break sound (sad fizzle)
+ * Plays when a hot streak is lost
+ */
+export function playStreakBreakSound(refs: AudioRefs, settings: AudioSettings): void {
+  if (settings.muted || !refs.ctx) return;
+
+  const ctx = refs.ctx;
+  const vol = settings.volume;
+  const now = ctx.currentTime;
+
+  // Fizzle sound - descending sawtooth
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(200, now);
+  osc.frequency.exponentialRampToValueAtTime(50, now + 0.5);
+
+  gain.gain.setValueAtTime(0.15 * vol, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.start(now);
+  osc.stop(now + 0.55);
+}

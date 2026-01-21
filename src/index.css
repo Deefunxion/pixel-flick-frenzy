@@ -216,3 +216,13 @@ input, textarea {
 .animate-fade-in {
   animation: fade-in 0.3s ease-out forwards;
 }
+
+/* Fade-out animation for streak break */
+@keyframes fade-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.5); }
+}
+
+.animate-fade-out {
+  animation: fade-out 1.5s ease-out forwards;
+}

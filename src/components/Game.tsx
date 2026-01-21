@@ -74,6 +74,8 @@ import {
   playFailImpact,
   // Grade sounds
   playGradeSound,
+  // Streak sounds
+  playStreakBreakSound,
   type AudioRefs,
   type AudioSettings,
   type AudioState,
@@ -96,6 +98,7 @@ import { LeaderboardScreen } from './LeaderboardScreen';
 import { TutorialOverlay } from './TutorialOverlay';
 import { NearMissOverlay } from './NearMissOverlay';
 import { StreakCounter } from './StreakCounter';
+import { StreakBreak } from './StreakBreak';
 import { ThrowCounter } from './ThrowCounter';
 import { PracticeModeOverlay } from './PracticeModeOverlay';
 import type { ThrowState, DailyTasks, MilestonesClaimed } from '@/game/engine/types';
@@ -273,6 +276,13 @@ const Game = () => {
     distance: number;
     intensity: 'extreme' | 'close' | 'near';
   } | null>(null);
+
+  // Streak break feedback state
+  const [streakBreakState, setStreakBreakState] = useState<{
+    visible: boolean;
+    lostStreak: number;
+  }>({ visible: false, lostStreak: 0 });
+  const prevHotStreakRef = useRef(0);
 
   // Daily tasks state
   const [dailyTasks, setDailyTasks] = useState<DailyTasks>(() => {
@@ -541,7 +551,19 @@ const Game = () => {
       setSessionGoals,
       setDailyStats,
       setDailyChallenge,
-      setHotStreak: (current, best) => setHotStreakState({ current, best }),
+      setHotStreak: (current, best) => {
+        // Detect streak loss
+        if (current === 0 && prevHotStreakRef.current >= 2) {
+          // Streak was lost!
+          const lostStreak = prevHotStreakRef.current;
+          setStreakBreakState({ visible: true, lostStreak });
+          playStreakBreakSound(audioRefs.current, audioSettingsRef.current);
+          // Auto-hide after 2 seconds
+          setTimeout(() => setStreakBreakState({ visible: false, lostStreak: 0 }), 2000);
+        }
+        prevHotStreakRef.current = current;
+        setHotStreakState({ current, best });
+      },
       onNewPersonalBest: handleNewPersonalBest,
       onFall: handleFall,
       onLanding: handleLanding,
@@ -1234,6 +1256,12 @@ const Game = () => {
           streak={hotStreak.current}
           bestStreak={hotStreak.best}
           visible={hotStreak.current >= 1}
+        />
+
+        {/* Streak Break Feedback */}
+        <StreakBreak
+          lostStreak={streakBreakState.lostStreak}
+          visible={streakBreakState.visible}
         />
 
         {/* Stats overlay */}
