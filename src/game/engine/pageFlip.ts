@@ -94,6 +94,15 @@ export function startPageFlip(
     return;
   }
 
+  // Haptic feedback (subtle vibration on mobile)
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    try {
+      navigator.vibrate(10);
+    } catch (e) {
+      // Ignore - vibration not supported or blocked
+    }
+  }
+
   // Set state BEFORE async capture to prevent race condition
   state.pageFlip.active = true;
   state.pageFlip.startMs = nowMs;
