@@ -20,7 +20,7 @@ import {
 } from './pageFlip';
 
 /**
- * Draw the "next page" background (clean paper)
+ * Draw the "next page" background (clean paper or film)
  */
 function drawNextPageBackground(
   ctx: CanvasRenderingContext2D,
@@ -30,31 +30,55 @@ function drawNextPageBackground(
   const scaledW = W * dpr;
   const scaledH = H * dpr;
 
-  // Paper background
+  // Check if noir theme (dark background)
+  const isNoir = theme.background === '#1a1a2e' ||
+                 theme.background.startsWith('#1') ||
+                 theme.background.startsWith('#0');
+
+  // Paper/Film background
   ctx.fillStyle = theme.background;
   ctx.fillRect(0, 0, scaledW, scaledH);
 
-  // Subtle ruled lines (notebook paper effect)
-  ctx.strokeStyle = theme.uiText + '15'; // 15% opacity
-  ctx.lineWidth = 1;
+  if (isNoir) {
+    // Film strip effect for noir theme
+    ctx.fillStyle = '#ffffff08'; // Very subtle white
 
-  const lineSpacing = 20 * dpr;
-  const marginTop = 30 * dpr;
+    // Film sprocket holes (top)
+    for (let x = 20 * dpr; x < scaledW - 20 * dpr; x += 40 * dpr) {
+      ctx.fillRect(x, 5 * dpr, 20 * dpr, 10 * dpr);
+    }
+    // Film sprocket holes (bottom)
+    for (let x = 20 * dpr; x < scaledW - 20 * dpr; x += 40 * dpr) {
+      ctx.fillRect(x, scaledH - 15 * dpr, 20 * dpr, 10 * dpr);
+    }
 
-  for (let y = marginTop; y < scaledH - 10 * dpr; y += lineSpacing) {
+    // Frame border
+    ctx.strokeStyle = '#ffffff15';
+    ctx.lineWidth = 2 * dpr;
+    ctx.strokeRect(15 * dpr, 20 * dpr, scaledW - 30 * dpr, scaledH - 40 * dpr);
+  } else {
+    // Notebook paper effect (original code)
+    ctx.strokeStyle = theme.uiText + '15';
+    ctx.lineWidth = 1;
+
+    const lineSpacing = 20 * dpr;
+    const marginTop = 30 * dpr;
+
+    for (let y = marginTop; y < scaledH - 10 * dpr; y += lineSpacing) {
+      ctx.beginPath();
+      ctx.moveTo(20 * dpr, y);
+      ctx.lineTo(scaledW - 20 * dpr, y);
+      ctx.stroke();
+    }
+
+    // Red margin line
+    ctx.strokeStyle = '#cc666640';
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(20 * dpr, y);
-    ctx.lineTo(scaledW - 20 * dpr, y);
+    ctx.moveTo(50 * dpr, 0);
+    ctx.lineTo(50 * dpr, scaledH);
     ctx.stroke();
   }
-
-  // Red margin line (left side)
-  ctx.strokeStyle = '#cc666640'; // Faded red
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(50 * dpr, 0);
-  ctx.lineTo(50 * dpr, scaledH);
-  ctx.stroke();
 }
 
 /**
