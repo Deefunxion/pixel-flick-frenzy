@@ -351,10 +351,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.runTrail.push({ x: state.px, y: state.py });
     }
 
-    // Ring system: update positions and check collisions
+    // Ring collision: only check during flight
     for (const ring of state.rings) {
-      updateRingPosition(ring, nowMs);
-
       if (!ring.passed && checkRingCollision(state.px, state.py, ring)) {
         ring.passed = true;
         ring.passedAt = nowMs;
@@ -418,6 +416,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
     if (state.px < CLIFF_EDGE) {
       state.lastValidPx = state.px;
     }
+  }
+
+  // Ring system: ALWAYS update positions for smooth animation
+  for (const ring of state.rings) {
+    updateRingPosition(ring, nowMs);
   }
 
   // Age trail
