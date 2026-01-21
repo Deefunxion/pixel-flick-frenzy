@@ -11,9 +11,9 @@ const AIR_BRAKE_HOLD_REDUCTION = 0.97;  // 3% velocity reduction per frame
 const AIR_BRAKE_HOLD_COST_PER_SEC = 15; // Base cost/sec, scaled by edge multiplier
 
 // Air thrust constants (forward velocity boost on tap)
-const AIR_THRUST_VX_BOOST = 0.5;
-const AIR_THRUST_BASE_COST = 5;
-const AIR_THRUST_MAX_VX_MULT = 1.5;
+const AIR_THRUST_VX_BOOST = 1.0;       // 2x original (was 0.5)
+const AIR_THRUST_BASE_COST = 6;        // Slight increase for balance (was 5)
+const AIR_THRUST_MAX_VX_MULT = 1.6;    // Modest increase (was 1.5)
 
 // Slide control constants
 const SLIDE_EXTEND_VELOCITY = 0.15;
