@@ -174,6 +174,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
   if (state.paused) return;
 
+  // Calculate effective delta time (assuming 60fps = ~16.67ms per frame)
+  const effectiveDeltaMs = 16.67;
+
   // Track previous vy for tutorial apex detection
   const prevVy = state.vy;
 
