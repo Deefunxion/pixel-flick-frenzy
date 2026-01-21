@@ -267,7 +267,8 @@ export function resetPhysics(state: GameState) {
     state.particleSystem.clear();
   }
   // Rings reset - generate new rings for each throw
-  state.rings = generateRings(state.seed);
+  // Use derived seed (base seed + throw count) for unique layouts per throw
+  state.rings = generateRings(state.seed + state.stats.totalThrows);
   state.ringsPassedThisThrow = 0;
   state.ringMultiplier = 1;
 }
