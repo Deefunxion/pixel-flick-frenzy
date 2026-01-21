@@ -74,8 +74,8 @@ export const RING_SPRITES = {
 // Ring multipliers (escalating)
 export const RING_MULTIPLIERS = [1.1, 1.25, 1.5];
 
-// Hit zone radius (generous for fun)
-export const RING_HIT_ZONE = 15;
+// Hit zone radius (generous for fun, +15% to match larger visuals)
+export const RING_HIT_ZONE = 17;
 
 // Ring zones along trajectory - WIDER spread for more variety
 const RING_ZONES = [
@@ -103,27 +103,27 @@ export function seededRandom(seed: number): () => number {
  */
 function generateOscillationParams(random: () => number): OscillationParams {
   return {
-    amplitude: 40 + random() * 40,       // 40-80px - BIG vertical swings
-    frequency: 0.002 + random() * 0.003, // 0.002-0.005 - varied speeds
-    phase: random() * Math.PI * 2,       // 0-2π random start
+    amplitude: 40 + random() * 40,         // 40-80px - BIG vertical swings
+    frequency: 0.0017 + random() * 0.00255, // 15% slower (was 0.002-0.005)
+    phase: random() * Math.PI * 2,         // 0-2π random start
   };
 }
 
 function generateOrbitParams(random: () => number): OrbitParams {
   return {
-    radius: 35 + random() * 35,          // 35-70px - LARGE orbits
-    speed: 0.001 + random() * 0.003,     // 0.001-0.004 - some fast, some slow
+    radius: 35 + random() * 35,            // 35-70px - LARGE orbits
+    speed: 0.00085 + random() * 0.00255,   // 15% slower (was 0.001-0.004)
     clockwise: random() > 0.5,
   };
 }
 
 function generateLissajousParams(random: () => number): LissajousParams {
   return {
-    ampX: 50 + random() * 40,            // 50-90px horizontal sweep
-    ampY: 35 + random() * 30,            // 35-65px vertical sweep
-    freqRatio: 1 + random() * 2,         // 1-3 - more pattern variety
-    phase: random() * Math.PI,           // Random phase for variety
-    speed: 0.001 + random() * 0.002,     // 0.001-0.003
+    ampX: 50 + random() * 40,              // 50-90px horizontal sweep
+    ampY: 35 + random() * 30,              // 35-65px vertical sweep
+    freqRatio: 1 + random() * 2,           // 1-3 - more pattern variety
+    phase: random() * Math.PI,             // Random phase for variety
+    speed: 0.00085 + random() * 0.0017,    // 15% slower (was 0.001-0.003)
   };
 }
 

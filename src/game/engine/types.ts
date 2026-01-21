@@ -45,6 +45,31 @@ export interface Stats {
   perfectRingThrows: number;    // Throws where all 3 rings passed
 }
 
+// Throw/Energy System
+export interface ThrowState {
+  freeThrows: number;           // 0-50, regenerates over time
+  permanentThrows: number;      // 0+, earned/purchased, never expires
+  lastRegenTimestamp: number;   // Unix ms for calculating regen
+  isPremium: boolean;           // Purchased unlimited (Phase 4)
+}
+
+export interface DailyTasks {
+  date: string;                 // ISO date string for reset detection
+  landCount: number;            // Landings today
+  zenoTargetCount: number;      // Times reached zeno target today
+  landed400: boolean;           // Landed beyond 400 today
+  airTime3s: boolean;           // Stayed airborne 3+ seconds
+  airTime4s: boolean;           // Stayed airborne 4+ seconds
+  airTime5s: boolean;           // Stayed airborne 5+ seconds
+  claimed: string[];            // Task IDs already claimed today
+}
+
+export interface MilestonesClaimed {
+  achievements: string[];       // Achievement reward IDs claimed
+  milestones: string[];         // Milestone reward IDs claimed
+  newPlayerBonus: boolean;      // 100 throws claimed on first launch
+}
+
 export interface PrecisionInput {
   pressedThisFrame: boolean;   // True only on the frame input started
   releasedThisFrame: boolean;  // True only on the frame input released
@@ -132,6 +157,7 @@ export interface GameState {
   bestHotStreak: number;
   // Launch effects
   launchFrame: number;  // Frames since last launch (for burst effect)
+  launchTimestamp: number;  // Unix ms when throw started (for air time tracking)
   // New particle system
   particleSystem: ParticleSystem;
   // Sprite-based character animation
@@ -162,4 +188,9 @@ export interface GameState {
   rings: Ring[];
   ringsPassedThisThrow: number;
   ringMultiplier: number;
+  // Monetization - Throw system
+  throwState: ThrowState;
+  dailyTasks: DailyTasks;
+  milestonesClaimed: MilestonesClaimed;
+  practiceMode: boolean;  // Computed: freeThrows=0 AND permanentThrows=0
 }

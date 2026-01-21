@@ -3,13 +3,16 @@ import { loadJson, loadStringSet } from '@/game/storage';
 import { ACHIEVEMENTS } from '@/game/engine/achievements';
 import { getPersonalLeaderboard, getCurrentPrecision, getMaxAtPrecision } from '@/game/leaderboard';
 import { useUser } from '@/contexts/UserContext';
-import type { Stats } from '@/game/engine/types';
+import type { DailyTasks, Stats } from '@/game/engine/types';
 import type { Theme } from '@/game/themes';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
+import { DailyTasksPanel } from './DailyTasksPanel';
 
 type StatsOverlayProps = {
   theme: Theme;
   onClose: () => void;
+  dailyTasks: DailyTasks;
+  onClaimTask: (taskId: string) => void;
 };
 
 type HistoryEntry = {
@@ -19,7 +22,7 @@ type HistoryEntry = {
   score: number;
 };
 
-export function StatsOverlay({ theme, onClose }: StatsOverlayProps) {
+export function StatsOverlay({ theme, onClose, dailyTasks, onClaimTask }: StatsOverlayProps) {
   const { profile, firebaseUser, refreshProfile } = useUser();
   const [stats] = useState<Stats>(() =>
     loadJson('stats', { totalThrows: 0, successfulLandings: 0, totalDistance: 0, perfectLandings: 0, maxMultiplier: 1 }, 'omf_stats')
@@ -138,6 +141,11 @@ export function StatsOverlay({ theme, onClose }: StatsOverlayProps) {
               Sign in to enable cloud sync
             </p>
           )}
+        </div>
+
+        {/* Daily Tasks */}
+        <div className="mb-4">
+          <DailyTasksPanel dailyTasks={dailyTasks} onClaimTask={onClaimTask} />
         </div>
 
         {/* Main stats grid */}

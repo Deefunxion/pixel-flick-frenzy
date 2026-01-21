@@ -15,8 +15,8 @@ import type { Theme } from '@/game/themes';
 const spriteCache: Map<string, HTMLImageElement> = new Map();
 let spritesLoaded = false;
 
-// Sprite display size (scaled down from original)
-const RING_DISPLAY_SIZE = 50;
+// Sprite display size (scaled down from original, +15% for easier gameplay)
+const RING_DISPLAY_SIZE = 58;
 
 /**
  * Load all ring sprites

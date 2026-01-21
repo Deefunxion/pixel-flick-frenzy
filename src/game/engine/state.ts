@@ -1,8 +1,10 @@
 import {
   CLIFF_EDGE,
+  FREE_THROWS_CAP,
   H,
   LAUNCH_PAD_X,
   MIN_ANGLE,
+  NEW_PLAYER_BONUS_THROWS,
   OPTIMAL_ANGLE,
   W,
 } from '@/game/constants';
@@ -11,11 +13,13 @@ import {
   loadJson,
   loadNumber,
   loadStringSet,
+  saveJson,
   todayLocalISODate,
 } from '@/game/storage';
-import type { GameState, Star, TutorialState } from './types';
+import type { DailyTasks, GameState, MilestonesClaimed, Star, ThrowState, TutorialState } from './types';
 import { ParticleSystem } from './particles';
 import { generateRings, resetRings } from './rings';
+import { calculateThrowRegen } from './throws';
 
 function loadTutorialProgress(): Pick<TutorialState, 'hasSeenCharge' | 'hasSeenAir' | 'hasSeenSlide'> {
   if (typeof window === 'undefined') {
@@ -25,6 +29,36 @@ function loadTutorialProgress(): Pick<TutorialState, 'hasSeenCharge' | 'hasSeenA
     hasSeenCharge: localStorage.getItem('tutorial_charge_seen') === 'true',
     hasSeenAir: localStorage.getItem('tutorial_air_seen') === 'true',
     hasSeenSlide: localStorage.getItem('tutorial_slide_seen') === 'true',
+  };
+}
+
+function getDefaultThrowState(): ThrowState {
+  return {
+    freeThrows: FREE_THROWS_CAP,
+    permanentThrows: 0,
+    lastRegenTimestamp: Date.now(),
+    isPremium: false,
+  };
+}
+
+function getDefaultDailyTasks(): DailyTasks {
+  return {
+    date: new Date().toISOString().split('T')[0],
+    landCount: 0,
+    zenoTargetCount: 0,
+    landed400: false,
+    airTime3s: false,
+    airTime4s: false,
+    airTime5s: false,
+    claimed: [],
+  };
+}
+
+function getDefaultMilestonesClaimed(): MilestonesClaimed {
+  return {
+    achievements: [],
+    milestones: [],
+    newPlayerBonus: false,
   };
 }
 
@@ -46,6 +80,28 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
       brightness: 0.3 + Math.random() * 0.7,
       size: Math.random() > 0.8 ? 2 : 1,
     });
+  }
+
+  // Load throw state
+  const savedThrowState = loadJson<ThrowState>('throw_state', getDefaultThrowState());
+  const savedDailyTasks = loadJson<DailyTasks>('daily_tasks', getDefaultDailyTasks());
+  const savedMilestones = loadJson<MilestonesClaimed>('milestones_claimed', getDefaultMilestonesClaimed());
+
+  // Check if daily tasks need reset (new day)
+  const dailyTasks = savedDailyTasks.date === today
+    ? savedDailyTasks
+    : getDefaultDailyTasks();
+
+  // Calculate free throw regeneration
+  const throwState = calculateThrowRegen(savedThrowState);
+
+  // Check for new player bonus
+  const milestonesClaimed = savedMilestones;
+  if (!milestonesClaimed.newPlayerBonus) {
+    throwState.permanentThrows += NEW_PLAYER_BONUS_THROWS;
+    milestonesClaimed.newPlayerBonus = true;
+    saveJson('milestones_claimed', milestonesClaimed);
+    saveJson('throw_state', throwState);
   }
 
   return {
@@ -116,6 +172,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     hotStreak: 0,
     bestHotStreak: loadNumber('best_hot_streak', 0, 'omf_best_hot_streak'),
     launchFrame: 0,
+    launchTimestamp: 0,
     particleSystem: new ParticleSystem(),
     zenoAnimator: null,
     stamina: 100,
@@ -149,6 +206,11 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     rings: generateRings(seed),
     ringsPassedThisThrow: 0,
     ringMultiplier: 1,
+    // Monetization - Throw system
+    throwState,
+    dailyTasks,
+    milestonesClaimed,
+    practiceMode: throwState.freeThrows === 0 && throwState.permanentThrows === 0 && !throwState.isPremium,
   };
 }
 
@@ -183,6 +245,7 @@ export function resetPhysics(state: GameState) {
   state.failureFrame = 0;
   state.failureType = null;
   state.launchFrame = 0;
+  state.launchTimestamp = 0;
   state.stamina = 100;
   state.precisionInput = {
     pressedThisFrame: false,
