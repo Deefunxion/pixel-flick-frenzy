@@ -1407,6 +1407,7 @@ const Game = () => {
             onClaimTask={handleClaimTask}
             milestonesClaimed={milestonesClaimed}
             onClaimAchievement={handleClaimAchievement}
+            achievements={achievements}
           />
         )}
 

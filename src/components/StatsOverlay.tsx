@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { loadJson, loadStringSet } from '@/game/storage';
+import { loadJson } from '@/game/storage';
 import { ACHIEVEMENTS } from '@/game/engine/achievements';
 import { getClosestAchievements } from '@/game/engine/achievementProgress';
 import { getPersonalLeaderboard, getCurrentPrecision, getMaxAtPrecision } from '@/game/leaderboard';
@@ -17,6 +17,7 @@ type StatsOverlayProps = {
   onClaimTask: (taskId: string) => void;
   milestonesClaimed: MilestonesClaimed;
   onClaimAchievement: (achievementId: string) => void;
+  achievements: Set<string>;  // Pass from Game.tsx to stay in sync with badge
 };
 
 type HistoryEntry = {
@@ -26,7 +27,7 @@ type HistoryEntry = {
   score: number;
 };
 
-export function StatsOverlay({ theme, onClose, dailyTasks, onClaimTask, milestonesClaimed, onClaimAchievement }: StatsOverlayProps) {
+export function StatsOverlay({ theme, onClose, dailyTasks, onClaimTask, milestonesClaimed, onClaimAchievement, achievements }: StatsOverlayProps) {
   const { profile, firebaseUser, refreshProfile } = useUser();
   const [stats] = useState<Stats>(() =>
     loadJson('stats', {
@@ -43,7 +44,6 @@ export function StatsOverlay({ theme, onClose, dailyTasks, onClaimTask, mileston
   const [history] = useState<HistoryEntry[]>(() =>
     loadJson('history', [], 'omf_history')
   );
-  const [achievements] = useState<Set<string>>(() => loadStringSet('achievements', 'omf_achievements'));
   const [leaderboard] = useState(() => getPersonalLeaderboard());
   const [isLinking, setIsLinking] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
