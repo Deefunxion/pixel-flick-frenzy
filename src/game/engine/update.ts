@@ -1111,6 +1111,30 @@ export function updateFrame(state: GameState, svc: GameServices) {
     }
   }
 
+  // === NEAR-MISS DRAMATIC PAUSE MANAGEMENT ===
+  const NEAR_MISS_PAUSE_DURATION = 1000;  // 1 second pause
+
+  // If near-miss is active, maintain slow-mo for dramatic effect
+  if (state.nearMissActive) {
+    const timeSinceNearMiss = nowMs - state.nearMissAnimationStart;
+
+    if (timeSinceNearMiss < NEAR_MISS_PAUSE_DURATION) {
+      // Maintain heavy slow-mo during pause
+      state.slowMo = Math.max(state.slowMo, 0.85);
+
+      // Screen pulse effect synced with heartbeat
+      if (timeSinceNearMiss < 200 || (timeSinceNearMiss > 400 && timeSinceNearMiss < 600)) {
+        // Pulse the screen slightly during heartbeats
+        if (!state.reduceFx) {
+          state.screenFlash = 0.1;
+        }
+      }
+    } else {
+      // Release dramatic pause, allow normal reset
+      state.nearMissActive = false;
+    }
+  }
+
   // Tutorial system - check for triggers
   const tutorialPhase = checkTutorialTrigger(state, prevVy);
   if (tutorialPhase !== 'none') {
