@@ -100,6 +100,7 @@ import { NearMissOverlay } from './NearMissOverlay';
 import { StreakCounter } from './StreakCounter';
 import { StreakBreak } from './StreakBreak';
 import { MiniGoalHUD } from './MiniGoalHUD';
+import { ToastQueue, useToastQueue } from './ToastQueue';
 import { ThrowCounter } from './ThrowCounter';
 import { PracticeModeOverlay } from './PracticeModeOverlay';
 import type { ThrowState, DailyTasks, MilestonesClaimed } from '@/game/engine/types';
@@ -302,6 +303,9 @@ const Game = () => {
     current: number;
     target: number;
   } | null>(null);
+
+  // Toast queue for progress notifications
+  const { toasts, addToast, dismissToast } = useToastQueue();
 
   // Daily tasks state
   const [dailyTasks, setDailyTasks] = useState<DailyTasks>(() => {
@@ -1296,6 +1300,9 @@ const Game = () => {
             visible={true}
           />
         )}
+
+        {/* Toast Queue */}
+        <ToastQueue toasts={toasts} onDismiss={dismissToast} />
 
         {/* Stats overlay */}
         {showStats && (
