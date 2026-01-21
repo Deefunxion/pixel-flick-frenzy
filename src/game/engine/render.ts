@@ -21,6 +21,8 @@ import {
   LINE_WEIGHTS,
 } from './sketchy';
 import { drawPrecisionBar, drawPrecisionFallOverlay } from './precisionRender';
+import { drawRings, drawRingMultiplierIndicator } from './ringsRender';
+import { updateRingPosition } from './rings';
 // TODO: Import sprite-based effects when assets are ready
 // import { renderParticles } from './particles';
 
@@ -300,6 +302,17 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.globalAlpha = 0.3;
     drawDashedCurve(ctx, ghostPoints, COLORS.player, 5, 8, 6);
     ctx.globalAlpha = 1;
+  }
+
+  // Rings - update positions and draw (visible during idle for planning, during flight for collection)
+  for (const ring of state.rings) {
+    updateRingPosition(ring, nowMs);
+  }
+  drawRings(ctx, state.rings, COLORS, nowMs);
+
+  // Ring multiplier indicator (shows during flight when rings collected)
+  if (state.flying && state.ringsPassedThisThrow > 0) {
+    drawRingMultiplierIndicator(ctx, state.ringMultiplier, state.ringsPassedThisThrow, COLORS);
   }
 
   // Player rendering - prefer sprites, fallback to procedural (using zenoX/zenoY for visual offset)
@@ -703,6 +716,17 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.stroke();
     ctx.globalAlpha = 1;
     ctx.setLineDash([]);
+  }
+
+  // Rings - update positions and draw (visible during idle for planning, during flight for collection)
+  for (const ring of state.rings) {
+    updateRingPosition(ring, nowMs);
+  }
+  drawRings(ctx, state.rings, COLORS, nowMs);
+
+  // Ring multiplier indicator (shows during flight when rings collected)
+  if (state.flying && state.ringsPassedThisThrow > 0) {
+    drawRingMultiplierIndicator(ctx, state.ringMultiplier, state.ringsPassedThisThrow, COLORS);
   }
 
   // Player rendering - prefer sprites, fallback to procedural (using zenoY for visual offset)

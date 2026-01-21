@@ -1,5 +1,6 @@
 import type { ParticleSystem } from './particles';
 import type { Animator } from './animator';
+import type { Ring } from './rings';
 
 export interface Star {
   x: number;
@@ -38,6 +39,10 @@ export interface Stats {
   totalDistance: number;
   perfectLandings: number;
   maxMultiplier: number;
+  // Ring stats
+  totalRingsPassed: number;
+  maxRingsInThrow: number;      // Best single throw (0-3)
+  perfectRingThrows: number;    // Throws where all 3 rings passed
 }
 
 export interface PrecisionInput {
@@ -150,4 +155,11 @@ export interface GameState {
   // "Almost!" overlay - stays visible until next throw
   almostOverlayActive: boolean;
   almostOverlayDistance: number; // Frozen distance from target at landing
+  // Streak tracking (session-volatile, for achievements)
+  sessionThrows: number;        // Resets on page load
+  landingsWithoutFall: number;  // Resets on fall
+  // Rings system
+  rings: Ring[];
+  ringsPassedThisThrow: number;
+  ringMultiplier: number;
 }

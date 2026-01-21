@@ -64,6 +64,8 @@ import {
   playPbDing,
   playNewRecord,
   playCloseCall,
+  // Ring sounds
+  playRingCollect,
   type AudioRefs,
   type AudioSettings,
   type AudioState,
@@ -85,6 +87,7 @@ import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { TutorialOverlay } from './TutorialOverlay';
 import { resetTutorialProgress } from '@/game/engine/tutorial';
+import { loadRingSprites } from '@/game/engine/ringsRender';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
 import { captureError } from '@/lib/sentry';
@@ -386,6 +389,13 @@ const Game = () => {
           console.warn('[Game] Audio files failed to load, using synth fallback:', err);
         });
 
+        // Load ring sprites (non-blocking, will fallback to procedural if fails)
+        loadRingSprites().then(() => {
+          console.log('[Game] Ring sprites loaded');
+        }).catch((err) => {
+          console.warn('[Game] Ring sprites failed to load, using procedural fallback:', err);
+        });
+
         // Create animator based on current theme
         const theme = themeId === 'noir' ? 'noir' : 'flipbook';
         const animator = new Animator(theme);
@@ -459,6 +469,8 @@ const Game = () => {
       pbDing: () => playPbDing(audioRefs.current, audioSettingsRef.current),
       newRecordJingle: () => playNewRecord(audioRefs.current, audioSettingsRef.current),
       closeCall: () => playCloseCall(audioRefs.current, audioSettingsRef.current),
+      // Ring sounds
+      ringCollect: (ringIndex: number) => playRingCollect(audioRefs.current, audioSettingsRef.current, ringIndex),
     };
 
     const scheduleReset = (ms: number) => {
