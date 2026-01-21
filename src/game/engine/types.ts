@@ -2,6 +2,7 @@ import type { ParticleSystem } from './particles';
 import type { Animator } from './animator';
 import type { Ring } from './rings';
 import type { RingJuicePopup } from './ringJuice';
+import type { GradeResult } from './gradeSystem';
 
 export interface Star {
   x: number;
@@ -198,6 +199,9 @@ export interface GameState {
   ringJuicePopups: RingJuicePopup[];
   lastRingCollectTime: number;
   edgeGlowIntensity: number;  // 0-1 for screen edge glow effect
+  // Landing grade system
+  lastGrade: GradeResult | null;
+  gradeDisplayTime: number;  // When grade was shown (for animation timing)
   // Monetization - Throw system
   throwState: ThrowState;
   dailyTasks: DailyTasks;

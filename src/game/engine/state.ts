@@ -215,6 +215,9 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     ringJuicePopups: [],
     lastRingCollectTime: 0,
     edgeGlowIntensity: 0,
+    // Landing grade system
+    lastGrade: null,
+    gradeDisplayTime: 0,
     // Monetization - Throw system
     throwState,
     dailyTasks,
@@ -287,6 +290,9 @@ export function resetPhysics(state: GameState) {
   state.ringJuicePopups = [];
   state.lastRingCollectTime = 0;
   state.edgeGlowIntensity = 0;
+  // Reset landing grade
+  state.lastGrade = null;
+  state.gradeDisplayTime = 0;
 }
 
 export function nextWind(state: GameState) {
