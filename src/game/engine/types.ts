@@ -147,4 +147,12 @@ export interface GameState {
   precisionTimeScale: number;
   precisionBarTriggeredThisThrow: boolean;
   passedPbThisThrow: boolean;
+  // Page flip transition state
+  pageFlip: {
+    active: boolean;
+    startMs: number;
+    durationMs: number;
+    snapshotReady: boolean;
+    direction: 'left' | 'right';
+  };
 }
