@@ -96,6 +96,7 @@ import type { GameState } from '@/game/engine/types';
 import { assetLoader } from '@/game/engine/assets';
 import { Animator } from '@/game/engine/animator';
 import { SPRITE_SHEETS } from '@/game/engine/spriteConfig';
+import { bufferInput, isBuffering } from '@/game/engine/inputBuffer';
 import { backgroundRenderer } from '@/game/engine/backgroundRenderer';
 import { noirBackgroundRenderer } from '@/game/engine/noirBackgroundRenderer';
 import { UI_ASSETS } from '@/game/engine/uiAssets';
@@ -684,6 +685,10 @@ const Game = () => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         e.preventDefault();
+        // Buffer input if we're in slow-mo/freeze
+        if (isBuffering()) {
+          bufferInput('press');
+        }
         pressedRef.current = true;
         // Unlock audio on first gesture (iOS compatible)
         const wasUnlocked = audioRefs.current.unlocked;
@@ -707,6 +712,10 @@ const Game = () => {
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         e.preventDefault();
+        // Buffer input if we're in slow-mo/freeze
+        if (isBuffering()) {
+          bufferInput('release');
+        }
         pressedRef.current = false;
       }
     };
@@ -714,6 +723,12 @@ const Game = () => {
     const handlePointerDown = async (e: PointerEvent) => {
       if (e.button !== 0 && e.pointerType !== 'touch') return;
       e.preventDefault();
+
+      // Buffer input if we're in slow-mo/freeze
+      if (isBuffering()) {
+        bufferInput('press', { x: e.clientX, y: e.clientY });
+      }
+
       pressedRef.current = true;
       pointerIdRef.current = e.pointerId;
       pointerStartYRef.current = e.clientY;
@@ -768,6 +783,12 @@ const Game = () => {
       if (pointerIdRef.current != null && e.pointerId === pointerIdRef.current) {
         pointerIdRef.current = null;
       }
+
+      // Buffer input if we're in slow-mo/freeze
+      if (isBuffering()) {
+        bufferInput('release');
+      }
+
       pressedRef.current = false;
 
       markTouchActive(false);

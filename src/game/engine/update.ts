@@ -56,6 +56,13 @@ import {
 import { addPermanentThrows, consumeThrow } from './throws';
 import { checkMilestones, awardZenoLevelUp } from './milestones';
 import { updateDailyProgress } from './dailyTasks';
+import {
+  startBuffering,
+  stopBuffering,
+  isBuffering,
+  hasBufferedInput,
+  clearBuffer
+} from './inputBuffer';
 
 export type GameAudio = {
   startCharge: (power01: number) => void;
@@ -180,6 +187,21 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
   if (state.paused) return;
 
+  // Input buffering during slow-mo
+  // When entering significant slow-mo, start buffering
+  if (state.slowMo > 0.8 && !isBuffering()) {
+    startBuffering();
+  }
+
+  // Track if we should process buffered inputs
+  let processBufferedInputs = false;
+
+  // When exiting slow-mo, apply buffered inputs
+  if (state.slowMo < 0.3 && isBuffering()) {
+    processBufferedInputs = true;
+    stopBuffering();
+  }
+
   // Calculate effective delta time (assuming 60fps = ~16.67ms per frame)
   const effectiveDeltaMs = 16.67;
 
@@ -197,6 +219,17 @@ export function updateFrame(state: GameState, svc: GameServices) {
     const wasPressed = state.precisionInput.lastPressedState;
     state.precisionInput.pressedThisFrame = pressed && !wasPressed;
     state.precisionInput.releasedThisFrame = !pressed && wasPressed;
+
+    // Apply buffered inputs from slow-mo period
+    if (processBufferedInputs) {
+      if (hasBufferedInput('tap') || hasBufferedInput('press')) {
+        state.precisionInput.pressedThisFrame = true;
+      }
+      if (hasBufferedInput('release')) {
+        state.precisionInput.releasedThisFrame = true;
+      }
+      clearBuffer();
+    }
 
     if (pressed) {
       state.precisionInput.holdDuration++;
