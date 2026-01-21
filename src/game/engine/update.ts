@@ -1051,6 +1051,39 @@ export function updateFrame(state: GameState, svc: GameServices) {
         }
       }
 
+      // === NEAR-MISS DETECTION ===
+      if (!state.nearMissActive) {
+        const distFromTarget = Math.abs(state.px - state.zenoTarget);
+        const distFromEdge = CLIFF_EDGE - state.px;  // How close to edge they got
+
+        // Determine intensity based on distance
+        let intensity: 'extreme' | 'close' | 'near' | null = null;
+        if (distFromEdge < 0.5 || distFromTarget < 2) {
+          intensity = 'extreme';  // < 0.5px from edge or < 2px from target
+          state.nearMissDistance = Math.min(distFromEdge, distFromTarget);
+        } else if (distFromEdge < 2 || distFromTarget < 5) {
+          intensity = 'close';
+          state.nearMissDistance = Math.min(distFromEdge, distFromTarget);
+        } else if (distFromEdge < 5 || distFromTarget < 10) {
+          intensity = 'near';
+          state.nearMissDistance = Math.min(distFromEdge, distFromTarget);
+        }
+
+        if (intensity) {
+          state.nearMissActive = true;
+          state.nearMissIntensity = intensity;
+          state.nearMissAnimationStart = nowMs;
+
+          // Trigger heartbeat for all players (no unlock required)
+          if (intensity === 'extreme' || intensity === 'close') {
+            audio.heartbeat(intensity === 'extreme' ? 1.0 : 0.7);
+          }
+
+          // Dramatic slowdown
+          state.slowMo = 0.9;  // Slow to 10% speed briefly
+        }
+      }
+
       // 10% chance of Wilhelm scream easter egg
       if (Math.random() < 0.1) {
         audio.wilhelmScream();

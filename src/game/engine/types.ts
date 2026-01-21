@@ -202,6 +202,11 @@ export interface GameState {
   // Landing grade system
   lastGrade: GradeResult | null;
   gradeDisplayTime: number;  // When grade was shown (for animation timing)
+  // Near-miss drama state
+  nearMissActive: boolean;
+  nearMissDistance: number;  // How far from target
+  nearMissIntensity: 'extreme' | 'close' | 'near' | null;
+  nearMissAnimationStart: number;
   // Monetization - Throw system
   throwState: ThrowState;
   dailyTasks: DailyTasks;

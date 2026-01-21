@@ -218,6 +218,11 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     // Landing grade system
     lastGrade: null,
     gradeDisplayTime: 0,
+    // Near-miss drama state
+    nearMissActive: false,
+    nearMissDistance: 0,
+    nearMissIntensity: null,
+    nearMissAnimationStart: 0,
     // Monetization - Throw system
     throwState,
     dailyTasks,
@@ -293,6 +298,11 @@ export function resetPhysics(state: GameState) {
   // Reset landing grade
   state.lastGrade = null;
   state.gradeDisplayTime = 0;
+  // Reset near-miss drama
+  state.nearMissActive = false;
+  state.nearMissDistance = 0;
+  state.nearMissIntensity = null;
+  state.nearMissAnimationStart = 0;
 }
 
 export function nextWind(state: GameState) {
