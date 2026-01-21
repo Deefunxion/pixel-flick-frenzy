@@ -1009,6 +1009,33 @@ function playGradeWomp(ctx: AudioContext, volume: number): void {
 }
 
 /**
+ * Sweet spot click - satisfying feedback when entering optimal charge range
+ */
+export function playSweetSpotClick(refs: AudioRefs, settings: AudioSettings): void {
+  if (settings.muted || !refs.ctx) return;
+
+  const ctx = refs.ctx;
+  const vol = settings.volume;
+  const now = ctx.currentTime;
+
+  // Short, satisfying click
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(1000, now);
+
+  gain.gain.setValueAtTime(0.2 * vol, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.start(now);
+  osc.stop(now + 0.06);
+}
+
+/**
  * Streak break sound (sad fizzle)
  * Plays when a hot streak is lost
  */

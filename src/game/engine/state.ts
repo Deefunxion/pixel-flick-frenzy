@@ -226,6 +226,9 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     // Session heat (ON FIRE mode)
     sessionHeat: 0,
     onFireMode: false,
+    // Charge sweet spot
+    chargeSweetSpot: false,
+    sweetSpotJustEntered: false,
     // Monetization - Throw system
     throwState,
     dailyTasks,
@@ -306,6 +309,9 @@ export function resetPhysics(state: GameState) {
   state.nearMissDistance = 0;
   state.nearMissIntensity = null;
   state.nearMissAnimationStart = 0;
+  // Reset charge sweet spot
+  state.chargeSweetSpot = false;
+  state.sweetSpotJustEntered = false;
 }
 
 export function nextWind(state: GameState) {

@@ -210,6 +210,9 @@ export interface GameState {
   // Session heat (ON FIRE mode)
   sessionHeat: number;  // 0-100, builds across session
   onFireMode: boolean;  // True when streak >= 5
+  // Charge sweet spot
+  chargeSweetSpot: boolean;  // True when in optimal range (70-85%)
+  sweetSpotJustEntered: boolean;  // For one-time feedback
   // Monetization - Throw system
   throwState: ThrowState;
   dailyTasks: DailyTasks;

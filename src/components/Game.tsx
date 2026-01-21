@@ -76,6 +76,8 @@ import {
   playGradeSound,
   // Streak sounds
   playStreakBreakSound,
+  // Charge sweet spot
+  playSweetSpotClick,
   type AudioRefs,
   type AudioSettings,
   type AudioState,
@@ -632,6 +634,8 @@ const Game = () => {
       ringCollect: (ringIndex: number, ringX?: number) => playRingCollect(audioRefs.current, audioSettingsRef.current, ringIndex, ringX),
       // Fail juice
       failImpact: () => playFailImpact(audioRefs.current, audioSettingsRef.current),
+      // Charge sweet spot
+      sweetSpotClick: () => playSweetSpotClick(audioRefs.current, audioSettingsRef.current),
     };
 
     const scheduleReset = (ms: number) => {

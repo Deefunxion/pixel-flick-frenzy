@@ -94,6 +94,8 @@ export type GameAudio = {
   ringCollect?: (ringIndex: number, ringX?: number) => void;
   // Fail juice
   failImpact?: () => void;
+  // Charge sweet spot
+  sweetSpotClick?: () => void;
 };
 
 export type GameUI = {
@@ -222,6 +224,26 @@ export function updateFrame(state: GameState, svc: GameServices) {
     const dt = cyclePosition <= 1 ? cyclePosition : 2 - cyclePosition;
     state.chargePower = dt;
     audio.updateCharge(dt);
+
+    // Sweet spot detection (70-85% power)
+    const SWEET_SPOT_MIN = 0.70;
+    const SWEET_SPOT_MAX = 0.85;
+    const inSweetSpot = dt >= SWEET_SPOT_MIN && dt <= SWEET_SPOT_MAX;
+
+    // Track entry into sweet spot
+    if (inSweetSpot && !state.chargeSweetSpot) {
+      state.sweetSpotJustEntered = true;
+      audio.sweetSpotClick?.();  // Satisfying click
+
+      // Micro zoom
+      if (!state.reduceFx) {
+        state.zoom = 1.02;  // Subtle 2% zoom
+      }
+    } else {
+      state.sweetSpotJustEntered = false;
+    }
+
+    state.chargeSweetSpot = inSweetSpot;
 
     // Emit charging swirls every 4 frames
     if (Math.floor(nowMs / 64) % 4 === 0 && state.particleSystem) {
