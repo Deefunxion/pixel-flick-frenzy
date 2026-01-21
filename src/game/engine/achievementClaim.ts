@@ -60,16 +60,20 @@ export function claimAchievement(
 
 /**
  * Get list of achievements that are unlocked but not yet claimed.
+ * Only includes achievements that exist in the current ACHIEVEMENTS object.
  */
 export function getUnclaimedAchievements(
   achievements: Set<string>,
   claimedIds: string[]
 ): string[] {
-  return [...achievements].filter(id => !claimedIds.includes(id));
+  return [...achievements].filter(id =>
+    !claimedIds.includes(id) && ACHIEVEMENTS[id] !== undefined
+  );
 }
 
 /**
  * Get the count of unclaimed achievements (for badge/notification display).
+ * Only counts achievements that exist in the current ACHIEVEMENTS object.
  */
 export function getUnclaimedCount(
   achievements: Set<string>,
