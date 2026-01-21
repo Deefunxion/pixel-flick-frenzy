@@ -10,6 +10,31 @@
 
 **Design Document:** `docs/plans/2026-01-21-engagement-juice-design.md`
 
+**Research Sources:** `docs/plans/grok_on_juice.md`, `docs/plans/deepseek_on_juice.md`
+
+---
+
+## Task Summary (27 Tasks)
+
+| Phase | Focus | Tasks |
+|-------|-------|-------|
+| **Phase 1** | Core Juice | 1.1-1.6 (ring popups, multiplier ladder, audio, **haptics**, **anti-fatigue**, **fail juice**) |
+| **Phase 2** | Landing Grades | 2.1-2.3 (grade system, UI, audio) |
+| **Phase 3** | Near-Miss Drama | 3.1-3.3 (heartbeat, visuals, dramatic pause) |
+| **Phase 4** | Streak & Momentum | 4.1-4.3 (counter, break feedback, ON FIRE mode) |
+| **Phase 5** | Goal Tracking | 5.1-5.2 (mini HUD, toast queue) |
+| **Phase 6** | Charge Feel | 6.1-6.4 (sweet spot, tension audio, **charge glow**, **input buffering**) |
+| **Phase 7** | Live Stats | 7.1 (PB callouts) |
+| **Phase 8** | Air Control | 8.1-8.4 (trail effects, stamina warnings, action denied, **performance guardrails**) |
+
+**New from research review (bolded above):**
+- Task 1.4: Haptic feedback layer (Android Vibration API)
+- Task 1.5: Audio anti-fatigue (pooling, pitch variation, session decay)
+- Task 1.6: Regular fail juice (hit-stop, dust, thud for all falls)
+- Task 6.3: Charge visual tension (glow, vignette, particles)
+- Task 6.4: Input buffering during slow-mo/freeze
+- Task 8.4: Performance guardrails (FPS, particle budget, haptic rate limiting)
+
 ---
 
 ## Phase 1: Core Juice (Highest Impact)
@@ -615,6 +640,561 @@ git commit -m "feat(juice): enhance ring collection audio
 - Add stereo pan based on ring X position
 - Add bonus flourish arpeggio on 3rd ring collection
 - Add short 'coin' sound for immediate feedback"
+```
+
+---
+
+### Task 1.4: Haptic Feedback Layer (Android)
+
+**Files:**
+- Create: `src/game/engine/haptics.ts`
+- Modify: `src/game/engine/update.ts`
+- Modify: `src/components/Game.tsx`
+
+**Step 1: Create haptics.ts module**
+
+Create `src/game/engine/haptics.ts`:
+
+```typescript
+/**
+ * Haptic Feedback System
+ *
+ * Provides tactile feedback for key game events.
+ * Uses Vibration API with graceful fallback.
+ *
+ * Research: "Combined audiohaptic feedback significantly enhances
+ * motor performance and precision" - Husain et al., 2019
+ */
+
+// Check for Vibration API support
+export function hasHapticSupport(): boolean {
+  return typeof navigator !== 'undefined' && 'vibrate' in navigator;
+}
+
+// User preference for haptics
+let hapticsEnabled = true;
+
+export function setHapticsEnabled(enabled: boolean): void {
+  hapticsEnabled = enabled;
+  localStorage.setItem('omf_haptics_enabled', enabled ? '1' : '0');
+}
+
+export function getHapticsEnabled(): boolean {
+  const stored = localStorage.getItem('omf_haptics_enabled');
+  if (stored !== null) {
+    hapticsEnabled = stored === '1';
+  }
+  return hapticsEnabled;
+}
+
+/**
+ * Trigger haptic feedback
+ * @param pattern - Single duration or pattern array [vibrate, pause, vibrate, ...]
+ */
+function vibrate(pattern: number | number[]): void {
+  if (!hapticsEnabled || !hasHapticSupport()) return;
+
+  try {
+    navigator.vibrate(pattern);
+  } catch (e) {
+    // Silently fail - haptics are enhancement, not critical
+  }
+}
+
+// === Haptic Patterns ===
+
+/**
+ * Ring collection - short, satisfying tap
+ * Intensity scales with ring index (0, 1, 2)
+ */
+export function hapticRingCollect(ringIndex: number): void {
+  const durations = [20, 35, 50];  // Escalating intensity
+  vibrate(durations[Math.min(ringIndex, 2)]);
+}
+
+/**
+ * Perfect landing - celebratory pattern
+ */
+export function hapticPerfectLanding(): void {
+  vibrate([50, 30, 80]);  // Short-pause-long
+}
+
+/**
+ * Good landing - single medium pulse
+ */
+export function hapticGoodLanding(): void {
+  vibrate(40);
+}
+
+/**
+ * Near-miss - dramatic pulse synced with heartbeat
+ */
+export function hapticNearMiss(): void {
+  vibrate([80, 150, 60]);  // thump-pause-thump
+}
+
+/**
+ * Fail/fall - impact feedback
+ */
+export function hapticFail(): void {
+  vibrate(60);
+}
+
+/**
+ * Achievement unlock - celebration pattern
+ */
+export function hapticAchievement(): void {
+  vibrate([30, 50, 30, 50, 80]);  // Quick celebration
+}
+
+/**
+ * Multiplier threshold crossed
+ */
+export function hapticMultiplierThreshold(): void {
+  vibrate([25, 25, 40]);
+}
+
+/**
+ * Action denied - sharp negative feedback
+ */
+export function hapticDenied(): void {
+  vibrate([15, 30, 15]);  // Quick double-tap
+}
+
+/**
+ * Charge release - snap feedback
+ */
+export function hapticRelease(): void {
+  vibrate(30);
+}
+
+/**
+ * Streak milestone (3, 5, 10, 15)
+ */
+export function hapticStreakMilestone(streak: number): void {
+  if (streak >= 10) {
+    vibrate([40, 30, 40, 30, 60]);  // Big celebration
+  } else if (streak >= 5) {
+    vibrate([30, 30, 50]);
+  } else {
+    vibrate([25, 25, 35]);
+  }
+}
+```
+
+**Step 2: Integrate haptics into update.ts**
+
+In `src/game/engine/update.ts`, add imports and calls:
+
+```typescript
+import {
+  hapticRingCollect,
+  hapticPerfectLanding,
+  hapticGoodLanding,
+  hapticNearMiss,
+  hapticFail,
+  hapticRelease,
+  hapticDenied,
+  hapticMultiplierThreshold
+} from './haptics';
+
+// On ring collection:
+hapticRingCollect(state.ringsPassedThisThrow - 1);
+
+// On landing (based on grade):
+if (grade === 'S' || grade === 'A') {
+  hapticPerfectLanding();
+} else if (grade === 'B' || grade === 'C') {
+  hapticGoodLanding();
+}
+
+// On near-miss:
+hapticNearMiss();
+
+// On fall:
+hapticFail();
+
+// On throw release:
+hapticRelease();
+
+// On action denied:
+hapticDenied();
+
+// On multiplier threshold:
+hapticMultiplierThreshold();
+```
+
+**Step 3: Add haptics toggle to settings**
+
+In `src/components/Game.tsx`, add haptics toggle near audio settings:
+
+```typescript
+import { getHapticsEnabled, setHapticsEnabled, hasHapticSupport } from '@/game/engine/haptics';
+
+// State
+const [hapticsEnabled, setHapticsEnabledState] = useState(getHapticsEnabled());
+
+// Toggle handler
+const toggleHaptics = () => {
+  const newValue = !hapticsEnabled;
+  setHapticsEnabled(newValue);
+  setHapticsEnabledState(newValue);
+};
+
+// Only show toggle if device supports haptics
+{hasHapticSupport() && (
+  <button onClick={toggleHaptics}>
+    {hapticsEnabled ? '📳' : '📴'}
+  </button>
+)}
+```
+
+**Step 4: Commit**
+
+```bash
+git add src/game/engine/haptics.ts src/game/engine/update.ts src/components/Game.tsx
+git commit -m "feat(juice): add haptic feedback layer for Android
+
+- Create haptics.ts with Vibration API wrapper
+- Add haptic patterns for all key events:
+  - Ring collection (escalating intensity)
+  - Landing (perfect vs good patterns)
+  - Near-miss (heartbeat sync)
+  - Fail, release, denied, achievements
+- User preference toggle with localStorage
+- Graceful fallback when unsupported"
+```
+
+---
+
+### Task 1.5: Audio Anti-Fatigue System
+
+**Files:**
+- Create: `src/game/engine/audioPool.ts`
+- Modify: `src/game/engine/audio.ts`
+
+**Step 1: Create audioPool.ts module**
+
+Create `src/game/engine/audioPool.ts`:
+
+```typescript
+/**
+ * Audio Pool & Anti-Fatigue System
+ *
+ * Prevents audio fatigue through:
+ * - Sound pooling (max concurrent instances)
+ * - Pitch variation (±15% random)
+ * - Session volume decay
+ * - Cooldown enforcement
+ *
+ * Research: "Slightly randomize the pitch of frequent sound effects
+ * (within 0.9-1.1 range) to reduce perceptual fatigue"
+ */
+
+interface PooledSound {
+  lastPlayedAt: number;
+  playCount: number;
+}
+
+// Track sound instances
+const soundPool: Map<string, PooledSound[]> = new Map();
+
+// Configuration
+const MAX_CONCURRENT_SOUNDS = 4;
+const DEFAULT_COOLDOWN_MS = 100;
+const PITCH_VARIATION = 0.15;  // ±15%
+
+// Session volume decay
+let sessionStartTime = Date.now();
+let sessionVolumeMultiplier = 1.0;
+const VOLUME_DECAY_INTERVAL_MS = 3 * 60 * 1000;  // Every 3 minutes
+const VOLUME_DECAY_AMOUNT = 0.05;  // 5% quieter
+const MIN_SESSION_VOLUME = 0.7;  // Never below 70%
+
+/**
+ * Update session volume (call periodically)
+ */
+export function updateSessionVolume(): number {
+  const elapsed = Date.now() - sessionStartTime;
+  const decaySteps = Math.floor(elapsed / VOLUME_DECAY_INTERVAL_MS);
+  sessionVolumeMultiplier = Math.max(
+    MIN_SESSION_VOLUME,
+    1.0 - (decaySteps * VOLUME_DECAY_AMOUNT)
+  );
+  return sessionVolumeMultiplier;
+}
+
+/**
+ * Reset session volume (e.g., on page focus)
+ */
+export function resetSessionVolume(): void {
+  sessionStartTime = Date.now();
+  sessionVolumeMultiplier = 1.0;
+}
+
+/**
+ * Get current session volume multiplier
+ */
+export function getSessionVolumeMultiplier(): number {
+  return sessionVolumeMultiplier;
+}
+
+/**
+ * Check if a sound can play (respects pooling and cooldown)
+ */
+export function canPlaySound(
+  soundId: string,
+  cooldownMs: number = DEFAULT_COOLDOWN_MS
+): boolean {
+  const now = Date.now();
+  const pool = soundPool.get(soundId) || [];
+
+  // Clean up old entries
+  const activePool = pool.filter(s => now - s.lastPlayedAt < 1000);
+
+  // Check concurrent limit
+  if (activePool.length >= MAX_CONCURRENT_SOUNDS) {
+    return false;
+  }
+
+  // Check cooldown
+  const lastPlayed = activePool[activePool.length - 1];
+  if (lastPlayed && now - lastPlayed.lastPlayedAt < cooldownMs) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Register a sound play
+ */
+export function registerSoundPlay(soundId: string): void {
+  const now = Date.now();
+  const pool = soundPool.get(soundId) || [];
+
+  // Clean up old entries (older than 1 second)
+  const activePool = pool.filter(s => now - s.lastPlayedAt < 1000);
+
+  activePool.push({ lastPlayedAt: now, playCount: 1 });
+  soundPool.set(soundId, activePool);
+}
+
+/**
+ * Get random pitch variation
+ * Returns multiplier between (1 - variation) and (1 + variation)
+ */
+export function getRandomPitch(variation: number = PITCH_VARIATION): number {
+  return 1 + (Math.random() * 2 - 1) * variation;
+}
+
+/**
+ * Get volume with session decay applied
+ */
+export function getDecayedVolume(baseVolume: number): number {
+  updateSessionVolume();
+  return baseVolume * sessionVolumeMultiplier;
+}
+
+/**
+ * Cooldown values for different sound types
+ */
+export const SOUND_COOLDOWNS = {
+  ringCollect: 150,
+  coinCollect: 100,
+  impact: 200,
+  whoosh: 100,
+  denied: 300,
+  achievement: 500,
+  gradeSound: 300,
+  heartbeat: 400,
+};
+```
+
+**Step 2: Integrate into audio.ts**
+
+Modify `src/game/engine/audio.ts` to use the pool:
+
+```typescript
+import {
+  canPlaySound,
+  registerSoundPlay,
+  getRandomPitch,
+  getDecayedVolume,
+  SOUND_COOLDOWNS
+} from './audioPool';
+
+// Modify existing methods to use pool:
+
+ringCollect(ringIndex: 0 | 1 | 2, ringX: number = 240): void {
+  if (!this.ctx || this.muted) return;
+
+  // Check pool
+  if (!canPlaySound('ringCollect', SOUND_COOLDOWNS.ringCollect)) return;
+  registerSoundPlay('ringCollect');
+
+  // Apply pitch variation
+  const basePitch = [440, 554, 659][ringIndex];
+  const pitch = basePitch * getRandomPitch(0.1);  // ±10% variation
+
+  // Apply session volume decay
+  const volume = getDecayedVolume(0.3 * this.volume);
+
+  // ... rest of implementation with pitch and volume
+}
+
+// Similar changes to other frequently-called methods:
+// - coinCollect()
+// - tone()
+// - impact()
+```
+
+**Step 3: Commit**
+
+```bash
+git add src/game/engine/audioPool.ts src/game/engine/audio.ts
+git commit -m "feat(juice): add audio anti-fatigue system
+
+- Create audioPool.ts with sound pooling
+- Max 4 concurrent sounds per type
+- Pitch variation ±15% to prevent repetition fatigue
+- Session volume decay (5% quieter every 3 minutes)
+- Cooldown enforcement per sound type
+- Prevents audio spam on rapid actions"
+```
+
+---
+
+### Task 1.6: Regular Fail Juice (Non-Near-Miss Falls)
+
+**Files:**
+- Modify: `src/game/engine/update.ts`
+- Modify: `src/game/engine/render.ts`
+- Modify: `src/game/engine/audio.ts`
+
+**Step 1: Add fail state tracking**
+
+In `src/game/engine/types.ts`:
+
+```typescript
+// Fail juice state
+failJuiceActive: boolean;
+failJuiceStartTime: number;
+failImpactX: number;
+failImpactY: number;
+```
+
+**Step 2: Trigger fail juice on any fall**
+
+In `src/game/engine/update.ts`, when fall is detected:
+
+```typescript
+// On ANY fall (not just near-miss), trigger fail juice
+if (state.fellOff && !state.failJuiceActive) {
+  state.failJuiceActive = true;
+  state.failJuiceStartTime = nowMs;
+  state.failImpactX = state.px;
+  state.failImpactY = state.py;
+
+  // Hit-stop (brief freeze on impact)
+  const FAIL_HIT_STOP_MS = 80;  // 5 frames at 60fps
+  state.slowMo = Math.max(state.slowMo, 0.95);
+
+  // Screen shake
+  state.screenShake = 5;
+
+  // Impact sound (if not already playing near-miss drama)
+  if (!state.nearMissActive) {
+    audio.failImpact();
+  }
+
+  // Haptic
+  hapticFail();
+
+  // Spawn dust particles at impact point
+  if (!state.reduceFx) {
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI + Math.PI;  // Upward arc
+      state.particles.push({
+        x: state.failImpactX,
+        y: H - 20,  // Ground level
+        vx: Math.cos(angle) * (1 + Math.random()),
+        vy: Math.sin(angle) * 2,
+        life: 20 + Math.random() * 10,
+        maxLife: 30,
+        color: '#8B7355',  // Dust brown
+      });
+    }
+  }
+}
+
+// Clear fail juice after duration
+if (state.failJuiceActive && nowMs - state.failJuiceStartTime > 300) {
+  state.failJuiceActive = false;
+}
+```
+
+**Step 3: Add fail impact sound**
+
+In `src/game/engine/audio.ts`:
+
+```typescript
+/**
+ * Fail impact sound - dull thud
+ */
+failImpact(): void {
+  if (!this.ctx || this.muted) return;
+
+  if (!canPlaySound('failImpact', 200)) return;
+  registerSoundPlay('failImpact');
+
+  const osc = this.ctx.createOscillator();
+  const gain = this.ctx.createGain();
+
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(80, this.ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.15);
+
+  const volume = getDecayedVolume(0.25 * this.volume);
+  gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+  gain.gain.exponentialDecayTo(0.01, this.ctx.currentTime + 0.2);
+
+  osc.connect(gain);
+  gain.connect(this.ctx.destination);
+
+  osc.start();
+  osc.stop(this.ctx.currentTime + 0.2);
+}
+```
+
+**Step 4: Initialize state**
+
+In `src/game/engine/state.ts`:
+
+```typescript
+// createInitialState():
+failJuiceActive: false,
+failJuiceStartTime: 0,
+failImpactX: 0,
+failImpactY: 0,
+
+// resetPhysics():
+state.failJuiceActive = false;
+state.failJuiceStartTime = 0;
+```
+
+**Step 5: Commit**
+
+```bash
+git add src/game/engine/types.ts src/game/engine/state.ts src/game/engine/update.ts src/game/engine/audio.ts
+git commit -m "feat(juice): add fail juice for all falls
+
+- Hit-stop (80ms) on any fall impact
+- Screen shake on fail
+- Dust particle burst at impact point
+- Dull thud impact sound
+- Works for all falls, not just near-misses
+- Every failure now has satisfying feedback"
 ```
 
 ---
@@ -2614,6 +3194,330 @@ git commit -m "feat(juice): add charge tension audio
 
 ---
 
+### Task 6.3: Charge Visual Tension Build
+
+**Files:**
+- Modify: `src/game/engine/render.ts`
+- Modify: `src/game/engine/update.ts`
+- Modify: `src/game/engine/types.ts`
+
+**Step 1: Add charge visual state**
+
+In `src/game/engine/types.ts`:
+
+```typescript
+// Charge visual tension
+chargeGlowIntensity: number;  // 0-1, builds with charge
+chargeVignetteActive: boolean;
+```
+
+**Step 2: Update charge glow in update.ts**
+
+In `src/game/engine/update.ts`, during charging:
+
+```typescript
+// Build charge visual intensity
+if (state.charging) {
+  const power01 = state.power / 10;  // 0-1
+
+  // Glow builds with charge
+  state.chargeGlowIntensity = power01;
+
+  // Vignette activates at 50% charge
+  state.chargeVignetteActive = power01 > 0.5;
+
+  // Particles intensify with charge (existing particle system)
+  if (power01 > 0.6 && !state.reduceFx) {
+    // Emit more particles at higher charge
+    const particleChance = power01 * 0.3;  // Up to 30% chance per frame
+    if (Math.random() < particleChance) {
+      state.particleSystem.emitChargingSwirls(
+        state.px,
+        state.py,
+        power01,
+        '#FFD700'
+      );
+    }
+  }
+}
+
+// Reset on release
+if (!state.charging) {
+  state.chargeGlowIntensity = 0;
+  state.chargeVignetteActive = false;
+}
+```
+
+**Step 3: Render charge visual effects**
+
+In `src/game/engine/render.ts`:
+
+```typescript
+/**
+ * Render charge glow around Zeno
+ */
+function renderChargeGlow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  intensity: number  // 0-1
+): void {
+  if (intensity <= 0) return;
+
+  const radius = 30 + intensity * 20;  // 30-50px
+  const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+
+  gradient.addColorStop(0, `rgba(255, 215, 0, ${intensity * 0.4})`);
+  gradient.addColorStop(0.5, `rgba(255, 165, 0, ${intensity * 0.2})`);
+  gradient.addColorStop(1, 'rgba(255, 165, 0, 0)');
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+}
+
+/**
+ * Render charge vignette (subtle edge darkening)
+ */
+function renderChargeVignette(
+  ctx: CanvasRenderingContext2D,
+  intensity: number,
+  width: number,
+  height: number
+): void {
+  if (intensity <= 0) return;
+
+  const gradient = ctx.createRadialGradient(
+    width / 2, height / 2, height * 0.3,
+    width / 2, height / 2, height * 0.8
+  );
+
+  gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  gradient.addColorStop(1, `rgba(0, 0, 0, ${intensity * 0.3})`);
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+}
+
+// Call during charging phase:
+if (state.charging && !state.reduceFx) {
+  renderChargeGlow(ctx, state.px, state.py, state.chargeGlowIntensity);
+  if (state.chargeVignetteActive) {
+    renderChargeVignette(ctx, state.chargeGlowIntensity - 0.5, W, H);
+  }
+}
+```
+
+**Step 4: Initialize state**
+
+In `src/game/engine/state.ts`:
+
+```typescript
+// createInitialState():
+chargeGlowIntensity: 0,
+chargeVignetteActive: false,
+
+// resetPhysics():
+state.chargeGlowIntensity = 0;
+state.chargeVignetteActive = false;
+```
+
+**Step 5: Commit**
+
+```bash
+git add src/game/engine/types.ts src/game/engine/state.ts src/game/engine/update.ts src/game/engine/render.ts
+git commit -m "feat(juice): add charge visual tension build
+
+- Glow around Zeno intensifies with charge level
+- Subtle vignette at screen edges during high charge
+- Particle swirls increase with charge intensity
+- Visual 'energy building' feel before release
+- Respects reduceFx setting"
+```
+
+---
+
+### Task 6.4: Input Buffering During Slow-Mo/Freeze
+
+**Files:**
+- Create: `src/game/engine/inputBuffer.ts`
+- Modify: `src/game/engine/update.ts`
+- Modify: `src/components/Game.tsx`
+
+**Step 1: Create inputBuffer.ts module**
+
+Create `src/game/engine/inputBuffer.ts`:
+
+```typescript
+/**
+ * Input Buffer System
+ *
+ * Stores player inputs during slow-mo/freeze frames
+ * and applies them when time resumes.
+ *
+ * Research: "Buffer Inputs: Store input events during the freeze
+ * and apply them once time resumes to maintain responsiveness"
+ */
+
+interface BufferedInput {
+  type: 'press' | 'release' | 'tap';
+  timestamp: number;
+  data?: {
+    x?: number;
+    y?: number;
+  };
+}
+
+// Buffer storage
+let inputBuffer: BufferedInput[] = [];
+let bufferingActive = false;
+
+// Buffer window (how long to hold inputs)
+const BUFFER_WINDOW_MS = 200;
+
+/**
+ * Start buffering inputs (call when entering slow-mo/freeze)
+ */
+export function startBuffering(): void {
+  bufferingActive = true;
+  inputBuffer = [];
+}
+
+/**
+ * Stop buffering and return buffered inputs
+ */
+export function stopBuffering(): BufferedInput[] {
+  bufferingActive = false;
+  const buffered = [...inputBuffer];
+  inputBuffer = [];
+  return buffered;
+}
+
+/**
+ * Check if currently buffering
+ */
+export function isBuffering(): boolean {
+  return bufferingActive;
+}
+
+/**
+ * Add input to buffer (call from input handlers)
+ */
+export function bufferInput(
+  type: BufferedInput['type'],
+  data?: BufferedInput['data']
+): void {
+  if (!bufferingActive) return;
+
+  const now = Date.now();
+
+  // Clear old inputs outside buffer window
+  inputBuffer = inputBuffer.filter(
+    input => now - input.timestamp < BUFFER_WINDOW_MS
+  );
+
+  inputBuffer.push({
+    type,
+    timestamp: now,
+    data,
+  });
+}
+
+/**
+ * Get the most recent buffered input of a type
+ */
+export function getBufferedInput(type: BufferedInput['type']): BufferedInput | null {
+  const matching = inputBuffer.filter(i => i.type === type);
+  return matching.length > 0 ? matching[matching.length - 1] : null;
+}
+
+/**
+ * Check if a specific input was buffered
+ */
+export function hasBufferedInput(type: BufferedInput['type']): boolean {
+  return inputBuffer.some(i => i.type === type);
+}
+
+/**
+ * Clear the buffer
+ */
+export function clearBuffer(): void {
+  inputBuffer = [];
+}
+```
+
+**Step 2: Integrate into update.ts**
+
+In `src/game/engine/update.ts`:
+
+```typescript
+import {
+  startBuffering,
+  stopBuffering,
+  isBuffering,
+  hasBufferedInput,
+  clearBuffer
+} from './inputBuffer';
+
+// When entering significant slow-mo (e.g., micro-freeze):
+if (state.slowMo > 0.8 && !isBuffering()) {
+  startBuffering();
+}
+
+// When exiting slow-mo, apply buffered inputs:
+if (state.slowMo < 0.3 && isBuffering()) {
+  const buffered = stopBuffering();
+
+  // Apply buffered tap/release
+  if (hasBufferedInput('tap')) {
+    // Treat as if player tapped this frame
+    pressedThisFrame = true;
+  }
+  if (hasBufferedInput('release')) {
+    releasedThisFrame = true;
+  }
+
+  clearBuffer();
+}
+```
+
+**Step 3: Buffer inputs in Game.tsx**
+
+In `src/components/Game.tsx`, modify input handlers:
+
+```typescript
+import { bufferInput, isBuffering } from '@/game/engine/inputBuffer';
+
+// In pointer handlers:
+const handlePointerDown = (e: PointerEvent) => {
+  if (isBuffering()) {
+    bufferInput('press', { x: e.clientX, y: e.clientY });
+  }
+  // ... existing logic
+};
+
+const handlePointerUp = (e: PointerEvent) => {
+  if (isBuffering()) {
+    bufferInput('release');
+  }
+  // ... existing logic
+};
+```
+
+**Step 4: Commit**
+
+```bash
+git add src/game/engine/inputBuffer.ts src/game/engine/update.ts src/components/Game.tsx
+git commit -m "feat(juice): add input buffering during slow-mo
+
+- Create inputBuffer.ts for storing inputs during freeze
+- Buffer window of 200ms
+- Inputs applied when time resumes
+- Maintains responsiveness during dramatic pauses
+- Prevents 'swallowed' inputs during hit-stop"
+```
+
+---
+
 ### Task 7.1: Personal Best Callouts
 
 **Files:**
@@ -2919,6 +3823,277 @@ git commit -m "feat(juice): improve action denied feedback
 
 ---
 
+### Task 8.4: Performance Guardrails Module
+
+**Files:**
+- Create: `src/game/engine/performanceGuard.ts`
+- Modify: `src/game/engine/update.ts`
+- Modify: `src/game/engine/particles.ts`
+
+**Step 1: Create performanceGuard.ts module**
+
+Create `src/game/engine/performanceGuard.ts`:
+
+```typescript
+/**
+ * Performance Guardrails
+ *
+ * Monitors and enforces performance limits for juice effects.
+ * Critical for Google Play Store success (battery/performance reviews).
+ *
+ * Guardrails:
+ * - Particle budget (max 100-200)
+ * - FPS monitoring with auto-degradation
+ * - Audio instance limits
+ * - Battery-conscious haptic limits
+ */
+
+// Configuration
+const MAX_PARTICLES = 150;
+const TARGET_FPS = 60;
+const FPS_WARNING_THRESHOLD = 45;
+const FPS_CRITICAL_THRESHOLD = 30;
+
+// Tracking
+let frameTimestamps: number[] = [];
+let currentFPS = 60;
+let qualityLevel: 'high' | 'medium' | 'low' = 'high';
+
+// Particle budget
+let activeParticleCount = 0;
+
+/**
+ * Update FPS tracking (call every frame)
+ */
+export function trackFrame(timestamp: number): void {
+  frameTimestamps.push(timestamp);
+
+  // Keep last 60 frames
+  if (frameTimestamps.length > 60) {
+    frameTimestamps.shift();
+  }
+
+  // Calculate FPS
+  if (frameTimestamps.length >= 2) {
+    const oldest = frameTimestamps[0];
+    const newest = frameTimestamps[frameTimestamps.length - 1];
+    const duration = newest - oldest;
+    currentFPS = Math.round((frameTimestamps.length - 1) / (duration / 1000));
+  }
+
+  // Auto-adjust quality
+  if (currentFPS < FPS_CRITICAL_THRESHOLD) {
+    qualityLevel = 'low';
+  } else if (currentFPS < FPS_WARNING_THRESHOLD) {
+    qualityLevel = 'medium';
+  } else {
+    qualityLevel = 'high';
+  }
+}
+
+/**
+ * Get current FPS
+ */
+export function getCurrentFPS(): number {
+  return currentFPS;
+}
+
+/**
+ * Get current quality level
+ */
+export function getQualityLevel(): 'high' | 'medium' | 'low' {
+  return qualityLevel;
+}
+
+/**
+ * Check if we can spawn more particles
+ */
+export function canSpawnParticles(count: number): boolean {
+  const limit = qualityLevel === 'high' ? MAX_PARTICLES
+              : qualityLevel === 'medium' ? MAX_PARTICLES * 0.6
+              : MAX_PARTICLES * 0.3;
+
+  return activeParticleCount + count <= limit;
+}
+
+/**
+ * Register particle spawn
+ */
+export function registerParticles(count: number): void {
+  activeParticleCount += count;
+}
+
+/**
+ * Register particle death
+ */
+export function unregisterParticles(count: number): void {
+  activeParticleCount = Math.max(0, activeParticleCount - count);
+}
+
+/**
+ * Get scaled particle count based on quality
+ */
+export function getScaledParticleCount(baseCount: number): number {
+  const scale = qualityLevel === 'high' ? 1.0
+              : qualityLevel === 'medium' ? 0.6
+              : 0.3;
+  return Math.max(1, Math.round(baseCount * scale));
+}
+
+/**
+ * Check if effect should be skipped for performance
+ */
+export function shouldSkipEffect(effectType: 'particle' | 'glow' | 'shake'): boolean {
+  if (qualityLevel === 'low') {
+    // In low quality, skip non-essential effects
+    return effectType === 'glow';
+  }
+  if (qualityLevel === 'medium') {
+    // In medium, skip expensive effects sometimes
+    return effectType === 'glow' && Math.random() > 0.5;
+  }
+  return false;
+}
+
+/**
+ * Get maximum concurrent haptic operations
+ * Battery-conscious limiting
+ */
+export function getMaxHapticOps(): number {
+  return qualityLevel === 'high' ? 10
+       : qualityLevel === 'medium' ? 5
+       : 2;
+}
+
+let hapticOpsThisSecond = 0;
+let lastHapticReset = Date.now();
+
+/**
+ * Check if haptic can fire (rate limiting)
+ */
+export function canFireHaptic(): boolean {
+  const now = Date.now();
+  if (now - lastHapticReset > 1000) {
+    hapticOpsThisSecond = 0;
+    lastHapticReset = now;
+  }
+
+  if (hapticOpsThisSecond >= getMaxHapticOps()) {
+    return false;
+  }
+
+  hapticOpsThisSecond++;
+  return true;
+}
+
+/**
+ * Performance stats for debugging
+ */
+export function getPerformanceStats(): {
+  fps: number;
+  quality: string;
+  particles: number;
+  maxParticles: number;
+} {
+  const limit = qualityLevel === 'high' ? MAX_PARTICLES
+              : qualityLevel === 'medium' ? MAX_PARTICLES * 0.6
+              : MAX_PARTICLES * 0.3;
+
+  return {
+    fps: currentFPS,
+    quality: qualityLevel,
+    particles: activeParticleCount,
+    maxParticles: limit,
+  };
+}
+```
+
+**Step 2: Integrate into update.ts**
+
+In `src/game/engine/update.ts`:
+
+```typescript
+import {
+  trackFrame,
+  canSpawnParticles,
+  registerParticles,
+  getScaledParticleCount,
+  shouldSkipEffect
+} from './performanceGuard';
+
+// At start of updateFrame:
+trackFrame(nowMs);
+
+// When spawning particles:
+const particleCount = getScaledParticleCount(10);  // Base 10 particles
+if (canSpawnParticles(particleCount)) {
+  for (let i = 0; i < particleCount; i++) {
+    state.particles.push({ /* ... */ });
+  }
+  registerParticles(particleCount);
+}
+
+// When checking glow effects:
+if (!shouldSkipEffect('glow')) {
+  state.edgeGlowIntensity = getEdgeGlowIntensity(state.ringsPassedThisThrow);
+}
+```
+
+**Step 3: Integrate into haptics.ts**
+
+In `src/game/engine/haptics.ts`:
+
+```typescript
+import { canFireHaptic } from './performanceGuard';
+
+function vibrate(pattern: number | number[]): void {
+  if (!hapticsEnabled || !hasHapticSupport()) return;
+
+  // Battery-conscious rate limiting
+  if (!canFireHaptic()) return;
+
+  try {
+    navigator.vibrate(pattern);
+  } catch (e) {
+    // Silently fail
+  }
+}
+```
+
+**Step 4: Add dev overlay (optional)**
+
+In `src/components/Game.tsx` (dev mode only):
+
+```typescript
+import { getPerformanceStats } from '@/game/engine/performanceGuard';
+
+// In render, only in dev:
+{import.meta.env.DEV && (
+  <div className="fixed bottom-2 left-2 text-xs text-white/50 bg-black/30 p-1 rounded">
+    {(() => {
+      const stats = getPerformanceStats();
+      return `FPS: ${stats.fps} | Q: ${stats.quality} | P: ${stats.particles}/${stats.maxParticles}`;
+    })()}
+  </div>
+)}
+```
+
+**Step 5: Commit**
+
+```bash
+git add src/game/engine/performanceGuard.ts src/game/engine/update.ts src/game/engine/haptics.ts src/components/Game.tsx
+git commit -m "feat(juice): add performance guardrails module
+
+- FPS monitoring with auto quality degradation
+- Particle budget (150 max, scales with quality)
+- Quality levels: high/medium/low (auto-detected)
+- Battery-conscious haptic rate limiting
+- Dev overlay for performance stats
+- Critical for Google Play Store success"
+```
+
+---
+
 ## Testing Checklist
 
 Run after each phase completion:
@@ -2943,12 +4118,19 @@ npm run dev
 - [ ] Micro-freeze on ring collection (if not in slow-mo)
 - [ ] Multiplier ladder shows during flight
 - [ ] Audio escalates with ring collection
+- [ ] Haptic feedback on ring collection (Android only)
+- [ ] Haptic patterns vary by event type
+- [ ] Audio doesn't spam on rapid ring collection (anti-fatigue)
+- [ ] Pitch varies slightly on repeated sounds
 - [ ] Landing grades (S/A/B/C/D) display correctly
 - [ ] Grade sounds play appropriately
 - [ ] Confetti on S/A grades
 - [ ] Near-miss heartbeat triggers on fall near target
 - [ ] Spotlight vignette focuses on target
 - [ ] Distance counter animates
+- [ ] Regular falls (non-near-miss) have hit-stop
+- [ ] Dust particles on all falls
+- [ ] Impact thud sound on falls
 
 **Phase 2 (Progression Feel) tests:**
 - [ ] Streak counter shows during gameplay
@@ -2962,10 +4144,18 @@ npm run dev
 **Phase 3 (Polish) tests:**
 - [ ] Sweet spot click on optimal charge
 - [ ] Tension drone builds during charge
+- [ ] Charge glow intensifies with power level
+- [ ] Vignette appears at high charge
+- [ ] Inputs during slow-mo are buffered and applied
+- [ ] No "swallowed" inputs during hit-stop
 - [ ] PB callouts on passing best
 - [ ] Trail effects on float/brake
 - [ ] Low stamina warning enhanced
 - [ ] Action denied has clear feedback
+- [ ] FPS stays above 45 with full juice
+- [ ] Quality auto-degrades on low-end devices
+- [ ] Particle count respects budget
+- [ ] Haptics rate-limited on rapid actions
 
 ---
 
@@ -2988,23 +4178,27 @@ git reset --hard <pre-phase-commit>
 
 ## Files Summary
 
-**New Files (13):**
-- `src/game/engine/ringJuice.ts`
-- `src/game/engine/gradeSystem.ts`
-- `src/components/MultiplierLadder.tsx`
-- `src/components/LandingGrade.tsx`
-- `src/components/NearMissOverlay.tsx`
-- `src/components/StreakCounter.tsx`
-- `src/components/StreakBreak.tsx`
-- `src/components/MiniGoalHUD.tsx`
-- `src/components/ToastQueue.tsx`
+**New Files (17):**
+- `src/game/engine/ringJuice.ts` - Ring collection feedback system
+- `src/game/engine/gradeSystem.ts` - Landing grade calculation
+- `src/game/engine/haptics.ts` - Vibration API wrapper for Android
+- `src/game/engine/audioPool.ts` - Audio anti-fatigue system
+- `src/game/engine/inputBuffer.ts` - Input buffering during slow-mo
+- `src/game/engine/performanceGuard.ts` - FPS/particle budget guardrails
+- `src/components/MultiplierLadder.tsx` - Multiplier HUD during flight
+- `src/components/LandingGrade.tsx` - Grade stamp display
+- `src/components/NearMissOverlay.tsx` - Near-miss drama UI
+- `src/components/StreakCounter.tsx` - Hot streak HUD
+- `src/components/StreakBreak.tsx` - Streak loss feedback
+- `src/components/MiniGoalHUD.tsx` - Closest achievement display
+- `src/components/ToastQueue.tsx` - Non-blocking notification system
 
 **Modified Files (8):**
-- `src/game/engine/types.ts` (state extensions)
-- `src/game/engine/state.ts` (initialization)
-- `src/game/engine/update.ts` (logic integration)
-- `src/game/engine/render.ts` (visual effects)
-- `src/game/engine/audio.ts` (audio feedback)
+- `src/game/engine/types.ts` (state extensions for all juice systems)
+- `src/game/engine/state.ts` (initialization and reset)
+- `src/game/engine/update.ts` (logic integration, performance tracking)
+- `src/game/engine/render.ts` (visual effects, charge glow, trails)
+- `src/game/engine/audio.ts` (audio feedback with pooling)
 - `src/game/engine/achievementProgress.ts` (goal selection)
 - `src/components/Game.tsx` (React integration)
 - `src/index.css` (animations)
