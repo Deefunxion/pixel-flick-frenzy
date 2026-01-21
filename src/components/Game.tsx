@@ -84,6 +84,7 @@ import { SPRITE_SHEETS } from '@/game/engine/spriteConfig';
 import { backgroundRenderer } from '@/game/engine/backgroundRenderer';
 import { noirBackgroundRenderer } from '@/game/engine/noirBackgroundRenderer';
 import { UI_ASSETS } from '@/game/engine/uiAssets';
+import { renderPageFlip } from '@/game/engine/pageFlipRender';
 import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { TutorialOverlay } from './TutorialOverlay';
@@ -643,10 +644,29 @@ const Game = () => {
             triggerHaptic,
             scheduleReset,
             getDailyStats: () => dailyStatsRef.current,
+            canvas: canvasRef.current!,
           });
           // Pass devicePixelRatio for high-res rendering
           if (!errorRef.current) {
-            renderFrame(ctx, state, currentTheme, now, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
+            // Check if page flip transition should consume the frame
+            const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+            const pageFlipConsumed = renderPageFlip(
+              ctx,
+              state,
+              currentTheme,
+              now,
+              dpr,
+              () => {
+                // Page flip complete callback - reset physics
+                resetPhysics(state);
+                audio.playPaperSettle?.();
+              }
+            );
+
+            // Only render normal game frame if page flip didn't consume it
+            if (!pageFlipConsumed) {
+              renderFrame(ctx, state, currentTheme, now, dpr);
+            }
           }
         } catch (err: any) {
           // Derive phase from existing state properties for error context
