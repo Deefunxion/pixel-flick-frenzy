@@ -390,6 +390,21 @@ export function updateFrame(state: GameState, svc: GameServices) {
           state.lastControlAction = 'float';
           state.controlActionTime = nowMs;
           audio.airBrakeTap?.(); // TODO: add airFloat sound
+
+          // Visual feedback: upward puff particles for float
+          if (state.particleSystem && !state.reduceFx) {
+            state.particleSystem.emit('spark', {
+              x: state.px,
+              y: state.py,
+              count: 5,
+              baseAngle: -Math.PI / 2,  // Upward
+              spread: 0.5,
+              speed: 1.5,
+              life: 15,
+              color: '#87CEEB',
+              gravity: 0,
+            });
+          }
         } else if (result.denied) {
           audio.actionDenied?.();
           state.staminaDeniedShake = 8;
@@ -403,6 +418,21 @@ export function updateFrame(state: GameState, svc: GameServices) {
           if (state.precisionInput.holdDuration === 12) {  // ~200ms at 60fps
             state.lastControlAction = 'brake';
             state.controlActionTime = nowMs;
+
+            // Visual feedback: downward/backward particles for brake
+            if (state.particleSystem && !state.reduceFx) {
+              state.particleSystem.emit('spark', {
+                x: state.px,
+                y: state.py,
+                count: 3,
+                baseAngle: Math.PI,  // Backward
+                spread: 0.3,
+                speed: 2,
+                life: 12,
+                color: '#FF6B6B',
+                gravity: 0,
+              });
+            }
           }
           // Play hold sound every 6 frames to avoid spam
           if (state.precisionInput.holdDuration % 6 === 0) {
