@@ -223,6 +223,9 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     nearMissDistance: 0,
     nearMissIntensity: null,
     nearMissAnimationStart: 0,
+    // Session heat (ON FIRE mode)
+    sessionHeat: 0,
+    onFireMode: false,
     // Monetization - Throw system
     throwState,
     dailyTasks,

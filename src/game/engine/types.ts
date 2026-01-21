@@ -207,6 +207,9 @@ export interface GameState {
   nearMissDistance: number;  // How far from target
   nearMissIntensity: 'extreme' | 'close' | 'near' | null;
   nearMissAnimationStart: number;
+  // Session heat (ON FIRE mode)
+  sessionHeat: number;  // 0-100, builds across session
+  onFireMode: boolean;  // True when streak >= 5
   // Monetization - Throw system
   throwState: ThrowState;
   dailyTasks: DailyTasks;

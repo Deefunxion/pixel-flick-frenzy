@@ -961,6 +961,13 @@ export function updateFrame(state: GameState, svc: GameServices) {
         }
         ui.setHotStreak(state.hotStreak, state.bestHotStreak);
 
+        // Session heat (builds across session, doesn't reset on fail)
+        if (!state.fellOff) {
+          state.sessionHeat = Math.min(100, state.sessionHeat + 5);
+        }
+        // ON FIRE mode triggers at streak 5+
+        state.onFireMode = state.hotStreak >= 5;
+
         // Check achievements
         checkAchievements(state, ui, audio, 3000);
 

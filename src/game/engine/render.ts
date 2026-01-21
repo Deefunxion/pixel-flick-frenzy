@@ -129,6 +129,30 @@ function renderNearMissSpotlight(
 }
 
 /**
+ * Render ON FIRE mode visual effects
+ * - Warm background tint
+ * - Flame border effect at bottom of screen
+ */
+function renderOnFireMode(
+  ctx: CanvasRenderingContext2D,
+  intensity: number,  // sessionHeat / 100
+  width: number,
+  height: number
+): void {
+  // Warm background tint
+  ctx.fillStyle = `rgba(255, 100, 0, ${intensity * 0.1})`;
+  ctx.fillRect(0, 0, width, height);
+
+  // Flame border effect at bottom
+  const gradient = ctx.createLinearGradient(0, height, 0, height - 40);
+  gradient.addColorStop(0, `rgba(255, 100, 0, ${intensity * 0.3})`);
+  gradient.addColorStop(1, 'rgba(255, 100, 0, 0)');
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, height - 40, width, 40);
+}
+
+/**
  * Draw stamina bar above Zeno.
  * - Hidden when stamina = 100
  * - Green > 50, Yellow 25-50, Red < 25
@@ -430,6 +454,11 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   // Ring juice effects
   renderEdgeGlow(ctx, state.edgeGlowIntensity, W, H);
   renderRingPopups(ctx, state.ringJuicePopups);
+
+  // ON FIRE mode visual effects
+  if (state.onFireMode && !state.reduceFx) {
+    renderOnFireMode(ctx, state.sessionHeat / 100, W, H);
+  }
 
   // Near-miss spotlight effect
   if (state.nearMissActive && state.nearMissIntensity) {
@@ -863,6 +892,11 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   // Ring juice effects
   renderEdgeGlow(ctx, state.edgeGlowIntensity, W, H);
   renderRingPopups(ctx, state.ringJuicePopups);
+
+  // ON FIRE mode visual effects
+  if (state.onFireMode && !state.reduceFx) {
+    renderOnFireMode(ctx, state.sessionHeat / 100, W, H);
+  }
 
   // Near-miss spotlight effect
   if (state.nearMissActive && state.nearMissIntensity) {
