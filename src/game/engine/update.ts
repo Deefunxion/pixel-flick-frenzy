@@ -14,6 +14,10 @@ import {
 // Time scale for gameplay speed (0.550 = 55% speed, 1.0 = normal)
 const TIME_SCALE = 0.550;
 
+// Grace period for tap detection - prevents accidental hold trigger
+// 4 frames = ~67ms buffer at 60fps
+const TAP_GRACE_FRAMES = 4;
+
 // Cinematic zone threshold - triggers 4x zoom and 4x slowdown
 const CINEMATIC_THRESHOLD = 318.5;
 import type { Theme } from '@/game/themes';
@@ -409,8 +413,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
           audio.actionDenied?.();
           state.staminaDeniedShake = 8;
         }
-      } else if (pressed && state.precisionInput.holdDuration > 0) {
-        // Hold: continuous reduction
+      } else if (pressed && state.precisionInput.holdDuration > TAP_GRACE_FRAMES) {
+        // Hold: continuous reduction (grace period allows clean taps)
         const result = applyAirBrake(state, 'hold', deltaTime);
         if (result.applied) {
           precisionAppliedThisFrame = true;
@@ -455,7 +459,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.vy += BASE_GRAV * effectiveTimeScale;
 
     // Wind effect with 50% resistance when air-braking (holding)
-    const isAirBraking = pressed && state.precisionInput.holdDuration > 0;
+    const isAirBraking = pressed && state.precisionInput.holdDuration > TAP_GRACE_FRAMES;
     const windResistance = isAirBraking ? 0.5 : 1.0;
     state.vx += state.wind * 0.3 * effectiveTimeScale * windResistance;
 
@@ -782,8 +786,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
           audio.actionDenied?.();
           state.staminaDeniedShake = 8;
         }
-      } else if (pressed && state.precisionInput.holdDuration > 0) {
-        // Hold: brake
+      } else if (pressed && state.precisionInput.holdDuration > TAP_GRACE_FRAMES) {
+        // Hold: brake (grace period allows clean taps)
         const result = applySlideControl(state, 'hold', deltaTime);
         if (result.applied) {
           precisionAppliedThisFrame = true;

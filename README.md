@@ -1,11 +1,11 @@
 # One‑More‑Flick
 
-A minimalist synthwave arcade flick game rendered on a tiny pixel canvas.
+A minimalist arcade flick game with hand-drawn ballpoint pen aesthetics, rendered on a tiny pixel canvas (480×240).
 
 ## How to play
 
-- Goal: land as close as possible to the cliff edge (145) without falling off.
-- Beat the moving Zeno target to level up (the target moves halfway to the unreachable edge).
+- Goal: land as close as possible to the cliff edge (420) without falling off.
+- Beat the moving Zeno target to level up (the target moves halfway to the unreachable edge each level).
 
 Controls:
 
@@ -15,12 +15,15 @@ Controls:
 
 ## Features
 
-- Synthwave themes (some unlock via achievements)
+- Hand-drawn ballpoint pen style with blue and orange trademark colors
+- Sprite-based character animations (Zeno flipbook with 50 frames, 9 animations)
 - Risk/reward multiplier as you approach the edge
-- Achievements + stats persisted locally
+- Achievements + stats persisted locally and synced to cloud (Firebase)
+- Multiplayer leaderboards (total score, best throw, total falls)
 - Ghost trail of your best run
 - Daily best distance
 - WebAudio SFX with mute/volume + reduced FX toggle
+- Contextual tutorials with slow-motion for new players
 
 ## Development
 
