@@ -11,7 +11,7 @@ export const TUTORIAL_CONTENT: Record<TutorialPhase, TutorialContent> = {
   none: { lines: [] },
   idle: { lines: ['Welcome to One More Flick!', 'Tap and hold to begin'] },
   charge: { lines: ['Hold to charge power (it bounces!)', 'Drag up/down to aim'] },
-  air: { lines: ['TAP = float longer', 'HOLD = brake'] },
+  air: { lines: ['TAP = thrust forward', 'HOLD = brake'] },
   slide: { lines: ['TAP = push further', 'HOLD = brake'] },
 };
 

@@ -174,9 +174,6 @@ export interface GameState {
   // Precision mechanics - input state tracking
   precisionInput: PrecisionInput;
   staminaDeniedShake: number; // Frames of shake remaining
-  // Air float (gravity reduction on tap)
-  gravityMultiplier: number;
-  floatDuration: number;
   // Tutorial system
   tutorialState: TutorialState;
   // Precision bar system (419-420 zone)
@@ -218,7 +215,7 @@ export interface GameState {
   chargeGlowIntensity: number;  // 0-1, builds with charge
   chargeVignetteActive: boolean;
   // Air control feedback
-  lastControlAction: 'float' | 'brake' | null;
+  lastControlAction: 'thrust' | 'brake' | null;
   controlActionTime: number;
   // Monetization - Throw system
   throwState: ThrowState;

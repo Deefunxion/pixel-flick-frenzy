@@ -18,20 +18,24 @@ export function StreakBreak({ lostStreak, visible }: StreakBreakProps) {
   if (!visible || lostStreak < 2) return null;
 
   return (
-    <div className="fixed top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 text-center">
-      {/* Broken flame */}
-      <div className="text-4xl opacity-50 animate-fade-out">
-        💔
-      </div>
-
-      {/* Lost streak text */}
-      <div className="text-xl font-bold text-red-400 mt-2">
-        Streak Lost: {lostStreak}
-      </div>
-
-      {/* Motivation */}
-      <div className="text-sm text-white/60 mt-1">
-        Can you beat {lostStreak}?
+    <div
+      className="absolute left-1/2 -translate-x-1/2 text-center"
+      style={{ bottom: '20%' }}
+    >
+      {/* Compact streak break display with brand colors */}
+      <div
+        className="flex items-center rounded"
+        style={{
+          gap: '3px',
+          padding: '2px 5px',
+          backgroundColor: 'rgba(33, 87, 158, 0.85)',
+          border: '1px solid #21579e',
+        }}
+      >
+        <span style={{ fontSize: '10px', opacity: 0.8 }}>💔</span>
+        <span style={{ fontSize: '9px', fontWeight: 700, color: '#ed8818' }}>
+          Streak: {lostStreak}
+        </span>
       </div>
     </div>
   );

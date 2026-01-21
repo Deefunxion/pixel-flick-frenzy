@@ -59,40 +59,46 @@ export function StreakCounter({ streak, bestStreak, visible }: StreakCounterProp
 
   return (
     <>
-      {/* Streak counter */}
+      {/* Streak counter - positioned below MiniGoalHUD */}
       <div
-        className={`
-          fixed top-16 left-4
-          bg-black/60 rounded-lg px-3 py-2
-          border-2 transition-all duration-150
-          ${animatePulse ? 'scale-110' : 'scale-100'}
-          ${isHot ? 'border-orange-500' : 'border-white/30'}
-        `}
+        className={`absolute rounded transition-all duration-150 ${animatePulse ? 'scale-110' : 'scale-100'}`}
+        style={{
+          top: '18%',
+          left: '2%',
+          padding: '1px 4px',
+          backgroundColor: 'rgba(33, 87, 158, 0.85)',
+          border: `1px solid ${isHot ? '#ed8818' : '#21579e'}`,
+        }}
       >
         <div
-          className="text-2xl font-bold text-center flex items-center gap-1"
-          style={{ color: flameColor }}
+          className="flex items-center"
+          style={{ color: flameColor, fontSize: '9px', fontWeight: 700, gap: '2px' }}
         >
-          <span className={isHot ? 'animate-pulse' : ''}>🔥</span>
+          <span className={isHot ? 'animate-pulse' : ''} style={{ fontSize: '8px' }}>🔥</span>
           <span>×{streak}</span>
+          {/* Best streak indicator */}
+          {streak >= bestStreak && bestStreak > 0 && (
+            <span style={{ fontSize: '6px', marginLeft: '2px', color: '#ed8818' }}>PB!</span>
+          )}
         </div>
-
-        {/* Best streak indicator */}
-        {streak >= bestStreak && bestStreak > 0 && (
-          <div className="text-xs text-yellow-400 text-center">
-            Personal Best!
-          </div>
-        )}
       </div>
 
-      {/* Milestone celebration */}
+      {/* Milestone celebration - compact, below grade area */}
       {showMilestone && (
-        <div className="fixed top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50">
+        <div
+          className="absolute left-1/2 -translate-x-1/2"
+          style={{ top: '35%' }}
+        >
           <div
-            className="text-3xl font-black text-center animate-bounce"
+            className="text-center animate-bounce rounded"
             style={{
-              color: flameColor,
-              textShadow: `0 0 20px ${flameColor}, 0 0 40px ${flameColor}`,
+              fontSize: '10px',
+              fontWeight: 900,
+              padding: '2px 6px',
+              color: '#FFFFFF',
+              backgroundColor: 'rgba(237, 136, 24, 0.9)',
+              border: '1px solid #ed8818',
+              textShadow: '0 0 4px rgba(0,0,0,0.5)',
             }}
           >
             {showMilestone}

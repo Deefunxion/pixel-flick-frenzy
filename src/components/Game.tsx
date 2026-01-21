@@ -13,7 +13,7 @@ import { assetPath } from '@/lib/assetPath';
 import { getTheme, DEFAULT_THEME_ID, THEME_IDS, type ThemeId } from '@/game/themes';
 import { useUser } from '@/contexts/UserContext';
 import { NicknameModal } from './NicknameModal';
-import { MultiplierLadder } from './MultiplierLadder';
+import { ThrowScore } from './ThrowScore';
 import { LandingGrade } from './LandingGrade';
 import { calculateGrade, type GradeResult } from '@/game/engine/gradeSystem';
 import {
@@ -103,7 +103,7 @@ import { UI_ASSETS } from '@/game/engine/uiAssets';
 import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { TutorialOverlay } from './TutorialOverlay';
-import { NearMissOverlay } from './NearMissOverlay';
+// NearMissOverlay removed - feedback consolidated in LandingGrade
 import { StreakCounter } from './StreakCounter';
 import { StreakBreak } from './StreakBreak';
 import { MiniGoalHUD } from './MiniGoalHUD';
@@ -264,7 +264,8 @@ const Game = () => {
 
   const [hudPx, setHudPx] = useState(LAUNCH_PAD_X);
   const [hudFlying, setHudFlying] = useState(false);
-  const [combinedMultiplier, setCombinedMultiplier] = useState(1.0);
+  const [ringMultiplier, setRingMultiplier] = useState(1.0);
+  const [ringsCollected, setRingsCollected] = useState(0);
   // Tutorial overlay state (synced from stateRef)
   const [tutorialPhase, setTutorialPhase] = useState<'none' | 'idle' | 'charge' | 'air' | 'slide'>('none');
   const [tutorialActive, setTutorialActive] = useState(false);
@@ -660,9 +661,9 @@ const Game = () => {
       if (!s) return;
       setHudPx(s.px);
       setHudFlying(s.flying || s.sliding || s.charging);
-      // Sync combined multiplier for HUD
-      const combined = s.currentMultiplier * s.ringMultiplier;
-      setCombinedMultiplier(combined);
+      // Sync ring multiplier and count for HUD
+      setRingMultiplier(s.ringMultiplier);
+      setRingsCollected(s.ringsPassedThisThrow);
       // Sync tutorial state
       setTutorialPhase(s.tutorialState.phase);
       setTutorialActive(s.tutorialState.active);
@@ -1017,6 +1018,48 @@ const Game = () => {
             active={tutorialActive}
             timeRemaining={tutorialTimeRemaining}
           />
+
+          {/* Game HUD Overlays - positioned relative to canvas */}
+          <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
+            {/* Throw Score HUD */}
+            <ThrowScore
+              distance={hudPx}
+              ringMultiplier={ringMultiplier}
+              ringsCollected={ringsCollected}
+              isFlying={hudFlying}
+            />
+
+            {/* Landing Grade */}
+            <LandingGrade
+              result={lastGradeResult}
+              visible={showGrade}
+              onDismiss={() => setShowGrade(false)}
+            />
+
+            {/* Streak Counter HUD */}
+            <StreakCounter
+              streak={hotStreak.current}
+              bestStreak={hotStreak.best}
+              visible={hotStreak.current >= 1}
+            />
+
+            {/* Streak Break Feedback */}
+            <StreakBreak
+              lostStreak={streakBreakState.lostStreak}
+              visible={streakBreakState.visible}
+            />
+
+            {/* Mini Goal HUD */}
+            {miniGoal && (
+              <MiniGoalHUD
+                goalText={miniGoal.text}
+                progress={miniGoal.progress}
+                current={miniGoal.current}
+                target={miniGoal.target}
+                visible={true}
+              />
+            )}
+          </div>
         </div>
 
 
@@ -1288,53 +1331,6 @@ const Game = () => {
           regenTime={formatRegenTime(getMsUntilNextThrow(throwState))}
           onBuyThrows={() => {/* TODO: Open shop modal */}}
         />
-
-        {/* Multiplier Ladder HUD */}
-        <MultiplierLadder
-          currentMultiplier={combinedMultiplier}
-          isFlying={hudFlying}
-          reduceFx={reduceFx}
-        />
-
-        {/* Landing Grade */}
-        <LandingGrade
-          result={lastGradeResult}
-          visible={showGrade}
-          onDismiss={() => setShowGrade(false)}
-        />
-
-        {/* Near-Miss Overlay */}
-        {nearMissState && (
-          <NearMissOverlay
-            distance={nearMissState.distance}
-            intensity={nearMissState.intensity}
-            visible={nearMissState.visible}
-          />
-        )}
-
-        {/* Streak Counter HUD */}
-        <StreakCounter
-          streak={hotStreak.current}
-          bestStreak={hotStreak.best}
-          visible={hotStreak.current >= 1}
-        />
-
-        {/* Streak Break Feedback */}
-        <StreakBreak
-          lostStreak={streakBreakState.lostStreak}
-          visible={streakBreakState.visible}
-        />
-
-        {/* Mini Goal HUD */}
-        {miniGoal && (
-          <MiniGoalHUD
-            goalText={miniGoal.text}
-            progress={miniGoal.progress}
-            current={miniGoal.current}
-            target={miniGoal.target}
-            visible={true}
-          />
-        )}
 
         {/* Toast Queue */}
         <ToastQueue toasts={toasts} onDismiss={dismissToast} />

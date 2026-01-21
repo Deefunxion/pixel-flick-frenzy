@@ -47,8 +47,9 @@ export function LandingGrade({ result, visible, onDismiss }: LandingGradeProps) 
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center pointer-events-none"
+      className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
       style={{
+        top: '20%',
         opacity: fading ? 0 : 1,
         transition: 'opacity 200ms ease-out',
       }}
@@ -58,34 +59,46 @@ export function LandingGrade({ result, visible, onDismiss }: LandingGradeProps) 
         <Confetti />
       )}
 
-      {/* Grade display */}
-      <div className="relative text-center">
+      {/* Grade display - compact inline with brand colors */}
+      <div
+        className="flex items-center rounded"
+        style={{
+          gap: '4px',
+          padding: '2px 6px',
+          backgroundColor: 'rgba(33, 87, 158, 0.85)',
+          border: '1px solid #21579e',
+        }}
+      >
         {/* Grade letter */}
-        <div
-          className="text-4xl font-black"
+        <span
           style={{
+            fontSize: '14px',
+            fontWeight: 900,
             color,
-            textShadow: `0 2px 4px rgba(0,0,0,0.5), 0 0 12px ${color}40`,
+            textShadow: `0 0 4px ${color}60`,
           }}
         >
           {grade}
-        </div>
+        </span>
 
         {/* Comment */}
-        <div
-          className="text-base font-bold mt-1"
-          style={{ color }}
+        <span
+          style={{
+            fontSize: '9px',
+            fontWeight: 700,
+            color,
+          }}
         >
           {comment}
-        </div>
-
-        {/* Tip for C/D grades */}
-        {tip && (
-          <div className="text-xs text-yellow-400 mt-2 max-w-48 mx-auto">
-            {tip}
-          </div>
-        )}
+        </span>
       </div>
+
+      {/* Tip for C/D grades - below */}
+      {tip && (
+        <div style={{ fontSize: '7px', marginTop: '2px', textAlign: 'center', color: '#ef8819', maxWidth: '80px', margin: '2px auto 0' }}>
+          {tip}
+        </div>
+      )}
     </div>
   );
 }

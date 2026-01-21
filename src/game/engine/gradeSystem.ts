@@ -31,13 +31,13 @@ const GRADE_THRESHOLDS: Record<Grade, number> = {
   D: 0,
 };
 
-// Coach comments per grade (Greek and English mix)
+// Coach comments per grade (English only)
 const COMMENTS: Record<Grade, string[]> = {
-  S: ['FLAWLESS!', 'LEGENDARY!', 'Θρύλος!', 'MASTERFUL!'],
-  A: ['Solid!', 'Clean run!', 'Καθαρό!', 'Nice work!'],
-  B: ['Not bad!', 'Getting there!', 'Οκ δουλειά!', 'Keep it up!'],
-  C: ['Room to improve', 'Keep trying!', 'Προσπάθησε ξανά'],
-  D: ['Ouch...', 'Shake it off!', 'Ξαναπροσπάθησε...'],
+  S: ['FLAWLESS!', 'LEGENDARY!', 'MASTERFUL!', 'PERFECT!'],
+  A: ['Solid!', 'Clean run!', 'Nice work!', 'Great job!'],
+  B: ['Not bad!', 'Getting there!', 'Keep it up!', 'Good effort!'],
+  C: ['Room to improve', 'Keep trying!', 'You got this!'],
+  D: ['Ouch...', 'Shake it off!', 'Try again!'],
 };
 
 // Tips for C/D grades

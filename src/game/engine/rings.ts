@@ -75,7 +75,7 @@ export const RING_SPRITES = {
 export const RING_MULTIPLIERS = [1.1, 1.25, 1.5];
 
 // Hit zone radius (generous for fun, +15% to match larger visuals)
-export const RING_HIT_ZONE = 17;
+export const RING_HIT_ZONE = 20; // Increased 20% from 17 for more generous collision
 
 // Ring zones along trajectory - WIDER spread for more variety
 const RING_ZONES = [

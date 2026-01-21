@@ -33,7 +33,7 @@ import type { DailyTasks, GameState, ThrowState } from './types';
 import { nextWind, spawnCelebration, spawnParticles } from './state';
 import { ACHIEVEMENTS } from './achievements';
 import { updateAnimator } from './animationController';
-import { applyAirBrake, applySlideControl, applyAirFloat, decayFloatEffect } from './precision';
+import { applyAirBrake, applySlideControl, applyAirThrust } from './precision';
 import { checkTutorialTrigger, startTutorial, updateTutorial } from './tutorial';
 import {
   shouldActivatePrecisionBar,
@@ -132,7 +132,7 @@ export type GameUI = {
   onFall?: (totalFalls: number) => void;
   onLanding?: (landingX: number, targetX: number, ringsPassedThisThrow: number, landingVelocity: number, fellOff: boolean) => void;
   onChargeStart?: () => void;
-  onPbPassed?: () => void;  // Triggered when flying past PB position
+  onPbPassed?: () => void;  // Triggered on successful landing that beats PB
 };
 
 export type GameServices = {
@@ -383,25 +383,25 @@ export function updateFrame(state: GameState, svc: GameServices) {
     if (!state.landed && !precisionAppliedThisFrame) {
       const deltaTime = 1/60;
       if (state.precisionInput.pressedThisFrame) {
-        // Tap: gravity reduction (float)
-        const result = applyAirFloat(state);
+        // Tap: forward velocity boost (thrust)
+        const result = applyAirThrust(state);
         if (result.applied) {
           precisionAppliedThisFrame = true;
-          state.lastControlAction = 'float';
+          state.lastControlAction = 'thrust';
           state.controlActionTime = nowMs;
-          audio.airBrakeTap?.(); // TODO: add airFloat sound
+          audio.airBrakeTap?.(); // TODO: add airThrust sound
 
-          // Visual feedback: upward puff particles for float
+          // Visual feedback: backward exhaust particles for thrust
           if (state.particleSystem && !state.reduceFx) {
             state.particleSystem.emit('spark', {
               x: state.px,
               y: state.py,
               count: 5,
-              baseAngle: -Math.PI / 2,  // Upward
+              baseAngle: Math.PI,  // Backward (exhaust)
               spread: 0.5,
               speed: 1.5,
               life: 15,
-              color: '#87CEEB',
+              color: '#FFA500',  // Orange
               gravity: 0,
             });
           }
@@ -452,13 +452,12 @@ export function updateFrame(state: GameState, svc: GameServices) {
       }
     }
 
-    const effectiveGravity = BASE_GRAV * state.gravityMultiplier;
-    state.vy += effectiveGravity * effectiveTimeScale;
+    state.vy += BASE_GRAV * effectiveTimeScale;
 
-    // Decay float effect
-    decayFloatEffect(state, effectiveTimeScale / 60);
-
-    state.vx += state.wind * 0.3 * effectiveTimeScale;
+    // Wind effect with 50% resistance when air-braking (holding)
+    const isAirBraking = pressed && state.precisionInput.holdDuration > 0;
+    const windResistance = isAirBraking ? 0.5 : 1.0;
+    state.vx += state.wind * 0.3 * effectiveTimeScale * windResistance;
 
     state.px += state.vx * effectiveTimeScale;
     state.py += state.vy * effectiveTimeScale;
@@ -751,11 +750,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.pbPaceActive = true;
     }
 
-    // Track if we passed PB
+    // Track if we passed PB position (for precision bar visual only, not notification)
     if (state.precisionBarActive && !state.passedPbThisThrow && hasPassedPb(state.px, state.best)) {
       state.passedPbThisThrow = true;
-      audio.pbDing?.(); // Play PB ding
-      ui.onPbPassed?.();  // Trigger PB callout
+      audio.pbDing?.(); // Play PB ding sound
+      // NOTE: Notification moved to actual landing success path
     }
   } else if (!state.flying && !state.sliding && state.precisionBarActive) {
     // Deactivate when not flying/sliding
@@ -764,12 +763,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
     audio.stopPrecisionDrone?.();
   }
 
-  if ((state.flying || state.sliding) && state.px > 50) {
-    const riskFactor = (state.px - 50) / (CLIFF_EDGE - 50);
-    state.currentMultiplier = 1 + riskFactor * riskFactor * 4;
-  } else {
-    state.currentMultiplier = 1;
-  }
+  // Risk multiplier removed - only ring multiplier affects score now
+  state.currentMultiplier = 1;
 
   // Sliding (scaled by effectiveTimeScale for slowmo support)
   if (state.sliding) {
@@ -910,9 +905,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
         state.dist = Math.max(0, landedAt);
         ui.setFellOff(false);
 
-        // Combine risk multiplier with ring multiplier (capped to prevent runaway)
-        const rawMultiplier = state.currentMultiplier * state.ringMultiplier;
-        const finalMultiplier = Math.min(MAX_FINAL_MULTIPLIER, rawMultiplier);
+        // Ring multiplier only (capped to prevent runaway)
+        const finalMultiplier = Math.min(MAX_FINAL_MULTIPLIER, state.ringMultiplier);
         state.lastMultiplier = finalMultiplier;
         ui.setLastMultiplier(finalMultiplier);
 
@@ -937,13 +931,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
             state.stats.perfectRingThrows++;
           }
 
-          // Dev-only: Log ring/multiplier distribution for tuning
+          // Dev-only: Log scoring for tuning
           if (import.meta.env.DEV) {
             console.log('[DEV] Landing stats:', {
               ringsPassedThisThrow: state.ringsPassedThisThrow,
               ringMultiplier: state.ringMultiplier.toFixed(3),
-              riskMultiplier: state.currentMultiplier.toFixed(3),
-              finalMultiplier: finalMultiplier.toFixed(3),
               basePoints,
               scoreGained: scoreGained.toFixed(1),
             });
@@ -999,6 +991,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
             // Sync new personal best to Firebase
             ui.onNewPersonalBest?.(state.totalScore, state.best);
+            ui.onPbPassed?.();  // Show PB notification on actual successful landing
           } else if (state.dist > state.best) {
             state.best = state.dist;
             saveNumber('best', state.best);
@@ -1012,6 +1005,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
             // Sync new personal best to Firebase
             ui.onNewPersonalBest?.(state.totalScore, state.best);
+            ui.onPbPassed?.();  // Show PB notification on actual successful landing
           }
         }
 
