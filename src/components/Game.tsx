@@ -99,6 +99,7 @@ import { TutorialOverlay } from './TutorialOverlay';
 import { NearMissOverlay } from './NearMissOverlay';
 import { StreakCounter } from './StreakCounter';
 import { StreakBreak } from './StreakBreak';
+import { MiniGoalHUD } from './MiniGoalHUD';
 import { ThrowCounter } from './ThrowCounter';
 import { PracticeModeOverlay } from './PracticeModeOverlay';
 import type { ThrowState, DailyTasks, MilestonesClaimed } from '@/game/engine/types';
@@ -116,6 +117,7 @@ import {
 import { loadRingSprites } from '@/game/engine/ringsRender';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 import { claimDailyTask } from '@/game/engine/dailyTasks';
+import { getClosestGoal } from '@/game/engine/achievementProgress';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
 import { captureError } from '@/lib/sentry';
 import type { Theme } from '@/game/themes';
@@ -201,7 +203,16 @@ const Game = () => {
   const [perfectLanding, setPerfectLanding] = useState(false);
   // Phase 5: Meta Progression states
   const [stats, setStats] = useState(() => {
-    return loadJson('stats', { totalThrows: 0, successfulLandings: 0, totalDistance: 0, perfectLandings: 0, maxMultiplier: 1 }, 'omf_stats');
+    return loadJson('stats', {
+      totalThrows: 0,
+      successfulLandings: 0,
+      totalDistance: 0,
+      perfectLandings: 0,
+      maxMultiplier: 1,
+      totalRingsPassed: 0,
+      maxRingsInThrow: 0,
+      perfectRingThrows: 0,
+    }, 'omf_stats');
   });
   const [achievements, setAchievements] = useState<Set<string>>(() => {
     return loadStringSet('achievements', 'omf_achievements');
@@ -283,6 +294,14 @@ const Game = () => {
     lostStreak: number;
   }>({ visible: false, lostStreak: 0 });
   const prevHotStreakRef = useRef(0);
+
+  // Mini goal HUD state
+  const [miniGoal, setMiniGoal] = useState<{
+    text: string;
+    progress: number;
+    current: number;
+    target: number;
+  } | null>(null);
 
   // Daily tasks state
   const [dailyTasks, setDailyTasks] = useState<DailyTasks>(() => {
@@ -639,6 +658,9 @@ const Game = () => {
       } else if (!s.nearMissActive) {
         setNearMissState(null);
       }
+      // Update mini goal HUD
+      const goal = getClosestGoal(stats, s, achievements);
+      setMiniGoal(goal);
     };
 
     const hudInterval = window.setInterval(syncHud, 120);
@@ -1263,6 +1285,17 @@ const Game = () => {
           lostStreak={streakBreakState.lostStreak}
           visible={streakBreakState.visible}
         />
+
+        {/* Mini Goal HUD */}
+        {miniGoal && (
+          <MiniGoalHUD
+            goalText={miniGoal.text}
+            progress={miniGoal.progress}
+            current={miniGoal.current}
+            target={miniGoal.target}
+            visible={true}
+          />
+        )}
 
         {/* Stats overlay */}
         {showStats && (

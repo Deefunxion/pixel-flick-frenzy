@@ -81,3 +81,27 @@ export function getClosestAchievements(
     .sort((a, b) => b.progress - a.progress)
     .slice(0, count);
 }
+
+/**
+ * Get the single closest goal for mini HUD
+ * Prioritizes: near achievements > long-term
+ */
+export function getClosestGoal(
+  stats: Stats,
+  state: GameState,
+  unlockedSet: Set<string>
+): { text: string; progress: number; current: number; target: number } | null {
+  // Get closest achievements
+  const closest = getClosestAchievements(stats, state, unlockedSet, 1);
+
+  if (closest.length === 0) return null;
+
+  const goal = closest[0];
+
+  return {
+    text: goal.name,
+    progress: goal.current / goal.target,
+    current: goal.current,
+    target: goal.target,
+  };
+}
