@@ -83,7 +83,7 @@ export function LandingGrade({ result, visible, onDismiss }: LandingGradeProps) 
 
       {/* Tip for C/D grades - below */}
       {tip && (
-        <div className="text-xs text-yellow-400 mt-1 text-center max-w-48 mx-auto">
+        <div className="text-xs mt-1 text-center max-w-48 mx-auto" style={{ color: '#ef8819' }}>
           {tip}
         </div>
       )}
