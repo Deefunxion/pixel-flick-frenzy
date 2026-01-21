@@ -2,7 +2,25 @@
 
 All notable changes to One-More-Flick are documented in this file.
 
-## [Unreleased] - 2026-01-20
+## [Unreleased] - 2026-01-21
+
+### Added - Achievement Expansion
+- **194 achievements** (up from 14), rewarding every decimal digit of progress:
+  - **Distance (61 achievements)**: 400-419 whole numbers, 419.1-419.9, 419.91-419.99, 419.991-419.999, 419.9991-419.9999
+  - **Zeno Levels (15)**: 1, 2, 3, 5, 7, 10, 15, 20, 25, 30, 40, 50, 75, 100, 200
+  - **Perfect Landings (12)**: 1-10,000 milestone tiers
+  - **Total Throws (14)**: 50-1,000,000 milestone tiers
+  - **Score (13)**: 500-10,000,000 milestone tiers
+  - **Multiplier (5)**: 2x-6x
+  - **Streaks (18)**: Hot streak, safe landings, session marathon
+  - **Rings (14)**: Total rings, perfect ring throws
+  - **Air Time (10)**: 1-10 seconds
+  - **Falls (10)**: 1-10,000 (persistence humor)
+  - **Landings (10)**: 1-10,000 successful landings
+- **Achievement tiers**: Bronze, Silver, Gold, Platinum, Diamond, Mythic
+- **Tier-based throw rewards**: 5, 10, 20, 30, 50, 100 throws per tier
+- **Max air time tracking**: New stat for air time achievements
+- **New files**: `achievementGenerators.ts`
 
 ### Added - Rings System
 - **3 moving ring targets per throw** with different motion patterns:
