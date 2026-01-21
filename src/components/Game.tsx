@@ -68,6 +68,8 @@ import {
   playCloseCall,
   // Ring sounds
   playRingCollect,
+  // Fail juice
+  playFailImpact,
   type AudioRefs,
   type AudioSettings,
   type AudioState,
@@ -544,6 +546,8 @@ const Game = () => {
       closeCall: () => playCloseCall(audioRefs.current, audioSettingsRef.current),
       // Ring sounds (with stereo pan based on ring X position)
       ringCollect: (ringIndex: number, ringX?: number) => playRingCollect(audioRefs.current, audioSettingsRef.current, ringIndex, ringX),
+      // Fail juice
+      failImpact: () => playFailImpact(audioRefs.current, audioSettingsRef.current),
     };
 
     const scheduleReset = (ms: number) => {

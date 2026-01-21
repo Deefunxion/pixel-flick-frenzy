@@ -92,6 +92,8 @@ export type GameAudio = {
   closeCall?: () => void;
   // Ring sounds
   ringCollect?: (ringIndex: number, ringX?: number) => void;
+  // Fail juice
+  failImpact?: () => void;
 };
 
 export type GameUI = {
@@ -734,6 +736,42 @@ export function updateFrame(state: GameState, svc: GameServices) {
         state.failureFrame = 0;
         state.failureType = Math.random() > 0.5 ? 'tumble' : 'dive';
 
+        // === FAIL JUICE ===
+        if (!state.failJuiceActive) {
+          state.failJuiceActive = true;
+          state.failJuiceStartTime = nowMs;
+          state.failImpactX = state.px;
+          state.failImpactY = state.py;
+
+          // Hit-stop (brief freeze on impact)
+          state.slowMo = Math.max(state.slowMo, 0.95);
+
+          // Screen shake
+          state.screenShake = state.reduceFx ? 0 : 5;
+
+          // Fail impact sound (plays via failureSound below)
+          audio.failImpact?.();
+
+          // Haptic feedback
+          svc.triggerHaptic(60);
+
+          // Spawn dust particles at impact point
+          if (!state.reduceFx) {
+            for (let i = 0; i < 8; i++) {
+              const angle = (i / 8) * Math.PI + Math.PI;  // Upward arc
+              state.particles.push({
+                x: state.failImpactX,
+                y: H - 20,  // Ground level
+                vx: Math.cos(angle) * (1 + Math.random()),
+                vy: Math.sin(angle) * 2,
+                life: 1,
+                maxLife: 20 + Math.random() * 10,
+                color: '#8B7355',  // Dust brown
+              });
+            }
+          }
+        }
+
         // 10% chance of Wilhelm scream easter egg
         if (Math.random() < 0.1) {
           audio.wilhelmScream();
@@ -963,6 +1001,42 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.failureAnimating = true;
       state.failureFrame = 0;
       state.failureType = state.vx > 2 ? 'dive' : 'tumble';
+
+      // === FAIL JUICE (slide off edge) ===
+      if (!state.failJuiceActive) {
+        state.failJuiceActive = true;
+        state.failJuiceStartTime = nowMs;
+        state.failImpactX = state.px;
+        state.failImpactY = state.py;
+
+        // Hit-stop (brief freeze)
+        state.slowMo = Math.max(state.slowMo, 0.95);
+
+        // Screen shake
+        state.screenShake = state.reduceFx ? 0 : 5;
+
+        // Fail impact sound
+        audio.failImpact?.();
+
+        // Haptic feedback
+        svc.triggerHaptic(60);
+
+        // Spawn dust particles
+        if (!state.reduceFx) {
+          for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI + Math.PI;
+            state.particles.push({
+              x: state.failImpactX,
+              y: H - 20,
+              vx: Math.cos(angle) * (1 + Math.random()),
+              vy: Math.sin(angle) * 2,
+              life: 1,
+              maxLife: 20 + Math.random() * 10,
+              color: '#8B7355',
+            });
+          }
+        }
+      }
 
       // 10% chance of Wilhelm scream easter egg
       if (Math.random() < 0.1) {

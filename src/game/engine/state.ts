@@ -169,6 +169,11 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     failureAnimating: false,
     failureFrame: 0,
     failureType: null,
+    // Fail juice
+    failJuiceActive: false,
+    failJuiceStartTime: 0,
+    failImpactX: 0,
+    failImpactY: 0,
     hotStreak: 0,
     bestHotStreak: loadNumber('best_hot_streak', 0, 'omf_best_hot_streak'),
     launchFrame: 0,
@@ -248,6 +253,9 @@ export function resetPhysics(state: GameState) {
   state.failureAnimating = false;
   state.failureFrame = 0;
   state.failureType = null;
+  // Fail juice reset
+  state.failJuiceActive = false;
+  state.failJuiceStartTime = 0;
   state.launchFrame = 0;
   state.launchTimestamp = 0;
   state.stamina = 100;

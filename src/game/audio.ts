@@ -738,6 +738,60 @@ export function playCloseCall(refs: AudioRefs, settings: AudioSettings): void {
 }
 
 // ============================================
+// FAIL JUICE SOUNDS
+// ============================================
+
+/**
+ * Play fail impact sound - dull thud for any fall
+ * Provides satisfying feedback even for failures
+ */
+export function playFailImpact(refs: AudioRefs, settings: AudioSettings): void {
+  if (settings.muted || settings.volume <= 0) return;
+
+  // Anti-fatigue: Check cooldown
+  if (!canPlaySound('failImpact', SOUND_COOLDOWNS.impact)) return;
+  registerSoundPlay('failImpact');
+
+  const ctx = ensureAudioContext(refs);
+  const now = ctx.currentTime;
+
+  // Apply session volume decay
+  const effectiveVolume = getDecayedVolume(settings.volume);
+
+  // Low frequency thud
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(80, now);
+  osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.25 * effectiveVolume, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.start(now);
+  osc.stop(now + 0.25);
+
+  // Add a subtle crunch/debris sound
+  const noise = ctx.createOscillator();
+  noise.type = 'sawtooth';
+  noise.frequency.setValueAtTime(100, now);
+  noise.frequency.exponentialRampToValueAtTime(30, now + 0.1);
+
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.setValueAtTime(0.08 * effectiveVolume, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+  noise.connect(noiseGain);
+  noiseGain.connect(ctx.destination);
+
+  noise.start(now);
+  noise.stop(now + 0.15);
+}
+
+// ============================================
 // RING COLLECTION SOUNDS
 // ============================================
 

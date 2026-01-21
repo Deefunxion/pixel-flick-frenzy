@@ -153,6 +153,11 @@ export interface GameState {
   failureAnimating: boolean;
   failureFrame: number;
   failureType: 'tumble' | 'dive' | 'splat' | null;
+  // Fail juice state (visual feedback for any fall)
+  failJuiceActive: boolean;
+  failJuiceStartTime: number;
+  failImpactX: number;
+  failImpactY: number;
   // Hot streak (consecutive 419+ throws)
   hotStreak: number;
   bestHotStreak: number;
