@@ -13,6 +13,7 @@ import { assetPath } from '@/lib/assetPath';
 import { getTheme, DEFAULT_THEME_ID, THEME_IDS, type ThemeId } from '@/game/themes';
 import { useUser } from '@/contexts/UserContext';
 import { NicknameModal } from './NicknameModal';
+import { MultiplierLadder } from './MultiplierLadder';
 import {
   loadDailyStats,
   loadJson,
@@ -224,6 +225,7 @@ const Game = () => {
 
   const [hudPx, setHudPx] = useState(LAUNCH_PAD_X);
   const [hudFlying, setHudFlying] = useState(false);
+  const [combinedMultiplier, setCombinedMultiplier] = useState(1.0);
   // Tutorial overlay state (synced from stateRef)
   const [tutorialPhase, setTutorialPhase] = useState<'none' | 'idle' | 'charge' | 'air' | 'slide'>('none');
   const [tutorialActive, setTutorialActive] = useState(false);
@@ -533,6 +535,9 @@ const Game = () => {
       if (!s) return;
       setHudPx(s.px);
       setHudFlying(s.flying || s.sliding || s.charging);
+      // Sync combined multiplier for HUD
+      const combined = s.currentMultiplier * s.ringMultiplier;
+      setCombinedMultiplier(combined);
       // Sync tutorial state
       setTutorialPhase(s.tutorialState.phase);
       setTutorialActive(s.tutorialState.active);
@@ -1108,6 +1113,13 @@ const Game = () => {
           visible={practiceMode && !hudFlying}
           regenTime={formatRegenTime(getMsUntilNextThrow(throwState))}
           onBuyThrows={() => {/* TODO: Open shop modal */}}
+        />
+
+        {/* Multiplier Ladder HUD */}
+        <MultiplierLadder
+          currentMultiplier={combinedMultiplier}
+          isFlying={hudFlying}
+          reduceFx={reduceFx}
         />
 
         {/* Stats overlay */}
