@@ -72,6 +72,8 @@ import {
   playRingCollect,
   // Fail juice
   playFailImpact,
+  // Grade sounds
+  playGradeSound,
   type AudioRefs,
   type AudioSettings,
   type AudioState,
@@ -430,6 +432,8 @@ const Game = () => {
     );
     setLastGradeResult(gradeResult);
     setShowGrade(true);
+    // Play grade-specific sound
+    playGradeSound(audioRefs.current, audioSettingsRef.current, gradeResult.grade);
   }, []);
 
   // Mobile UX: Detect if user is on mobile
