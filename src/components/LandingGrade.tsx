@@ -59,8 +59,14 @@ export function LandingGrade({ result, visible, onDismiss }: LandingGradeProps) 
         <Confetti />
       )}
 
-      {/* Grade display - compact inline */}
-      <div className="flex items-center gap-2 bg-black/40 px-3 py-1 rounded-lg">
+      {/* Grade display - compact inline with brand colors */}
+      <div
+        className="flex items-center gap-2 px-3 py-1 rounded-lg border-2"
+        style={{
+          backgroundColor: 'rgba(33, 87, 158, 0.9)',
+          borderColor: '#21579e',
+        }}
+      >
         {/* Grade letter */}
         <span
           className="text-3xl font-black"

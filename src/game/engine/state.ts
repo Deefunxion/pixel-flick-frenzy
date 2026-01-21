@@ -188,8 +188,6 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
       lastPressedState: false,
     },
     staminaDeniedShake: 0,
-    gravityMultiplier: 1,
-    floatDuration: 0,
     tutorialState: {
       phase: 'none',
       active: false,
@@ -287,8 +285,6 @@ export function resetPhysics(state: GameState) {
     lastPressedState: false,
   };
   state.staminaDeniedShake = 0;
-  state.gravityMultiplier = 1;
-  state.floatDuration = 0;
   // Precision bar reset
   state.precisionBarActive = false;
   state.lastValidPx = 0;

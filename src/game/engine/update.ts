@@ -33,7 +33,7 @@ import type { DailyTasks, GameState, ThrowState } from './types';
 import { nextWind, spawnCelebration, spawnParticles } from './state';
 import { ACHIEVEMENTS } from './achievements';
 import { updateAnimator } from './animationController';
-import { applyAirBrake, applySlideControl, applyAirFloat, decayFloatEffect } from './precision';
+import { applyAirBrake, applySlideControl, applyAirThrust } from './precision';
 import { checkTutorialTrigger, startTutorial, updateTutorial } from './tutorial';
 import {
   shouldActivatePrecisionBar,
@@ -383,25 +383,25 @@ export function updateFrame(state: GameState, svc: GameServices) {
     if (!state.landed && !precisionAppliedThisFrame) {
       const deltaTime = 1/60;
       if (state.precisionInput.pressedThisFrame) {
-        // Tap: gravity reduction (float)
-        const result = applyAirFloat(state);
+        // Tap: forward velocity boost (thrust)
+        const result = applyAirThrust(state);
         if (result.applied) {
           precisionAppliedThisFrame = true;
-          state.lastControlAction = 'float';
+          state.lastControlAction = 'thrust';
           state.controlActionTime = nowMs;
-          audio.airBrakeTap?.(); // TODO: add airFloat sound
+          audio.airBrakeTap?.(); // TODO: add airThrust sound
 
-          // Visual feedback: upward puff particles for float
+          // Visual feedback: backward exhaust particles for thrust
           if (state.particleSystem && !state.reduceFx) {
             state.particleSystem.emit('spark', {
               x: state.px,
               y: state.py,
               count: 5,
-              baseAngle: -Math.PI / 2,  // Upward
+              baseAngle: Math.PI,  // Backward (exhaust)
               spread: 0.5,
               speed: 1.5,
               life: 15,
-              color: '#87CEEB',
+              color: '#FFA500',  // Orange
               gravity: 0,
             });
           }
@@ -452,11 +452,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
       }
     }
 
-    const effectiveGravity = BASE_GRAV * state.gravityMultiplier;
-    state.vy += effectiveGravity * effectiveTimeScale;
-
-    // Decay float effect
-    decayFloatEffect(state, effectiveTimeScale / 60);
+    state.vy += BASE_GRAV * effectiveTimeScale;
 
     state.vx += state.wind * 0.3 * effectiveTimeScale;
 

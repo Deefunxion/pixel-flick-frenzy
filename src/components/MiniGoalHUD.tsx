@@ -23,11 +23,17 @@ export function MiniGoalHUD({ goalText, progress, target, current, visible }: Mi
   const filledSegments = Math.floor(progress * segments);
 
   return (
-    <div className="fixed top-4 left-4 bg-black/50 rounded-lg px-2 py-1 text-xs">
+    <div
+      className="fixed top-4 left-4 rounded-lg px-2 py-1 text-xs border-2"
+      style={{
+        backgroundColor: 'rgba(33, 87, 158, 0.9)',
+        borderColor: '#21579e',
+      }}
+    >
       <div className="flex items-center gap-2">
         <span>🎯</span>
-        <span className="text-white/80">{goalText}</span>
-        <span className="text-white/60">({current}/{target})</span>
+        <span className="text-white font-medium">{goalText}</span>
+        <span className="text-white/80">({current}/{target})</span>
       </div>
 
       {/* Progress bar */}
@@ -35,11 +41,10 @@ export function MiniGoalHUD({ goalText, progress, target, current, visible }: Mi
         {Array.from({ length: segments }).map((_, i) => (
           <div
             key={i}
-            className={`w-3 h-1.5 rounded-sm ${
-              i < filledSegments
-                ? 'bg-yellow-400'
-                : 'bg-white/20'
-            }`}
+            className="w-3 h-1.5 rounded-sm"
+            style={{
+              backgroundColor: i < filledSegments ? '#ed8818' : 'rgba(255,255,255,0.2)',
+            }}
           />
         ))}
       </div>

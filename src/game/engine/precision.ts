@@ -10,10 +10,10 @@ const AIR_BRAKE_TAP_BASE_COST = 5;      // Base cost, scaled by edge multiplier
 const AIR_BRAKE_HOLD_REDUCTION = 0.97;  // 3% velocity reduction per frame
 const AIR_BRAKE_HOLD_COST_PER_SEC = 15; // Base cost/sec, scaled by edge multiplier
 
-// Air float constants (gravity reduction on tap)
-const AIR_FLOAT_GRAVITY_MULT = 0.5;
-const AIR_FLOAT_DURATION = 0.3;
-const AIR_FLOAT_BASE_COST = 5;
+// Air thrust constants (forward velocity boost on tap)
+const AIR_THRUST_VX_BOOST = 0.5;
+const AIR_THRUST_BASE_COST = 5;
+const AIR_THRUST_MAX_VX_MULT = 1.5;
 
 // Slide control constants
 const SLIDE_EXTEND_VELOCITY = 0.15;
@@ -123,35 +123,28 @@ export function applySlideControl(
 }
 
 /**
- * Apply air float during flight phase (replaces air brake tap).
- * Reduces gravity to 50% for 0.3 seconds.
+ * Apply air thrust during flight phase.
+ * Gives instant forward velocity boost.
  * Costs 5 * edgeMultiplier stamina.
+ * Velocity capped at 1.5 * initialSpeed to prevent abuse.
  */
-export function applyAirFloat(state: GameState): PrecisionResult {
+export function applyAirThrust(state: GameState): PrecisionResult {
   const edgeMultiplier = calculateEdgeMultiplier(state.px);
-  const cost = Math.ceil(AIR_FLOAT_BASE_COST * edgeMultiplier);
+  const cost = Math.ceil(AIR_THRUST_BASE_COST * edgeMultiplier);
 
   if (state.stamina < cost) {
     return { applied: false, denied: true };
   }
 
-  state.gravityMultiplier = AIR_FLOAT_GRAVITY_MULT;
-  state.floatDuration = AIR_FLOAT_DURATION;
+  // Check velocity cap - can't boost beyond 1.5x initial speed
+  const maxVx = state.initialSpeed * AIR_THRUST_MAX_VX_MULT;
+  if (state.vx >= maxVx) {
+    return { applied: false, denied: true };
+  }
+
+  // Apply forward boost (capped)
+  state.vx = Math.min(state.vx + AIR_THRUST_VX_BOOST, maxVx);
   state.stamina -= cost;
 
   return { applied: true, denied: false };
-}
-
-/**
- * Decay the float effect over time.
- * Called every frame during flight.
- */
-export function decayFloatEffect(state: GameState, deltaTime: number): void {
-  if (state.floatDuration > 0) {
-    state.floatDuration -= deltaTime;
-    if (state.floatDuration <= 0) {
-      state.floatDuration = 0;
-      state.gravityMultiplier = 1;
-    }
-  }
 }

@@ -63,12 +63,15 @@ export function StreakCounter({ streak, bestStreak, visible }: StreakCounterProp
       <div
         className={`
           fixed left-4 z-20
-          bg-black/60 rounded-lg px-2 py-1
-          border transition-all duration-150
+          rounded-lg px-2 py-1
+          border-2 transition-all duration-150
           ${animatePulse ? 'scale-110' : 'scale-100'}
-          ${isHot ? 'border-orange-500' : 'border-white/30'}
         `}
-        style={{ top: '60px' }}
+        style={{
+          top: '60px',
+          backgroundColor: 'rgba(33, 87, 158, 0.9)',
+          borderColor: isHot ? '#ed8818' : '#21579e',
+        }}
       >
         <div
           className="text-lg font-bold flex items-center gap-1"
@@ -78,7 +81,7 @@ export function StreakCounter({ streak, bestStreak, visible }: StreakCounterProp
           <span>×{streak}</span>
           {/* Best streak indicator */}
           {streak >= bestStreak && bestStreak > 0 && (
-            <span className="text-xs text-yellow-400 ml-1">PB!</span>
+            <span className="text-xs ml-1" style={{ color: '#ed8818' }}>PB!</span>
           )}
         </div>
       </div>
@@ -90,10 +93,12 @@ export function StreakCounter({ streak, bestStreak, visible }: StreakCounterProp
           style={{ top: '35%' }}
         >
           <div
-            className="text-xl font-black text-center animate-bounce bg-black/40 px-4 py-1 rounded-lg"
+            className="text-xl font-black text-center animate-bounce px-4 py-1 rounded-lg border-2"
             style={{
-              color: flameColor,
-              textShadow: `0 0 12px ${flameColor}`,
+              color: '#FFFFFF',
+              backgroundColor: 'rgba(237, 136, 24, 0.9)',
+              borderColor: '#ed8818',
+              textShadow: '0 0 8px rgba(0,0,0,0.5)',
             }}
           >
             {showMilestone}

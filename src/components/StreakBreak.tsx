@@ -22,10 +22,16 @@ export function StreakBreak({ lostStreak, visible }: StreakBreakProps) {
       className="fixed left-1/2 -translate-x-1/2 z-30 text-center"
       style={{ bottom: '30%' }}
     >
-      {/* Compact streak break display */}
-      <div className="flex items-center gap-2 bg-black/50 px-3 py-1 rounded-lg">
-        <span className="text-2xl opacity-60">💔</span>
-        <span className="text-base font-bold text-red-400">
+      {/* Compact streak break display with brand colors */}
+      <div
+        className="flex items-center gap-2 px-3 py-1 rounded-lg border-2"
+        style={{
+          backgroundColor: 'rgba(33, 87, 158, 0.9)',
+          borderColor: '#21579e',
+        }}
+      >
+        <span className="text-2xl opacity-80">💔</span>
+        <span className="text-base font-bold" style={{ color: '#ed8818' }}>
           Streak: {lostStreak}
         </span>
       </div>

@@ -49,10 +49,14 @@ export function ThrowScore({
     <div
       className={`
         fixed top-16 right-4
-        bg-black/60 rounded-lg px-3 py-2
+        rounded-lg px-3 py-2
         border-2 transition-all duration-150
-        ${glowActive ? 'border-yellow-400 shadow-lg shadow-yellow-400/50' : 'border-white/30'}
       `}
+      style={{
+        backgroundColor: 'rgba(33, 87, 158, 0.9)',
+        borderColor: glowActive ? '#ed8818' : '#21579e',
+        boxShadow: glowActive ? '0 0 12px rgba(237, 136, 24, 0.5)' : 'none',
+      }}
     >
       {/* Score display */}
       <div
@@ -76,7 +80,7 @@ export function ThrowScore({
 
       {/* Multiplier (only show if > 1) */}
       {ringMultiplier > 1.01 && (
-        <div className="text-xs text-yellow-400 text-center mt-1">
+        <div className="text-xs text-center mt-1" style={{ color: '#ed8818' }}>
           ×{ringMultiplier.toFixed(2)}
         </div>
       )}

@@ -22,11 +22,19 @@ interface ToastQueueProps {
   onDismiss: (id: string) => void;
 }
 
+// Brand colors: blue #21579e, orange #ed8818
 const TYPE_STYLES = {
-  progress: 'bg-blue-500/80 border-blue-400',
-  complete: 'bg-green-500/80 border-green-400',
-  streak: 'bg-orange-500/80 border-orange-400',
-  info: 'bg-gray-500/80 border-gray-400',
+  progress: 'border-2',
+  complete: 'border-2',
+  streak: 'border-2',
+  info: 'border-2',
+};
+
+const TYPE_COLORS = {
+  progress: { bg: 'rgba(33, 87, 158, 0.9)', border: '#21579e' },
+  complete: { bg: 'rgba(237, 136, 24, 0.9)', border: '#ed8818' },
+  streak: { bg: 'rgba(237, 136, 24, 0.9)', border: '#ed8818' },
+  info: { bg: 'rgba(33, 87, 158, 0.9)', border: '#21579e' },
 };
 
 const TYPE_ICONS = {
@@ -67,16 +75,20 @@ function ToastItem({ toast, index, onDismiss }: ToastItemProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast.id, toast.duration]); // Only depend on toast identity, not onDismiss callback
 
+  const colors = TYPE_COLORS[toast.type];
   return (
     <div
       className={`
         px-4 py-2 rounded-lg border-2
-        text-white text-sm font-medium
+        text-white text-sm font-bold
         flex items-center gap-2
         animate-slide-up
-        ${TYPE_STYLES[toast.type]}
       `}
-      style={{ animationDelay: `${index * 100}ms` }}
+      style={{
+        animationDelay: `${index * 100}ms`,
+        backgroundColor: colors.bg,
+        borderColor: colors.border,
+      }}
     >
       <span>{TYPE_ICONS[toast.type]}</span>
       <span>{toast.message}</span>
