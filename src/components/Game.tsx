@@ -95,6 +95,7 @@ import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { TutorialOverlay } from './TutorialOverlay';
 import { NearMissOverlay } from './NearMissOverlay';
+import { StreakCounter } from './StreakCounter';
 import { ThrowCounter } from './ThrowCounter';
 import { PracticeModeOverlay } from './PracticeModeOverlay';
 import type { ThrowState, DailyTasks, MilestonesClaimed } from '@/game/engine/types';
@@ -1227,6 +1228,13 @@ const Game = () => {
             visible={nearMissState.visible}
           />
         )}
+
+        {/* Streak Counter HUD */}
+        <StreakCounter
+          streak={hotStreak.current}
+          bestStreak={hotStreak.best}
+          visible={hotStreak.current >= 1}
+        />
 
         {/* Stats overlay */}
         {showStats && (
