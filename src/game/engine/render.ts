@@ -23,8 +23,179 @@ import {
 import { drawPrecisionBar, drawPrecisionFallOverlay } from './precisionRender';
 import { drawRings, drawRingMultiplierIndicator } from './ringsRender';
 import { updateRingPosition } from './rings';
+import type { RingJuicePopup } from './ringJuice';
 // TODO: Import sprite-based effects when assets are ready
 // import { renderParticles } from './particles';
+
+/**
+ * Render ring juice text popups ("Nice!", "Great!", "PERFECT!")
+ * Popups rise and fade out over time
+ */
+function renderRingPopups(
+  ctx: CanvasRenderingContext2D,
+  popups: RingJuicePopup[]
+): void {
+  for (const popup of popups) {
+    ctx.save();
+    ctx.globalAlpha = popup.opacity;
+    ctx.translate(popup.x, popup.y);
+    ctx.scale(popup.scale, popup.scale);
+
+    // Draw text with outline for visibility
+    ctx.font = 'bold 14px "Comic Sans MS", cursive';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Outline
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.strokeText(popup.text, 0, 0);
+
+    // Fill
+    ctx.fillStyle = popup.color;
+    ctx.fillText(popup.text, 0, 0);
+
+    ctx.restore();
+  }
+}
+
+/**
+ * Render screen edge glow effect when collecting multiple rings
+ */
+function renderEdgeGlow(
+  ctx: CanvasRenderingContext2D,
+  intensity: number,
+  width: number,
+  height: number
+): void {
+  if (intensity <= 0) return;
+
+  // Left edge glow
+  const leftGradient = ctx.createLinearGradient(0, 0, 30, 0);
+  leftGradient.addColorStop(0, `rgba(255, 215, 0, ${intensity * 0.4})`);
+  leftGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+  ctx.fillStyle = leftGradient;
+  ctx.fillRect(0, 0, 30, height);
+
+  // Right edge glow (mirror)
+  const rightGradient = ctx.createLinearGradient(width - 30, 0, width, 0);
+  rightGradient.addColorStop(0, 'rgba(255, 215, 0, 0)');
+  rightGradient.addColorStop(1, `rgba(255, 215, 0, ${intensity * 0.4})`);
+  ctx.fillStyle = rightGradient;
+  ctx.fillRect(width - 30, 0, 30, height);
+}
+
+/**
+ * Render near-miss spotlight effect
+ * Vignette that focuses on target zone
+ */
+function renderNearMissSpotlight(
+  ctx: CanvasRenderingContext2D,
+  targetX: number,
+  intensity: 'extreme' | 'close' | 'near',
+  width: number,
+  height: number
+): void {
+  // Dimming intensity based on near-miss level
+  const dimAmount = intensity === 'extreme' ? 0.5
+                  : intensity === 'close' ? 0.4
+                  : 0.3;
+
+  // Create radial gradient centered on target
+  const gradient = ctx.createRadialGradient(
+    targetX, height - 30,  // Target position
+    30,  // Inner radius (bright)
+    targetX, height - 30,
+    150  // Outer radius (dim)
+  );
+
+  gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');  // Clear center
+  gradient.addColorStop(0.5, `rgba(0, 0, 0, ${dimAmount * 0.5})`);
+  gradient.addColorStop(1, `rgba(0, 0, 0, ${dimAmount})`);
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  // Glow on target zone
+  const glowGradient = ctx.createRadialGradient(
+    targetX, height - 30, 0,
+    targetX, height - 30, 40
+  );
+  glowGradient.addColorStop(0, 'rgba(255, 215, 0, 0.3)');
+  glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+
+  ctx.fillStyle = glowGradient;
+  ctx.fillRect(targetX - 50, height - 80, 100, 100);
+}
+
+/**
+ * Render ON FIRE mode visual effects
+ * - Warm background tint
+ * - Flame border effect at bottom of screen
+ */
+function renderOnFireMode(
+  ctx: CanvasRenderingContext2D,
+  intensity: number,  // sessionHeat / 100
+  width: number,
+  height: number
+): void {
+  // Warm background tint
+  ctx.fillStyle = `rgba(255, 100, 0, ${intensity * 0.1})`;
+  ctx.fillRect(0, 0, width, height);
+
+  // Flame border effect at bottom
+  const gradient = ctx.createLinearGradient(0, height, 0, height - 40);
+  gradient.addColorStop(0, `rgba(255, 100, 0, ${intensity * 0.3})`);
+  gradient.addColorStop(1, 'rgba(255, 100, 0, 0)');
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, height - 40, width, 40);
+}
+
+/**
+ * Render charge glow around Zeno during charge
+ */
+function renderChargeGlow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  intensity: number  // 0-1
+): void {
+  if (intensity <= 0) return;
+
+  const radius = 30 + intensity * 20;  // 30-50px
+  const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+
+  gradient.addColorStop(0, `rgba(255, 215, 0, ${intensity * 0.4})`);
+  gradient.addColorStop(0.5, `rgba(255, 165, 0, ${intensity * 0.2})`);
+  gradient.addColorStop(1, 'rgba(255, 165, 0, 0)');
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+}
+
+/**
+ * Render charge vignette (subtle edge darkening)
+ */
+function renderChargeVignette(
+  ctx: CanvasRenderingContext2D,
+  intensity: number,
+  width: number,
+  height: number
+): void {
+  if (intensity <= 0) return;
+
+  const gradient = ctx.createRadialGradient(
+    width / 2, height / 2, height * 0.3,
+    width / 2, height / 2, height * 0.8
+  );
+
+  gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  gradient.addColorStop(1, `rgba(0, 0, 0, ${intensity * 0.3})`);
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+}
 
 /**
  * Draw stamina bar above Zeno.
@@ -66,11 +237,14 @@ function drawStaminaBar(
     fillColor = '#eab308'; // Yellow
   } else {
     fillColor = '#ef4444'; // Red
-    // Flash effect when low
-    if (Math.floor(nowMs / 200) % 2 === 0) {
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
-      ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
-    }
+    // Pulsing glow effect when low (Task 8.2)
+    const pulseAlpha = 0.3 + Math.sin(nowMs * 0.01) * 0.2;
+    ctx.save();
+    ctx.shadowColor = 'red';
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = `rgba(239, 68, 68, ${pulseAlpha})`;
+    ctx.fillRect(barX - 3, barY - 3, barWidth + 6, barHeight + 6);
+    ctx.restore();
   }
 
   // Fill bar
@@ -325,6 +499,28 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     drawRingMultiplierIndicator(ctx, state.ringMultiplier, state.ringsPassedThisThrow, COLORS);
   }
 
+  // Ring juice effects
+  renderEdgeGlow(ctx, state.edgeGlowIntensity, W, H);
+  renderRingPopups(ctx, state.ringJuicePopups);
+
+  // ON FIRE mode visual effects
+  if (state.onFireMode && !state.reduceFx) {
+    renderOnFireMode(ctx, state.sessionHeat / 100, W, H);
+  }
+
+  // Near-miss spotlight effect
+  if (state.nearMissActive && state.nearMissIntensity) {
+    renderNearMissSpotlight(ctx, state.zenoTarget, state.nearMissIntensity, W, H);
+  }
+
+  // Charge visual tension effects (before Zeno for glow effect behind character)
+  if (state.charging && !state.reduceFx) {
+    renderChargeGlow(ctx, zenoX, zenoY, state.chargeGlowIntensity);
+    if (state.chargeVignetteActive) {
+      renderChargeVignette(ctx, state.chargeGlowIntensity - 0.5, W, H);
+    }
+  }
+
   // Player rendering - prefer sprites, fallback to procedural (using zenoX/zenoY for visual offset)
   const spriteDrawn = drawZenoSprite(ctx, state, zenoX, zenoY);
 
@@ -358,6 +554,14 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       // Idle or other states
       drawStickFigure(ctx, zenoX, zenoY, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
     }
+  }
+
+  // Action denied red pulse on Zeno (Task 8.3)
+  if (state.staminaDeniedShake && state.staminaDeniedShake > 0) {
+    ctx.fillStyle = `rgba(255, 0, 0, ${state.staminaDeniedShake * 0.04})`;
+    ctx.beginPath();
+    ctx.arc(zenoX, zenoY, 25, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   // Stamina bar (only during flight/slide when stamina used)
@@ -749,6 +953,28 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     drawRingMultiplierIndicator(ctx, state.ringMultiplier, state.ringsPassedThisThrow, COLORS);
   }
 
+  // Ring juice effects
+  renderEdgeGlow(ctx, state.edgeGlowIntensity, W, H);
+  renderRingPopups(ctx, state.ringJuicePopups);
+
+  // ON FIRE mode visual effects
+  if (state.onFireMode && !state.reduceFx) {
+    renderOnFireMode(ctx, state.sessionHeat / 100, W, H);
+  }
+
+  // Near-miss spotlight effect
+  if (state.nearMissActive && state.nearMissIntensity) {
+    renderNearMissSpotlight(ctx, state.zenoTarget, state.nearMissIntensity, W, H);
+  }
+
+  // Charge visual tension effects (before Zeno for glow effect behind character)
+  if (state.charging && !state.reduceFx) {
+    renderChargeGlow(ctx, state.px, zenoY, state.chargeGlowIntensity);
+    if (state.chargeVignetteActive) {
+      renderChargeVignette(ctx, state.chargeGlowIntensity - 0.5, W, H);
+    }
+  }
+
   // Player rendering - prefer sprites, fallback to procedural (using zenoY for visual offset)
   const spriteDrawnNoir = drawZenoSprite(ctx, state, state.px, zenoY);
 
@@ -773,6 +999,14 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
       // Idle or other states
       drawStickFigure(ctx, state.px, zenoY, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
     }
+  }
+
+  // Action denied red pulse on Zeno (Task 8.3)
+  if (state.staminaDeniedShake && state.staminaDeniedShake > 0) {
+    ctx.fillStyle = `rgba(255, 0, 0, ${state.staminaDeniedShake * 0.04})`;
+    ctx.beginPath();
+    ctx.arc(state.px, zenoY, 25, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   // Stamina bar (only during flight/slide when stamina used)

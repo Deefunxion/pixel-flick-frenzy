@@ -13,6 +13,9 @@ import { assetPath } from '@/lib/assetPath';
 import { getTheme, DEFAULT_THEME_ID, THEME_IDS, type ThemeId } from '@/game/themes';
 import { useUser } from '@/contexts/UserContext';
 import { NicknameModal } from './NicknameModal';
+import { MultiplierLadder } from './MultiplierLadder';
+import { LandingGrade } from './LandingGrade';
+import { calculateGrade, type GradeResult } from '@/game/engine/gradeSystem';
 import {
   loadDailyStats,
   loadJson,
@@ -67,6 +70,18 @@ import {
   playCloseCall,
   // Ring sounds
   playRingCollect,
+  // Fail juice
+  playFailImpact,
+  // Grade sounds
+  playGradeSound,
+  // Streak sounds
+  playStreakBreakSound,
+  // Charge sweet spot
+  playSweetSpotClick,
+  // Charge tension audio
+  startTensionDrone,
+  updateTensionDrone,
+  stopTensionDrone,
   type AudioRefs,
   type AudioSettings,
   type AudioState,
@@ -81,20 +96,36 @@ import type { GameState } from '@/game/engine/types';
 import { assetLoader } from '@/game/engine/assets';
 import { Animator } from '@/game/engine/animator';
 import { SPRITE_SHEETS } from '@/game/engine/spriteConfig';
+import { bufferInput, isBuffering } from '@/game/engine/inputBuffer';
 import { backgroundRenderer } from '@/game/engine/backgroundRenderer';
 import { noirBackgroundRenderer } from '@/game/engine/noirBackgroundRenderer';
 import { UI_ASSETS } from '@/game/engine/uiAssets';
 import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { TutorialOverlay } from './TutorialOverlay';
+import { NearMissOverlay } from './NearMissOverlay';
+import { StreakCounter } from './StreakCounter';
+import { StreakBreak } from './StreakBreak';
+import { MiniGoalHUD } from './MiniGoalHUD';
+import { ToastQueue, useToastQueue } from './ToastQueue';
 import { ThrowCounter } from './ThrowCounter';
 import { PracticeModeOverlay } from './PracticeModeOverlay';
 import type { ThrowState, DailyTasks, MilestonesClaimed } from '@/game/engine/types';
 import { calculateThrowRegen, formatRegenTime, getMsUntilNextThrow } from '@/game/engine/throws';
 import { resetTutorialProgress } from '@/game/engine/tutorial';
+import {
+  hasHapticSupport,
+  getHapticsEnabled,
+  setHapticsEnabled,
+  hapticRingCollect,
+  hapticFail,
+  hapticRelease,
+  hapticLandingImpact,
+} from '@/game/engine/haptics';
 import { loadRingSprites } from '@/game/engine/ringsRender';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 import { claimDailyTask } from '@/game/engine/dailyTasks';
+import { getClosestGoal } from '@/game/engine/achievementProgress';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
 import { captureError } from '@/lib/sentry';
 import type { Theme } from '@/game/themes';
@@ -160,7 +191,7 @@ const Game = () => {
   const extraInputPadRef = useRef<HTMLDivElement>(null); // Extra touch area below stats
   const stateRef = useRef<GameState | null>(null);
   const pressedRef = useRef(false);
-  const audioRefs = useRef<AudioRefs>({ ctx: null, chargeOsc: null, chargeGain: null, edgeOsc: null, edgeGain: null, unlocked: false, stateChangeHandler: null });
+  const audioRefs = useRef<AudioRefs>({ ctx: null, chargeOsc: null, chargeGain: null, edgeOsc: null, edgeGain: null, tensionOsc: null, tensionGain: null, unlocked: false, stateChangeHandler: null });
   const animFrameRef = useRef<number>(0);
   const requestRef = useRef<number>();
   const previousTimeRef = useRef<number>();
@@ -180,7 +211,16 @@ const Game = () => {
   const [perfectLanding, setPerfectLanding] = useState(false);
   // Phase 5: Meta Progression states
   const [stats, setStats] = useState(() => {
-    return loadJson('stats', { totalThrows: 0, successfulLandings: 0, totalDistance: 0, perfectLandings: 0, maxMultiplier: 1 }, 'omf_stats');
+    return loadJson('stats', {
+      totalThrows: 0,
+      successfulLandings: 0,
+      totalDistance: 0,
+      perfectLandings: 0,
+      maxMultiplier: 1,
+      totalRingsPassed: 0,
+      maxRingsInThrow: 0,
+      perfectRingThrows: 0,
+    }, 'omf_stats');
   });
   const [achievements, setAchievements] = useState<Set<string>>(() => {
     return loadStringSet('achievements', 'omf_achievements');
@@ -224,6 +264,7 @@ const Game = () => {
 
   const [hudPx, setHudPx] = useState(LAUNCH_PAD_X);
   const [hudFlying, setHudFlying] = useState(false);
+  const [combinedMultiplier, setCombinedMultiplier] = useState(1.0);
   // Tutorial overlay state (synced from stateRef)
   const [tutorialPhase, setTutorialPhase] = useState<'none' | 'idle' | 'charge' | 'air' | 'slide'>('none');
   const [tutorialActive, setTutorialActive] = useState(false);
@@ -240,6 +281,38 @@ const Game = () => {
     return calculateThrowRegen(saved);
   });
   const [practiceMode, setPracticeMode] = useState(false);
+
+  // Haptics state (for Android vibration feedback)
+  const [hapticsEnabled, setHapticsEnabledState] = useState(() => getHapticsEnabled());
+
+  // Landing grade state
+  const [showGrade, setShowGrade] = useState(false);
+  const [lastGradeResult, setLastGradeResult] = useState<GradeResult | null>(null);
+
+  // Near-miss overlay state
+  const [nearMissState, setNearMissState] = useState<{
+    visible: boolean;
+    distance: number;
+    intensity: 'extreme' | 'close' | 'near';
+  } | null>(null);
+
+  // Streak break feedback state
+  const [streakBreakState, setStreakBreakState] = useState<{
+    visible: boolean;
+    lostStreak: number;
+  }>({ visible: false, lostStreak: 0 });
+  const prevHotStreakRef = useRef(0);
+
+  // Mini goal HUD state
+  const [miniGoal, setMiniGoal] = useState<{
+    text: string;
+    progress: number;
+    current: number;
+    target: number;
+  } | null>(null);
+
+  // Toast queue for progress notifications
+  const { toasts, addToast, dismissToast } = useToastQueue();
 
   // Daily tasks state
   const [dailyTasks, setDailyTasks] = useState<DailyTasks>(() => {
@@ -329,16 +402,26 @@ const Game = () => {
     });
   }, []);
 
-  // Mobile UX: Haptic feedback helper
+  // Mobile UX: Haptic feedback helper (uses haptics module with user preferences)
   const triggerHaptic = useCallback((pattern: number | number[] = 10) => {
-    if ('vibrate' in navigator) {
-      try {
-        navigator.vibrate(pattern);
-      } catch {
-        // Vibration not supported or blocked
-      }
+    if (!getHapticsEnabled() || !hasHapticSupport()) return;
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      // Vibration not supported or blocked
     }
   }, []);
+
+  // Haptics toggle handler
+  const toggleHaptics = useCallback(() => {
+    const newValue = !hapticsEnabled;
+    setHapticsEnabled(newValue);
+    setHapticsEnabledState(newValue);
+    // Give feedback on toggle
+    if (newValue && hasHapticSupport()) {
+      navigator.vibrate(30);
+    }
+  }, [hapticsEnabled]);
 
   // iOS Audio: Retry handler for blocked audio
   const handleAudioRetry = useCallback(async () => {
@@ -379,6 +462,27 @@ const Game = () => {
         setDailyTasks({ ...stateRef.current.dailyTasks });
       }
     }
+  }, []);
+
+  // Handle landing - calculate and display grade
+  const handleLanding = useCallback((
+    landingX: number,
+    targetX: number,
+    ringsPassedThisThrow: number,
+    landingVelocity: number,
+    fellOff: boolean
+  ) => {
+    const gradeResult = calculateGrade(
+      landingX,
+      targetX,
+      ringsPassedThisThrow,
+      landingVelocity,
+      fellOff
+    );
+    setLastGradeResult(gradeResult);
+    setShowGrade(true);
+    // Play grade-specific sound
+    playGradeSound(audioRefs.current, audioSettingsRef.current, gradeResult.grade);
   }, []);
 
   // Mobile UX: Detect if user is on mobile
@@ -477,9 +581,24 @@ const Game = () => {
       setSessionGoals,
       setDailyStats,
       setDailyChallenge,
-      setHotStreak: (current, best) => setHotStreakState({ current, best }),
+      setHotStreak: (current, best) => {
+        // Detect streak loss
+        if (current === 0 && prevHotStreakRef.current >= 2) {
+          // Streak was lost!
+          const lostStreak = prevHotStreakRef.current;
+          setStreakBreakState({ visible: true, lostStreak });
+          playStreakBreakSound(audioRefs.current, audioSettingsRef.current);
+          // Auto-hide after 2 seconds
+          setTimeout(() => setStreakBreakState({ visible: false, lostStreak: 0 }), 2000);
+        }
+        prevHotStreakRef.current = current;
+        setHotStreakState({ current, best });
+      },
       onNewPersonalBest: handleNewPersonalBest,
       onFall: handleFall,
+      onLanding: handleLanding,
+      onChargeStart: () => setShowGrade(false), // Dismiss grade immediately on new throw
+      onPbPassed: () => addToast('NEW PERSONAL BEST!', 'complete', 'high'),
       setThrowState,
       setPracticeMode,
       setDailyTasks,
@@ -518,8 +637,16 @@ const Game = () => {
       pbDing: () => playPbDing(audioRefs.current, audioSettingsRef.current),
       newRecordJingle: () => playNewRecord(audioRefs.current, audioSettingsRef.current),
       closeCall: () => playCloseCall(audioRefs.current, audioSettingsRef.current),
-      // Ring sounds
-      ringCollect: (ringIndex: number) => playRingCollect(audioRefs.current, audioSettingsRef.current, ringIndex),
+      // Ring sounds (with stereo pan based on ring X position)
+      ringCollect: (ringIndex: number, ringX?: number) => playRingCollect(audioRefs.current, audioSettingsRef.current, ringIndex, ringX),
+      // Fail juice
+      failImpact: () => playFailImpact(audioRefs.current, audioSettingsRef.current),
+      // Charge sweet spot
+      sweetSpotClick: () => playSweetSpotClick(audioRefs.current, audioSettingsRef.current),
+      // Charge tension audio
+      startTensionDrone: () => startTensionDrone(audioRefs.current, audioSettingsRef.current),
+      updateTensionDrone: (power01: number) => updateTensionDrone(audioRefs.current, audioSettingsRef.current, power01),
+      stopTensionDrone: () => stopTensionDrone(audioRefs.current),
     };
 
     const scheduleReset = (ms: number) => {
@@ -533,10 +660,26 @@ const Game = () => {
       if (!s) return;
       setHudPx(s.px);
       setHudFlying(s.flying || s.sliding || s.charging);
+      // Sync combined multiplier for HUD
+      const combined = s.currentMultiplier * s.ringMultiplier;
+      setCombinedMultiplier(combined);
       // Sync tutorial state
       setTutorialPhase(s.tutorialState.phase);
       setTutorialActive(s.tutorialState.active);
       setTutorialTimeRemaining(s.tutorialState.timeRemaining);
+      // Sync near-miss state
+      if (s.nearMissActive && s.nearMissIntensity) {
+        setNearMissState({
+          visible: true,
+          distance: s.nearMissDistance,
+          intensity: s.nearMissIntensity,
+        });
+      } else if (!s.nearMissActive) {
+        setNearMissState(null);
+      }
+      // Update mini goal HUD
+      const goal = getClosestGoal(stats, s, achievements);
+      setMiniGoal(goal);
     };
 
     const hudInterval = window.setInterval(syncHud, 120);
@@ -544,6 +687,10 @@ const Game = () => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         e.preventDefault();
+        // Buffer input if we're in slow-mo/freeze
+        if (isBuffering()) {
+          bufferInput('press');
+        }
         pressedRef.current = true;
         // Unlock audio on first gesture (iOS compatible)
         const wasUnlocked = audioRefs.current.unlocked;
@@ -567,6 +714,10 @@ const Game = () => {
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         e.preventDefault();
+        // Buffer input if we're in slow-mo/freeze
+        if (isBuffering()) {
+          bufferInput('release');
+        }
         pressedRef.current = false;
       }
     };
@@ -574,6 +725,12 @@ const Game = () => {
     const handlePointerDown = async (e: PointerEvent) => {
       if (e.button !== 0 && e.pointerType !== 'touch') return;
       e.preventDefault();
+
+      // Buffer input if we're in slow-mo/freeze
+      if (isBuffering()) {
+        bufferInput('press', { x: e.clientX, y: e.clientY });
+      }
+
       pressedRef.current = true;
       pointerIdRef.current = e.pointerId;
       pointerStartYRef.current = e.clientY;
@@ -628,6 +785,12 @@ const Game = () => {
       if (pointerIdRef.current != null && e.pointerId === pointerIdRef.current) {
         pointerIdRef.current = null;
       }
+
+      // Buffer input if we're in slow-mo/freeze
+      if (isBuffering()) {
+        bufferInput('release');
+      }
+
       pressedRef.current = false;
 
       markTouchActive(false);
@@ -937,6 +1100,22 @@ const Game = () => {
                     style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
                   />
                 </button>
+                {/* Haptics toggle - only show if device supports haptics */}
+                {hasHapticSupport() && (
+                  <button
+                    className={buttonClass}
+                    style={{
+                      ...buttonStyle,
+                      padding: '4px 6px',
+                      fontSize: '16px',
+                    }}
+                    onClick={toggleHaptics}
+                    aria-label="Toggle haptic feedback"
+                    title={hapticsEnabled ? 'Haptics on' : 'Haptics off'}
+                  >
+                    {hapticsEnabled ? '📳' : '📴'}
+                  </button>
+                )}
               </div>
 
               {/* Center: Leaderboard */}
@@ -1080,7 +1259,8 @@ const Game = () => {
 
         {/* Achievement popup */}
         {newAchievement && (() => {
-          const achievement = Object.values(ACHIEVEMENTS).find(a => a.name === newAchievement);
+          const achievementName = newAchievement.split(' (+')[0];
+          const achievement = Object.values(ACHIEVEMENTS).find(a => a.name === achievementName);
           return (
             <div
               className="fixed top-16 left-1/2 transform -translate-x-1/2 px-4 py-3 rounded-lg z-50 animate-in slide-in-from-top-4 duration-300"
@@ -1108,6 +1288,56 @@ const Game = () => {
           regenTime={formatRegenTime(getMsUntilNextThrow(throwState))}
           onBuyThrows={() => {/* TODO: Open shop modal */}}
         />
+
+        {/* Multiplier Ladder HUD */}
+        <MultiplierLadder
+          currentMultiplier={combinedMultiplier}
+          isFlying={hudFlying}
+          reduceFx={reduceFx}
+        />
+
+        {/* Landing Grade */}
+        <LandingGrade
+          result={lastGradeResult}
+          visible={showGrade}
+          onDismiss={() => setShowGrade(false)}
+        />
+
+        {/* Near-Miss Overlay */}
+        {nearMissState && (
+          <NearMissOverlay
+            distance={nearMissState.distance}
+            intensity={nearMissState.intensity}
+            visible={nearMissState.visible}
+          />
+        )}
+
+        {/* Streak Counter HUD */}
+        <StreakCounter
+          streak={hotStreak.current}
+          bestStreak={hotStreak.best}
+          visible={hotStreak.current >= 1}
+        />
+
+        {/* Streak Break Feedback */}
+        <StreakBreak
+          lostStreak={streakBreakState.lostStreak}
+          visible={streakBreakState.visible}
+        />
+
+        {/* Mini Goal HUD */}
+        {miniGoal && (
+          <MiniGoalHUD
+            goalText={miniGoal.text}
+            progress={miniGoal.progress}
+            current={miniGoal.current}
+            target={miniGoal.target}
+            visible={true}
+          />
+        )}
+
+        {/* Toast Queue */}
+        <ToastQueue toasts={toasts} onDismiss={dismissToast} />
 
         {/* Stats overlay */}
         {showStats && (

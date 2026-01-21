@@ -1,6 +1,8 @@
 import type { ParticleSystem } from './particles';
 import type { Animator } from './animator';
 import type { Ring } from './rings';
+import type { RingJuicePopup } from './ringJuice';
+import type { GradeResult } from './gradeSystem';
 
 export interface Star {
   x: number;
@@ -152,6 +154,11 @@ export interface GameState {
   failureAnimating: boolean;
   failureFrame: number;
   failureType: 'tumble' | 'dive' | 'splat' | null;
+  // Fail juice state (visual feedback for any fall)
+  failJuiceActive: boolean;
+  failJuiceStartTime: number;
+  failImpactX: number;
+  failImpactY: number;
   // Hot streak (consecutive 419+ throws)
   hotStreak: number;
   bestHotStreak: number;
@@ -178,6 +185,7 @@ export interface GameState {
   precisionTimeScale: number;
   precisionBarTriggeredThisThrow: boolean;
   passedPbThisThrow: boolean;
+  pbPaceActive: boolean;  // On track to beat PB during flight
   // "Almost!" overlay - stays visible until next throw
   almostOverlayActive: boolean;
   almostOverlayDistance: number; // Frozen distance from target at landing
@@ -188,6 +196,30 @@ export interface GameState {
   rings: Ring[];
   ringsPassedThisThrow: number;
   ringMultiplier: number;
+  // Ring juice state
+  ringJuicePopups: RingJuicePopup[];
+  lastRingCollectTime: number;
+  edgeGlowIntensity: number;  // 0-1 for screen edge glow effect
+  // Landing grade system
+  lastGrade: GradeResult | null;
+  gradeDisplayTime: number;  // When grade was shown (for animation timing)
+  // Near-miss drama state
+  nearMissActive: boolean;
+  nearMissDistance: number;  // How far from target
+  nearMissIntensity: 'extreme' | 'close' | 'near' | null;
+  nearMissAnimationStart: number;
+  // Session heat (ON FIRE mode)
+  sessionHeat: number;  // 0-100, builds across session
+  onFireMode: boolean;  // True when streak >= 5
+  // Charge sweet spot
+  chargeSweetSpot: boolean;  // True when in optimal range (70-85%)
+  sweetSpotJustEntered: boolean;  // For one-time feedback
+  // Charge visual tension
+  chargeGlowIntensity: number;  // 0-1, builds with charge
+  chargeVignetteActive: boolean;
+  // Air control feedback
+  lastControlAction: 'float' | 'brake' | null;
+  controlActionTime: number;
   // Monetization - Throw system
   throwState: ThrowState;
   dailyTasks: DailyTasks;

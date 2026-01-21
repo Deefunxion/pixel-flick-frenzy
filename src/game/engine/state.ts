@@ -169,6 +169,11 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     failureAnimating: false,
     failureFrame: 0,
     failureType: null,
+    // Fail juice
+    failJuiceActive: false,
+    failJuiceStartTime: 0,
+    failImpactX: 0,
+    failImpactY: 0,
     hotStreak: 0,
     bestHotStreak: loadNumber('best_hot_streak', 0, 'omf_best_hot_streak'),
     launchFrame: 0,
@@ -197,6 +202,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     precisionTimeScale: 1,
     precisionBarTriggeredThisThrow: false,
     passedPbThisThrow: false,
+    pbPaceActive: false,
     almostOverlayActive: false,
     almostOverlayDistance: 0,
     // Streak tracking (session-volatile)
@@ -206,6 +212,30 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     rings: generateRings(seed),
     ringsPassedThisThrow: 0,
     ringMultiplier: 1,
+    // Ring juice
+    ringJuicePopups: [],
+    lastRingCollectTime: 0,
+    edgeGlowIntensity: 0,
+    // Landing grade system
+    lastGrade: null,
+    gradeDisplayTime: 0,
+    // Near-miss drama state
+    nearMissActive: false,
+    nearMissDistance: 0,
+    nearMissIntensity: null,
+    nearMissAnimationStart: 0,
+    // Session heat (ON FIRE mode)
+    sessionHeat: 0,
+    onFireMode: false,
+    // Charge sweet spot
+    chargeSweetSpot: false,
+    sweetSpotJustEntered: false,
+    // Charge visual tension
+    chargeGlowIntensity: 0,
+    chargeVignetteActive: false,
+    // Air control feedback
+    lastControlAction: null,
+    controlActionTime: 0,
     // Monetization - Throw system
     throwState,
     dailyTasks,
@@ -244,6 +274,9 @@ export function resetPhysics(state: GameState) {
   state.failureAnimating = false;
   state.failureFrame = 0;
   state.failureType = null;
+  // Fail juice reset
+  state.failJuiceActive = false;
+  state.failJuiceStartTime = 0;
   state.launchFrame = 0;
   state.launchTimestamp = 0;
   state.stamina = 100;
@@ -262,14 +295,37 @@ export function resetPhysics(state: GameState) {
   state.precisionTimeScale = 1;
   state.precisionBarTriggeredThisThrow = false;
   state.passedPbThisThrow = false;
+  state.pbPaceActive = false;
   // Note: almostOverlayActive is NOT reset here - it clears when charging starts
   if (state.particleSystem) {
     state.particleSystem.clear();
   }
   // Rings reset - generate new rings for each throw
-  state.rings = generateRings(state.seed);
+  // Use derived seed (base seed + throw count) for unique layouts per throw
+  state.rings = generateRings(state.seed + state.stats.totalThrows);
   state.ringsPassedThisThrow = 0;
   state.ringMultiplier = 1;
+  // Reset ring juice
+  state.ringJuicePopups = [];
+  state.lastRingCollectTime = 0;
+  state.edgeGlowIntensity = 0;
+  // Reset landing grade
+  state.lastGrade = null;
+  state.gradeDisplayTime = 0;
+  // Reset near-miss drama
+  state.nearMissActive = false;
+  state.nearMissDistance = 0;
+  state.nearMissIntensity = null;
+  state.nearMissAnimationStart = 0;
+  // Reset charge sweet spot
+  state.chargeSweetSpot = false;
+  state.sweetSpotJustEntered = false;
+  // Reset charge visual tension
+  state.chargeGlowIntensity = 0;
+  state.chargeVignetteActive = false;
+  // Reset air control feedback
+  state.lastControlAction = null;
+  state.controlActionTime = 0;
 }
 
 export function nextWind(state: GameState) {

@@ -5,6 +5,7 @@ import {
   CLIFF_EDGE,
   H,
   MAX_ANGLE,
+  MAX_FINAL_MULTIPLIER,
   MAX_POWER,
   MIN_ANGLE,
   MIN_POWER,
@@ -44,9 +45,24 @@ import {
   checkRingCollision,
   RING_MULTIPLIERS,
 } from './rings';
+import {
+  createRingPopup,
+  updateRingPopups,
+  shouldMicroFreeze,
+  getEdgeGlowIntensity,
+  shouldScreenFlash,
+  MICRO_FREEZE_MS,
+} from './ringJuice';
 import { addPermanentThrows, consumeThrow } from './throws';
 import { checkMilestones, awardZenoLevelUp } from './milestones';
 import { updateDailyProgress } from './dailyTasks';
+import {
+  startBuffering,
+  stopBuffering,
+  isBuffering,
+  hasBufferedInput,
+  clearBuffer
+} from './inputBuffer';
 
 export type GameAudio = {
   startCharge: (power01: number) => void;
@@ -82,7 +98,15 @@ export type GameAudio = {
   newRecordJingle?: () => void;
   closeCall?: () => void;
   // Ring sounds
-  ringCollect?: (ringIndex: number) => void;
+  ringCollect?: (ringIndex: number, ringX?: number) => void;
+  // Fail juice
+  failImpact?: () => void;
+  // Charge sweet spot
+  sweetSpotClick?: () => void;
+  // Charge tension audio
+  startTensionDrone?: () => void;
+  updateTensionDrone?: (power01: number) => void;
+  stopTensionDrone?: () => void;
 };
 
 export type GameUI = {
@@ -106,6 +130,9 @@ export type GameUI = {
   setDailyTasks: (tasks: DailyTasks) => void;
   onNewPersonalBest?: (totalScore: number, bestThrow: number) => void;
   onFall?: (totalFalls: number) => void;
+  onLanding?: (landingX: number, targetX: number, ringsPassedThisThrow: number, landingVelocity: number, fellOff: boolean) => void;
+  onChargeStart?: () => void;
+  onPbPassed?: () => void;  // Triggered when flying past PB position
 };
 
 export type GameServices = {
@@ -123,13 +150,16 @@ function checkAchievements(state: GameState, ui: GameUI, audio: GameAudio, clear
   for (const [id, achievement] of Object.entries(ACHIEVEMENTS)) {
     if (!state.achievements.has(id) && achievement.check(state.stats, state)) {
       state.achievements.add(id);
-      state.newAchievement = achievement.name;
-      ui.setAchievements(new Set(state.achievements));
-      ui.setNewAchievement(achievement.name);
-      saveJson('achievements', [...state.achievements]);
 
       // Award throws if reward exists for this achievement
       const reward = ACHIEVEMENT_REWARDS[id];
+      const rewardText = reward ? ` (+${reward} throws)` : '';
+      const toastMessage = `${achievement.name}${rewardText}`;
+
+      state.newAchievement = toastMessage;
+      ui.setAchievements(new Set(state.achievements));
+      ui.setNewAchievement(toastMessage);
+      saveJson('achievements', [...state.achievements]);
       if (reward) {
         // Check not already claimed (prevent double-dipping on reload)
         if (!state.milestonesClaimed.achievements.includes(id)) {
@@ -159,6 +189,24 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
   if (state.paused) return;
 
+  // Input buffering during slow-mo
+  // When entering significant slow-mo, start buffering
+  if (state.slowMo > 0.8 && !isBuffering()) {
+    startBuffering();
+  }
+
+  // Track if we should process buffered inputs
+  let processBufferedInputs = false;
+
+  // When exiting slow-mo, apply buffered inputs
+  if (state.slowMo < 0.3 && isBuffering()) {
+    processBufferedInputs = true;
+    stopBuffering();
+  }
+
+  // Calculate effective delta time (assuming 60fps = ~16.67ms per frame)
+  const effectiveDeltaMs = 16.67;
+
   // Track previous vy for tutorial apex detection
   const prevVy = state.vy;
 
@@ -173,6 +221,17 @@ export function updateFrame(state: GameState, svc: GameServices) {
     const wasPressed = state.precisionInput.lastPressedState;
     state.precisionInput.pressedThisFrame = pressed && !wasPressed;
     state.precisionInput.releasedThisFrame = !pressed && wasPressed;
+
+    // Apply buffered inputs from slow-mo period
+    if (processBufferedInputs) {
+      if (hasBufferedInput('tap') || hasBufferedInput('press')) {
+        state.precisionInput.pressedThisFrame = true;
+      }
+      if (hasBufferedInput('release')) {
+        state.precisionInput.releasedThisFrame = true;
+      }
+      clearBuffer();
+    }
 
     if (pressed) {
       state.precisionInput.holdDuration++;
@@ -192,7 +251,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.chargeStart = nowMs;
     state.almostOverlayActive = false; // Hide "Almost!" overlay when starting new throw
     ui.setFellOff(false);
+    ui.onChargeStart?.(); // Dismiss grade overlay immediately
     audio.startCharge(0);
+    audio.startTensionDrone?.();  // Start low tension drone
   }
 
   // Charging update (power only) - bounces 0→100→0→100 continuously
@@ -204,16 +265,53 @@ export function updateFrame(state: GameState, svc: GameServices) {
     const dt = cyclePosition <= 1 ? cyclePosition : 2 - cyclePosition;
     state.chargePower = dt;
     audio.updateCharge(dt);
+    audio.updateTensionDrone?.(dt);  // Update tension drone pitch/volume
 
-    // Emit charging swirls every 4 frames
+    // Sweet spot detection (70-85% power)
+    const SWEET_SPOT_MIN = 0.70;
+    const SWEET_SPOT_MAX = 0.85;
+    const inSweetSpot = dt >= SWEET_SPOT_MIN && dt <= SWEET_SPOT_MAX;
+
+    // Track entry into sweet spot
+    if (inSweetSpot && !state.chargeSweetSpot) {
+      state.sweetSpotJustEntered = true;
+      audio.sweetSpotClick?.();  // Satisfying click
+
+      // Micro zoom
+      if (!state.reduceFx) {
+        state.zoom = 1.02;  // Subtle 2% zoom
+      }
+    } else {
+      state.sweetSpotJustEntered = false;
+    }
+
+    state.chargeSweetSpot = inSweetSpot;
+
+    // Build charge visual intensity
+    state.chargeGlowIntensity = dt;
+    state.chargeVignetteActive = dt > 0.5;
+
+    // Emit charging swirls every 4 frames (intensified with charge level)
     if (Math.floor(nowMs / 64) % 4 === 0 && state.particleSystem) {
       state.particleSystem.emitChargingSwirls(state.px, state.py, dt, theme.accent1);
+    }
+
+    // Extra particles at high charge
+    if (dt > 0.6 && !state.reduceFx && state.particleSystem) {
+      const particleChance = dt * 0.3;  // Up to 30% chance per frame
+      if (Math.random() < particleChance) {
+        state.particleSystem.emitChargingSwirls(state.px, state.py, dt, '#FFD700');
+      }
     }
   }
 
   // Launch
   if (state.charging && !pressed) {
     state.charging = false;
+
+    // Reset charge visual tension
+    state.chargeGlowIntensity = 0;
+    state.chargeVignetteActive = false;
 
     // Consume a throw when launching
     const { newState: newThrowState, practiceMode, throwConsumed } = consumeThrow(state.throwState);
@@ -244,6 +342,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
     }
 
     audio.stopCharge();
+    audio.stopTensionDrone?.();  // Release tension on launch
     audio.whoosh();
     audio.startFly?.(); // Start fly sound while in air
   }
@@ -288,7 +387,24 @@ export function updateFrame(state: GameState, svc: GameServices) {
         const result = applyAirFloat(state);
         if (result.applied) {
           precisionAppliedThisFrame = true;
+          state.lastControlAction = 'float';
+          state.controlActionTime = nowMs;
           audio.airBrakeTap?.(); // TODO: add airFloat sound
+
+          // Visual feedback: upward puff particles for float
+          if (state.particleSystem && !state.reduceFx) {
+            state.particleSystem.emit('spark', {
+              x: state.px,
+              y: state.py,
+              count: 5,
+              baseAngle: -Math.PI / 2,  // Upward
+              spread: 0.5,
+              speed: 1.5,
+              life: 15,
+              color: '#87CEEB',
+              gravity: 0,
+            });
+          }
         } else if (result.denied) {
           audio.actionDenied?.();
           state.staminaDeniedShake = 8;
@@ -298,6 +414,26 @@ export function updateFrame(state: GameState, svc: GameServices) {
         const result = applyAirBrake(state, 'hold', deltaTime);
         if (result.applied) {
           precisionAppliedThisFrame = true;
+          // Track brake action once hold duration reaches threshold
+          if (state.precisionInput.holdDuration === 12) {  // ~200ms at 60fps
+            state.lastControlAction = 'brake';
+            state.controlActionTime = nowMs;
+
+            // Visual feedback: downward/backward particles for brake
+            if (state.particleSystem && !state.reduceFx) {
+              state.particleSystem.emit('spark', {
+                x: state.px,
+                y: state.py,
+                count: 3,
+                baseAngle: Math.PI,  // Backward
+                spread: 0.3,
+                speed: 2,
+                life: 12,
+                color: '#FF6B6B',
+                gravity: 0,
+              });
+            }
+          }
           // Play hold sound every 6 frames to avoid spam
           if (state.precisionInput.holdDuration % 6 === 0) {
             audio.airBrakeHold?.();
@@ -351,10 +487,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.runTrail.push({ x: state.px, y: state.py });
     }
 
-    // Ring system: update positions and check collisions
+    // Ring collision: only check during flight
     for (const ring of state.rings) {
-      updateRingPosition(ring, nowMs);
-
       if (!ring.passed && checkRingCollision(state.px, state.py, ring)) {
         ring.passed = true;
         ring.passedAt = nowMs;
@@ -362,6 +496,31 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
         // Apply escalating multiplier
         state.ringMultiplier *= RING_MULTIPLIERS[ring.ringIndex];
+
+        // === RING JUICE ===
+
+        // 1. Create text popup
+        state.ringJuicePopups.push(
+          createRingPopup(ring.x, ring.y, state.ringsPassedThisThrow - 1, nowMs)
+        );
+
+        // 2. Micro-freeze (if not already in slow-mo)
+        if (shouldMicroFreeze(state.slowMo)) {
+          state.slowMo = Math.max(state.slowMo, 0.95);  // Brief pause
+          state.lastRingCollectTime = nowMs;
+        }
+
+        // 3. Screen flash (stronger on 3rd ring)
+        if (!state.reduceFx) {
+          if (shouldScreenFlash(state.ringsPassedThisThrow)) {
+            state.screenFlash = 0.5;  // Stronger flash for 3rd ring
+          } else {
+            state.screenFlash = 0.3;  // Normal flash
+          }
+        }
+
+        // 4. Edge glow (stored for render)
+        state.edgeGlowIntensity = getEdgeGlowIntensity(state.ringsPassedThisThrow);
 
         // Spawn ring collection particles
         for (let i = 0; i < 10; i++) {
@@ -377,15 +536,17 @@ export function updateFrame(state: GameState, svc: GameServices) {
           });
         }
 
-        // Play collection sound
-        audio.ringCollect?.(ring.ringIndex);
-
-        // Subtle screen flash on collection
-        if (!state.reduceFx) {
-          state.screenFlash = 0.3;
-        }
+        // Play collection sound (pass ring X for stereo pan)
+        audio.ringCollect?.(ring.ringIndex, ring.x);
       }
     }
+
+    // Update ring juice popups (outside collision check, every frame)
+    state.ringJuicePopups = updateRingPopups(
+      state.ringJuicePopups,
+      effectiveDeltaMs,
+      nowMs
+    );
 
     if (state.py >= H - 20) {
       state.flying = false;
@@ -418,6 +579,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
     if (state.px < CLIFF_EDGE) {
       state.lastValidPx = state.px;
     }
+  }
+
+  // Ring system: ALWAYS update positions for smooth animation
+  for (const ring of state.rings) {
+    updateRingPosition(ring, nowMs);
   }
 
   // Age trail
@@ -580,10 +746,16 @@ export function updateFrame(state: GameState, svc: GameServices) {
       audio.stopPrecisionDrone?.();
     }
 
+    // Track PB pace (within 10px of best)
+    if (!state.pbPaceActive && state.px > state.best - 10 && state.best > 0) {
+      state.pbPaceActive = true;
+    }
+
     // Track if we passed PB
     if (state.precisionBarActive && !state.passedPbThisThrow && hasPassedPb(state.px, state.best)) {
       state.passedPbThisThrow = true;
       audio.pbDing?.(); // Play PB ding
+      ui.onPbPassed?.();  // Trigger PB callout
     }
   } else if (!state.flying && !state.sliding && state.precisionBarActive) {
     // Deactivate when not flying/sliding
@@ -692,6 +864,42 @@ export function updateFrame(state: GameState, svc: GameServices) {
         state.failureFrame = 0;
         state.failureType = Math.random() > 0.5 ? 'tumble' : 'dive';
 
+        // === FAIL JUICE ===
+        if (!state.failJuiceActive) {
+          state.failJuiceActive = true;
+          state.failJuiceStartTime = nowMs;
+          state.failImpactX = state.px;
+          state.failImpactY = state.py;
+
+          // Hit-stop (brief freeze on impact)
+          state.slowMo = Math.max(state.slowMo, 0.95);
+
+          // Screen shake
+          state.screenShake = state.reduceFx ? 0 : 5;
+
+          // Fail impact sound (plays via failureSound below)
+          audio.failImpact?.();
+
+          // Haptic feedback
+          svc.triggerHaptic(60);
+
+          // Spawn dust particles at impact point
+          if (!state.reduceFx) {
+            for (let i = 0; i < 8; i++) {
+              const angle = (i / 8) * Math.PI + Math.PI;  // Upward arc
+              state.particles.push({
+                x: state.failImpactX,
+                y: H - 20,  // Ground level
+                vx: Math.cos(angle) * (1 + Math.random()),
+                vy: Math.sin(angle) * 2,
+                life: 1,
+                maxLife: 20 + Math.random() * 10,
+                color: '#8B7355',  // Dust brown
+              });
+            }
+          }
+        }
+
         // 10% chance of Wilhelm scream easter egg
         if (Math.random() < 0.1) {
           audio.wilhelmScream();
@@ -702,8 +910,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
         state.dist = Math.max(0, landedAt);
         ui.setFellOff(false);
 
-        // Combine risk multiplier with ring multiplier
-        const finalMultiplier = state.currentMultiplier * state.ringMultiplier;
+        // Combine risk multiplier with ring multiplier (capped to prevent runaway)
+        const rawMultiplier = state.currentMultiplier * state.ringMultiplier;
+        const finalMultiplier = Math.min(MAX_FINAL_MULTIPLIER, rawMultiplier);
         state.lastMultiplier = finalMultiplier;
         ui.setLastMultiplier(finalMultiplier);
 
@@ -726,6 +935,18 @@ export function updateFrame(state: GameState, svc: GameServices) {
           }
           if (state.ringsPassedThisThrow === 3) {
             state.stats.perfectRingThrows++;
+          }
+
+          // Dev-only: Log ring/multiplier distribution for tuning
+          if (import.meta.env.DEV) {
+            console.log('[DEV] Landing stats:', {
+              ringsPassedThisThrow: state.ringsPassedThisThrow,
+              ringMultiplier: state.ringMultiplier.toFixed(3),
+              riskMultiplier: state.currentMultiplier.toFixed(3),
+              finalMultiplier: finalMultiplier.toFixed(3),
+              basePoints,
+              scoreGained: scoreGained.toFixed(1),
+            });
           }
 
           state.totalScore += scoreGained;
@@ -864,6 +1085,13 @@ export function updateFrame(state: GameState, svc: GameServices) {
         }
         ui.setHotStreak(state.hotStreak, state.bestHotStreak);
 
+        // Session heat (builds across session, doesn't reset on fail)
+        if (!state.fellOff) {
+          state.sessionHeat = Math.min(100, state.sessionHeat + 5);
+        }
+        // ON FIRE mode triggers at streak 5+
+        state.onFireMode = state.hotStreak >= 5;
+
         // Check achievements
         checkAchievements(state, ui, audio, 3000);
 
@@ -872,6 +1100,15 @@ export function updateFrame(state: GameState, svc: GameServices) {
       }
 
       ui.setLastDist(state.fellOff ? null : state.dist);
+
+      // Trigger landing grade calculation
+      ui.onLanding?.(
+        state.px,
+        state.zenoTarget,
+        state.ringsPassedThisThrow,
+        Math.abs(state.vx),
+        state.fellOff
+      );
 
       state.tryCount++;
       if (state.tryCount % 5 === 0) nextWind(state);
@@ -909,6 +1146,75 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.failureFrame = 0;
       state.failureType = state.vx > 2 ? 'dive' : 'tumble';
 
+      // === FAIL JUICE (slide off edge) ===
+      if (!state.failJuiceActive) {
+        state.failJuiceActive = true;
+        state.failJuiceStartTime = nowMs;
+        state.failImpactX = state.px;
+        state.failImpactY = state.py;
+
+        // Hit-stop (brief freeze)
+        state.slowMo = Math.max(state.slowMo, 0.95);
+
+        // Screen shake
+        state.screenShake = state.reduceFx ? 0 : 5;
+
+        // Fail impact sound
+        audio.failImpact?.();
+
+        // Haptic feedback
+        svc.triggerHaptic(60);
+
+        // Spawn dust particles
+        if (!state.reduceFx) {
+          for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI + Math.PI;
+            state.particles.push({
+              x: state.failImpactX,
+              y: H - 20,
+              vx: Math.cos(angle) * (1 + Math.random()),
+              vy: Math.sin(angle) * 2,
+              life: 1,
+              maxLife: 20 + Math.random() * 10,
+              color: '#8B7355',
+            });
+          }
+        }
+      }
+
+      // === NEAR-MISS DETECTION ===
+      if (!state.nearMissActive) {
+        const distFromTarget = Math.abs(state.px - state.zenoTarget);
+        const distFromEdge = CLIFF_EDGE - state.px;  // How close to edge they got
+
+        // Determine intensity based on distance
+        let intensity: 'extreme' | 'close' | 'near' | null = null;
+        if (distFromEdge < 0.5 || distFromTarget < 2) {
+          intensity = 'extreme';  // < 0.5px from edge or < 2px from target
+          state.nearMissDistance = Math.min(distFromEdge, distFromTarget);
+        } else if (distFromEdge < 2 || distFromTarget < 5) {
+          intensity = 'close';
+          state.nearMissDistance = Math.min(distFromEdge, distFromTarget);
+        } else if (distFromEdge < 5 || distFromTarget < 10) {
+          intensity = 'near';
+          state.nearMissDistance = Math.min(distFromEdge, distFromTarget);
+        }
+
+        if (intensity) {
+          state.nearMissActive = true;
+          state.nearMissIntensity = intensity;
+          state.nearMissAnimationStart = nowMs;
+
+          // Trigger heartbeat for all players (no unlock required)
+          if (intensity === 'extreme' || intensity === 'close') {
+            audio.heartbeat(intensity === 'extreme' ? 1.0 : 0.7);
+          }
+
+          // Dramatic slowdown
+          state.slowMo = 0.9;  // Slow to 10% speed briefly
+        }
+      }
+
       // 10% chance of Wilhelm scream easter egg
       if (Math.random() < 0.1) {
         audio.wilhelmScream();
@@ -917,12 +1223,46 @@ export function updateFrame(state: GameState, svc: GameServices) {
       }
 
       ui.setLastDist(null);
+
+      // Trigger landing grade calculation (fell off = D grade)
+      ui.onLanding?.(
+        state.px,
+        state.zenoTarget,
+        state.ringsPassedThisThrow,
+        Math.abs(state.vx),
+        true  // fellOff = true
+      );
+
       state.tryCount++;
       if (state.tryCount % 5 === 0) nextWind(state);
 
       // Mark as landed to prevent new inputs
       state.landed = true;
       svc.scheduleReset(1200); // Slightly longer for failure animation
+    }
+  }
+
+  // === NEAR-MISS DRAMATIC PAUSE MANAGEMENT ===
+  const NEAR_MISS_PAUSE_DURATION = 1000;  // 1 second pause
+
+  // If near-miss is active, maintain slow-mo for dramatic effect
+  if (state.nearMissActive) {
+    const timeSinceNearMiss = nowMs - state.nearMissAnimationStart;
+
+    if (timeSinceNearMiss < NEAR_MISS_PAUSE_DURATION) {
+      // Maintain heavy slow-mo during pause
+      state.slowMo = Math.max(state.slowMo, 0.85);
+
+      // Screen pulse effect synced with heartbeat
+      if (timeSinceNearMiss < 200 || (timeSinceNearMiss > 400 && timeSinceNearMiss < 600)) {
+        // Pulse the screen slightly during heartbeats
+        if (!state.reduceFx) {
+          state.screenFlash = 0.1;
+        }
+      }
+    } else {
+      // Release dramatic pause, allow normal reset
+      state.nearMissActive = false;
     }
   }
 
