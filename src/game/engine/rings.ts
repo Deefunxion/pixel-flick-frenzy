@@ -69,6 +69,9 @@ export const RING_SPRITES = {
   easy: '/assets/rings/6.png',    // Green glow
   medium: '/assets/rings/5.png',  // Gold glow
   hard: '/assets/rings/4.png',    // Orange
+  // Upgraded sprites (shown when previous rings passed)
+  mediumUpgraded: '/assets/rings/7.png',  // Ring 2 after Ring 1 passed
+  hardUpgraded: '/assets/rings/8.png',    // Ring 3 after all 3 passed
 };
 
 // Ring multipliers (escalating)

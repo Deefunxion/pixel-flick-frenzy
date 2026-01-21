@@ -19,12 +19,18 @@ let spritesLoaded = false;
 const RING_DISPLAY_SIZE = 58;
 
 /**
- * Load all ring sprites
+ * Load all ring sprites (including upgraded variants)
  */
 export function loadRingSprites(): Promise<void> {
   if (spritesLoaded) return Promise.resolve();
 
-  const paths = [RING_SPRITES.easy, RING_SPRITES.medium, RING_SPRITES.hard];
+  const paths = [
+    RING_SPRITES.easy,
+    RING_SPRITES.medium,
+    RING_SPRITES.hard,
+    RING_SPRITES.mediumUpgraded,
+    RING_SPRITES.hardUpgraded,
+  ];
 
   const promises = paths.map(path => {
     return new Promise<void>((resolve, reject) => {
@@ -47,11 +53,25 @@ export function loadRingSprites(): Promise<void> {
 }
 
 /**
- * Get sprite for ring index
+ * Get sprite for ring index, considering upgrade based on rings passed
+ * - Ring 2 upgrades to 7.png when Ring 1 is passed
+ * - Ring 3 upgrades to 8.png when Ring 2 is passed
  */
-function getRingSprite(ringIndex: number): HTMLImageElement | null {
-  const paths = [RING_SPRITES.easy, RING_SPRITES.medium, RING_SPRITES.hard];
-  const path = paths[ringIndex];
+function getRingSprite(ringIndex: number, ringsPassedThisThrow: number): HTMLImageElement | null {
+  let path: string;
+
+  if (ringIndex === 1 && ringsPassedThisThrow >= 1) {
+    // Ring 2 upgrades when Ring 1 is passed
+    path = RING_SPRITES.mediumUpgraded;
+  } else if (ringIndex === 2 && ringsPassedThisThrow >= 2) {
+    // Ring 3 upgrades when Ring 2 is passed
+    path = RING_SPRITES.hardUpgraded;
+  } else {
+    // Default sprites
+    const paths = [RING_SPRITES.easy, RING_SPRITES.medium, RING_SPRITES.hard];
+    path = paths[ringIndex];
+  }
+
   return spriteCache.get(path) || null;
 }
 
@@ -62,7 +82,8 @@ export function drawRing(
   ctx: CanvasRenderingContext2D,
   ring: Ring,
   theme: Theme,
-  nowMs: number
+  nowMs: number,
+  ringsPassedThisThrow: number = 0
 ): void {
   const { x, y, passed, passedAt, ringIndex, color } = ring;
 
@@ -88,7 +109,7 @@ export function drawRing(
     }
   }
 
-  const sprite = getRingSprite(ringIndex);
+  const sprite = getRingSprite(ringIndex, ringsPassedThisThrow);
 
   if (sprite && sprite.complete) {
     // Draw sprite
@@ -183,10 +204,11 @@ export function drawRings(
   ctx: CanvasRenderingContext2D,
   rings: Ring[],
   theme: Theme,
-  nowMs: number
+  nowMs: number,
+  ringsPassedThisThrow: number = 0
 ): void {
   for (const ring of rings) {
-    drawRing(ctx, ring, theme, nowMs);
+    drawRing(ctx, ring, theme, nowMs, ringsPassedThisThrow);
   }
 }
 

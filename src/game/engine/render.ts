@@ -492,7 +492,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   for (const ring of state.rings) {
     updateRingPosition(ring, nowMs);
   }
-  drawRings(ctx, state.rings, COLORS, nowMs);
+  drawRings(ctx, state.rings, COLORS, nowMs, state.ringsPassedThisThrow);
 
   // Ring multiplier indicator removed - now shown in React ThrowScore HUD
 
@@ -917,7 +917,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   for (const ring of state.rings) {
     updateRingPosition(ring, nowMs);
   }
-  drawRings(ctx, state.rings, COLORS, nowMs);
+  drawRings(ctx, state.rings, COLORS, nowMs, state.ringsPassedThisThrow);
 
   // Ring multiplier indicator removed - now shown in React ThrowScore HUD
 

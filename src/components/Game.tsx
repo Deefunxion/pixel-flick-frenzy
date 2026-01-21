@@ -129,7 +129,7 @@ import {
 import { loadRingSprites } from '@/game/engine/ringsRender';
 import { loadDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 import { claimDailyTask } from '@/game/engine/dailyTasks';
-import { claimAchievement } from '@/game/engine/achievementClaim';
+import { claimAchievement, getUnclaimedCount } from '@/game/engine/achievementClaim';
 import { getClosestGoal } from '@/game/engine/achievementProgress';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
 import { captureError } from '@/lib/sentry';
@@ -1228,7 +1228,7 @@ const Game = () => {
 
               {/* Right: Stats */}
               <button
-                className={buttonClass}
+                className={`${buttonClass} relative`}
                 style={{
                   ...buttonStyle,
                   padding: '2px 4px',
@@ -1242,6 +1242,23 @@ const Game = () => {
                   className="h-8 object-contain"
                   style={{ filter: themeId === 'noir' ? 'invert(1)' : 'none' }}
                 />
+                {/* Unclaimed achievements badge */}
+                {(() => {
+                  const unclaimedCount = getUnclaimedCount(achievements, milestonesClaimed.achievements);
+                  if (unclaimedCount === 0) return null;
+                  return (
+                    <span
+                      className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold rounded-full"
+                      style={{
+                        backgroundColor: theme.highlight,
+                        color: theme.background,
+                        border: `1px solid ${theme.background}`,
+                      }}
+                    >
+                      {unclaimedCount > 99 ? '99+' : unclaimedCount}
+                    </span>
+                  );
+                })()}
               </button>
             </div>
           );
@@ -1346,24 +1363,24 @@ const Game = () => {
           </p>
         </div>
 
-        {/* Achievement popup */}
+        {/* Achievement popup - transparent with border */}
         {newAchievement && (() => {
-          const achievementName = newAchievement.split(' (+')[0];
+          const achievementName = newAchievement.split(' - ')[0]; // Updated for new toast format
           const achievement = Object.values(ACHIEVEMENTS).find(a => a.name === achievementName);
           return (
             <div
               className="fixed top-16 left-1/2 transform -translate-x-1/2 px-4 py-3 rounded-lg z-50 animate-in slide-in-from-top-4 duration-300"
               style={{
-                backgroundColor: '#1e3a5f',
-                border: '3px solid #F5A623',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.3), 0 0 15px rgba(245,166,35,0.4)',
+                backgroundColor: 'transparent',
+                border: `2px solid ${theme.highlight}`,
+                backdropFilter: 'blur(2px)',
               }}
             >
-              <p className="text-base font-bold text-center" style={{ color: '#2563eb' }}>
-                ★ {newAchievement}
+              <p className="text-base font-bold text-center" style={{ color: theme.highlight }}>
+                {newAchievement}
               </p>
               {achievement && (
-                <p className="text-sm text-center mt-1" style={{ color: '#f08c1d' }}>
+                <p className="text-sm text-center mt-1" style={{ color: theme.accent2 }}>
                   {achievement.desc}
                 </p>
               )}
