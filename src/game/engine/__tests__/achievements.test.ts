@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createInitialState } from '../state';
 import type { Stats } from '../types';
 import { ACHIEVEMENTS } from '../achievements';
+import { ACHIEVEMENT_TIER_REWARDS } from '@/game/constants';
 
 describe('Extended Stats Interface', () => {
   it('initializes new stats fields to default values', () => {
@@ -76,5 +77,16 @@ describe('ACHIEVEMENTS constant', () => {
   it('contains falls achievements', () => {
     expect(ACHIEVEMENTS['falls_1']).toBeDefined();
     expect(ACHIEVEMENTS['falls_100']).toBeDefined();
+  });
+});
+
+describe('Achievement Tier Rewards', () => {
+  it('defines rewards for all tiers', () => {
+    expect(ACHIEVEMENT_TIER_REWARDS.bronze).toBe(5);
+    expect(ACHIEVEMENT_TIER_REWARDS.silver).toBe(10);
+    expect(ACHIEVEMENT_TIER_REWARDS.gold).toBe(20);
+    expect(ACHIEVEMENT_TIER_REWARDS.platinum).toBe(30);
+    expect(ACHIEVEMENT_TIER_REWARDS.diamond).toBe(50);
+    expect(ACHIEVEMENT_TIER_REWARDS.mythic).toBe(100);
   });
 });

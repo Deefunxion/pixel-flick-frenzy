@@ -21,7 +21,7 @@ export const FREE_THROWS_CAP = 50;
 export const FREE_THROW_REGEN_MS = 216000; // 3.6 minutes = 216,000ms
 export const NEW_PLAYER_BONUS_THROWS = 100;
 
-// Achievement throw rewards (one-time)
+// Achievement throw rewards (one-time) - legacy IDs for backwards compatibility
 export const ACHIEVEMENT_REWARDS: Record<string, number> = {
   first_zeno: 10,      // First Step
   level_5: 20,         // Halfway There
@@ -30,6 +30,16 @@ export const ACHIEVEMENT_REWARDS: Record<string, number> = {
   ten_perfects: 20,    // Sharpshooter
   hundred_throws: 10,  // Dedicated
   hot_streak_5: 20,    // Hot Streak
+};
+
+// Achievement tier throw rewards (new system)
+export const ACHIEVEMENT_TIER_REWARDS: Record<string, number> = {
+  bronze: 5,
+  silver: 10,
+  gold: 20,
+  platinum: 30,
+  diamond: 50,
+  mythic: 100,
 };
 
 // Milestone throw rewards (one-time)
