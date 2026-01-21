@@ -6,6 +6,7 @@ import {
   generateScoreAchievements,
   AchievementTier,
 } from '../achievementGenerators';
+import type { Stats, GameState } from '../types';
 
 describe('Achievement Generators', () => {
   describe('generateDistanceAchievements', () => {
@@ -23,8 +24,8 @@ describe('Achievement Generators', () => {
 
     it('generates correct check function for dist_410', () => {
       const achievements = generateDistanceAchievements();
-      const mockStats = { totalThrows: 0 } as any;
-      const mockState = { best: 410 } as any;
+      const mockStats = { totalThrows: 0 } as Partial<Stats> as Stats;
+      const mockState = { best: 410 } as Partial<GameState> as GameState;
       expect(achievements['dist_410'].check(mockStats, mockState)).toBe(true);
       mockState.best = 409.9;
       expect(achievements['dist_410'].check(mockStats, mockState)).toBe(false);
