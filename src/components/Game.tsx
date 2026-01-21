@@ -1080,7 +1080,8 @@ const Game = () => {
 
         {/* Achievement popup */}
         {newAchievement && (() => {
-          const achievement = Object.values(ACHIEVEMENTS).find(a => a.name === newAchievement);
+          const achievementName = newAchievement.split(' (+')[0];
+          const achievement = Object.values(ACHIEVEMENTS).find(a => a.name === achievementName);
           return (
             <div
               className="fixed top-16 left-1/2 transform -translate-x-1/2 px-4 py-3 rounded-lg z-50 animate-in slide-in-from-top-4 duration-300"

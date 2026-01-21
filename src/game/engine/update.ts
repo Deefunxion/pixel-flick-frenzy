@@ -124,13 +124,16 @@ function checkAchievements(state: GameState, ui: GameUI, audio: GameAudio, clear
   for (const [id, achievement] of Object.entries(ACHIEVEMENTS)) {
     if (!state.achievements.has(id) && achievement.check(state.stats, state)) {
       state.achievements.add(id);
-      state.newAchievement = achievement.name;
-      ui.setAchievements(new Set(state.achievements));
-      ui.setNewAchievement(achievement.name);
-      saveJson('achievements', [...state.achievements]);
 
       // Award throws if reward exists for this achievement
       const reward = ACHIEVEMENT_REWARDS[id];
+      const rewardText = reward ? ` (+${reward} throws)` : '';
+      const toastMessage = `${achievement.name}${rewardText}`;
+
+      state.newAchievement = toastMessage;
+      ui.setAchievements(new Set(state.achievements));
+      ui.setNewAchievement(toastMessage);
+      saveJson('achievements', [...state.achievements]);
       if (reward) {
         // Check not already claimed (prevent double-dipping on reload)
         if (!state.milestonesClaimed.achievements.includes(id)) {
