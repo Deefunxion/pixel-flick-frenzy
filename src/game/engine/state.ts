@@ -152,6 +152,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
       totalRingsPassed: 0,
       maxRingsInThrow: 0,
       perfectRingThrows: 0,
+      maxAirTime: 0,
     }, 'omf_stats'),
     achievements: loadStringSet('achievements', 'omf_achievements'),
     newAchievement: null,

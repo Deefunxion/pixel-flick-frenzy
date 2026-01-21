@@ -45,6 +45,8 @@ export interface Stats {
   totalRingsPassed: number;
   maxRingsInThrow: number;      // Best single throw (0-3)
   perfectRingThrows: number;    // Throws where all 3 rings passed
+  // Air time tracking
+  maxAirTime: number;           // Best air time in seconds
 }
 
 // Throw/Energy System
