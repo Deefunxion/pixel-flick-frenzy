@@ -94,6 +94,7 @@ import { UI_ASSETS } from '@/game/engine/uiAssets';
 import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { TutorialOverlay } from './TutorialOverlay';
+import { NearMissOverlay } from './NearMissOverlay';
 import { ThrowCounter } from './ThrowCounter';
 import { PracticeModeOverlay } from './PracticeModeOverlay';
 import type { ThrowState, DailyTasks, MilestonesClaimed } from '@/game/engine/types';
@@ -264,6 +265,13 @@ const Game = () => {
   // Landing grade state
   const [showGrade, setShowGrade] = useState(false);
   const [lastGradeResult, setLastGradeResult] = useState<GradeResult | null>(null);
+
+  // Near-miss overlay state
+  const [nearMissState, setNearMissState] = useState<{
+    visible: boolean;
+    distance: number;
+    intensity: 'extreme' | 'close' | 'near';
+  } | null>(null);
 
   // Daily tasks state
   const [dailyTasks, setDailyTasks] = useState<DailyTasks>(() => {
@@ -598,6 +606,16 @@ const Game = () => {
       setTutorialPhase(s.tutorialState.phase);
       setTutorialActive(s.tutorialState.active);
       setTutorialTimeRemaining(s.tutorialState.timeRemaining);
+      // Sync near-miss state
+      if (s.nearMissActive && s.nearMissIntensity) {
+        setNearMissState({
+          visible: true,
+          distance: s.nearMissDistance,
+          intensity: s.nearMissIntensity,
+        });
+      } else if (!s.nearMissActive) {
+        setNearMissState(null);
+      }
     };
 
     const hudInterval = window.setInterval(syncHud, 120);
@@ -1200,6 +1218,15 @@ const Game = () => {
           visible={showGrade}
           onDismiss={() => setShowGrade(false)}
         />
+
+        {/* Near-Miss Overlay */}
+        {nearMissState && (
+          <NearMissOverlay
+            distance={nearMissState.distance}
+            intensity={nearMissState.intensity}
+            visible={nearMissState.visible}
+          />
+        )}
 
         {/* Stats overlay */}
         {showStats && (
