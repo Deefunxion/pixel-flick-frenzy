@@ -117,6 +117,7 @@ export type GameUI = {
   setDailyTasks: (tasks: DailyTasks) => void;
   onNewPersonalBest?: (totalScore: number, bestThrow: number) => void;
   onFall?: (totalFalls: number) => void;
+  onLanding?: (landingX: number, targetX: number, ringsPassedThisThrow: number, landingVelocity: number, fellOff: boolean) => void;
 };
 
 export type GameServices = {
@@ -966,6 +967,15 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
       ui.setLastDist(state.fellOff ? null : state.dist);
 
+      // Trigger landing grade calculation
+      ui.onLanding?.(
+        state.px,
+        state.zenoTarget,
+        state.ringsPassedThisThrow,
+        Math.abs(state.vx),
+        state.fellOff
+      );
+
       state.tryCount++;
       if (state.tryCount % 5 === 0) nextWind(state);
 
@@ -1046,6 +1056,16 @@ export function updateFrame(state: GameState, svc: GameServices) {
       }
 
       ui.setLastDist(null);
+
+      // Trigger landing grade calculation (fell off = D grade)
+      ui.onLanding?.(
+        state.px,
+        state.zenoTarget,
+        state.ringsPassedThisThrow,
+        Math.abs(state.vx),
+        true  // fellOff = true
+      );
+
       state.tryCount++;
       if (state.tryCount % 5 === 0) nextWind(state);
 

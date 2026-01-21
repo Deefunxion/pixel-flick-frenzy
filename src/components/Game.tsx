@@ -14,6 +14,8 @@ import { getTheme, DEFAULT_THEME_ID, THEME_IDS, type ThemeId } from '@/game/them
 import { useUser } from '@/contexts/UserContext';
 import { NicknameModal } from './NicknameModal';
 import { MultiplierLadder } from './MultiplierLadder';
+import { LandingGrade } from './LandingGrade';
+import { calculateGrade, type GradeResult } from '@/game/engine/gradeSystem';
 import {
   loadDailyStats,
   loadJson,
@@ -257,6 +259,10 @@ const Game = () => {
   // Haptics state (for Android vibration feedback)
   const [hapticsEnabled, setHapticsEnabledState] = useState(() => getHapticsEnabled());
 
+  // Landing grade state
+  const [showGrade, setShowGrade] = useState(false);
+  const [lastGradeResult, setLastGradeResult] = useState<GradeResult | null>(null);
+
   // Daily tasks state
   const [dailyTasks, setDailyTasks] = useState<DailyTasks>(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -407,6 +413,25 @@ const Game = () => {
     }
   }, []);
 
+  // Handle landing - calculate and display grade
+  const handleLanding = useCallback((
+    landingX: number,
+    targetX: number,
+    ringsPassedThisThrow: number,
+    landingVelocity: number,
+    fellOff: boolean
+  ) => {
+    const gradeResult = calculateGrade(
+      landingX,
+      targetX,
+      ringsPassedThisThrow,
+      landingVelocity,
+      fellOff
+    );
+    setLastGradeResult(gradeResult);
+    setShowGrade(true);
+  }, []);
+
   // Mobile UX: Detect if user is on mobile
   const isMobileRef = useRef(
     typeof window !== 'undefined' &&
@@ -506,6 +531,7 @@ const Game = () => {
       setHotStreak: (current, best) => setHotStreakState({ current, best }),
       onNewPersonalBest: handleNewPersonalBest,
       onFall: handleFall,
+      onLanding: handleLanding,
       setThrowState,
       setPracticeMode,
       setDailyTasks,
@@ -1162,6 +1188,13 @@ const Game = () => {
           currentMultiplier={combinedMultiplier}
           isFlying={hudFlying}
           reduceFx={reduceFx}
+        />
+
+        {/* Landing Grade */}
+        <LandingGrade
+          result={lastGradeResult}
+          visible={showGrade}
+          onDismiss={() => setShowGrade(false)}
         />
 
         {/* Stats overlay */}
