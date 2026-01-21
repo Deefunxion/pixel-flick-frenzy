@@ -96,6 +96,10 @@ export type GameAudio = {
   failImpact?: () => void;
   // Charge sweet spot
   sweetSpotClick?: () => void;
+  // Charge tension audio
+  startTensionDrone?: () => void;
+  updateTensionDrone?: (power01: number) => void;
+  stopTensionDrone?: () => void;
 };
 
 export type GameUI = {
@@ -213,6 +217,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.almostOverlayActive = false; // Hide "Almost!" overlay when starting new throw
     ui.setFellOff(false);
     audio.startCharge(0);
+    audio.startTensionDrone?.();  // Start low tension drone
   }
 
   // Charging update (power only) - bounces 0→100→0→100 continuously
@@ -224,6 +229,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
     const dt = cyclePosition <= 1 ? cyclePosition : 2 - cyclePosition;
     state.chargePower = dt;
     audio.updateCharge(dt);
+    audio.updateTensionDrone?.(dt);  // Update tension drone pitch/volume
 
     // Sweet spot detection (70-85% power)
     const SWEET_SPOT_MIN = 0.70;
@@ -284,6 +290,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
     }
 
     audio.stopCharge();
+    audio.stopTensionDrone?.();  // Release tension on launch
     audio.whoosh();
     audio.startFly?.(); // Start fly sound while in air
   }

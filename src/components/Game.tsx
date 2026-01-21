@@ -78,6 +78,10 @@ import {
   playStreakBreakSound,
   // Charge sweet spot
   playSweetSpotClick,
+  // Charge tension audio
+  startTensionDrone,
+  updateTensionDrone,
+  stopTensionDrone,
   type AudioRefs,
   type AudioSettings,
   type AudioState,
@@ -186,7 +190,7 @@ const Game = () => {
   const extraInputPadRef = useRef<HTMLDivElement>(null); // Extra touch area below stats
   const stateRef = useRef<GameState | null>(null);
   const pressedRef = useRef(false);
-  const audioRefs = useRef<AudioRefs>({ ctx: null, chargeOsc: null, chargeGain: null, edgeOsc: null, edgeGain: null, unlocked: false, stateChangeHandler: null });
+  const audioRefs = useRef<AudioRefs>({ ctx: null, chargeOsc: null, chargeGain: null, edgeOsc: null, edgeGain: null, tensionOsc: null, tensionGain: null, unlocked: false, stateChangeHandler: null });
   const animFrameRef = useRef<number>(0);
   const requestRef = useRef<number>();
   const previousTimeRef = useRef<number>();
@@ -636,6 +640,10 @@ const Game = () => {
       failImpact: () => playFailImpact(audioRefs.current, audioSettingsRef.current),
       // Charge sweet spot
       sweetSpotClick: () => playSweetSpotClick(audioRefs.current, audioSettingsRef.current),
+      // Charge tension audio
+      startTensionDrone: () => startTensionDrone(audioRefs.current, audioSettingsRef.current),
+      updateTensionDrone: (power01: number) => updateTensionDrone(audioRefs.current, audioSettingsRef.current, power01),
+      stopTensionDrone: () => stopTensionDrone(audioRefs.current),
     };
 
     const scheduleReset = (ms: number) => {

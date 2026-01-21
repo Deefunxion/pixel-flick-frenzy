@@ -46,6 +46,9 @@ export type AudioRefs = {
   chargeGain: GainNode | null;
   edgeOsc: OscillatorNode | null;
   edgeGain: GainNode | null;
+  // Tension drone for charge buildup
+  tensionOsc: OscillatorNode | null;
+  tensionGain: GainNode | null;
   unlocked: boolean; // Track if audio has been unlocked by user gesture
   stateChangeHandler: (() => void) | null; // For cleanup
 };
@@ -315,6 +318,69 @@ export function updateEdgeWarning(refs: AudioRefs, settings: AudioSettings, prox
   } else {
     stopEdgeWarning(refs);
   }
+}
+
+// ============================================
+// CHARGE TENSION DRONE
+// ============================================
+
+/**
+ * Start tension drone during charge - low rumble that builds
+ */
+export function startTensionDrone(refs: AudioRefs, settings: AudioSettings): void {
+  if (settings.muted || settings.volume <= 0 || refs.tensionOsc) return;
+
+  const ctx = ensureAudioContext(refs);
+
+  refs.tensionOsc = ctx.createOscillator();
+  refs.tensionGain = ctx.createGain();
+
+  refs.tensionOsc.type = 'sine';
+  refs.tensionOsc.frequency.setValueAtTime(80, ctx.currentTime);
+
+  refs.tensionGain.gain.setValueAtTime(0, ctx.currentTime);
+
+  refs.tensionOsc.connect(refs.tensionGain);
+  refs.tensionGain.connect(ctx.destination);
+
+  refs.tensionOsc.start();
+}
+
+/**
+ * Update tension drone pitch based on charge level
+ */
+export function updateTensionDrone(refs: AudioRefs, settings: AudioSettings, power01: number): void {
+  if (!refs.ctx || !refs.tensionOsc || !refs.tensionGain) return;
+  if (settings.muted || settings.volume <= 0) return;
+
+  // Pitch rises with charge: 80Hz → 200Hz
+  const freq = 80 + power01 * 120;
+  refs.tensionOsc.frequency.setValueAtTime(freq, refs.ctx.currentTime);
+
+  // Volume rises too: 0 → 0.1
+  const volume = power01 * 0.1 * settings.volume;
+  refs.tensionGain.gain.setValueAtTime(volume, refs.ctx.currentTime);
+}
+
+/**
+ * Stop/release tension drone on launch
+ */
+export function stopTensionDrone(refs: AudioRefs): void {
+  if (!refs.tensionOsc || !refs.tensionGain || !refs.ctx) return;
+
+  // Quick fade out
+  refs.tensionGain.gain.setValueAtTime(refs.tensionGain.gain.value, refs.ctx.currentTime);
+  refs.tensionGain.gain.exponentialRampToValueAtTime(0.001, refs.ctx.currentTime + 0.1);
+
+  const osc = refs.tensionOsc;
+  setTimeout(() => {
+    try {
+      osc.stop();
+    } catch { /* already stopped */ }
+  }, 100);
+
+  refs.tensionOsc = null;
+  refs.tensionGain = null;
 }
 
 export function playHeartbeat(refs: AudioRefs, settings: AudioSettings, intensity01: number) {
