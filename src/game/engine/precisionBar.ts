@@ -29,12 +29,12 @@ export function calculatePrecisionProgress(px: number): number {
 
 /**
  * Calculate time scale for progressive slow-motion.
- * 1.0 at 419, 0.1 at 420 (linear interpolation)
+ * 1.0 at 410, 0.2 at 420 (linear interpolation)
  */
 export function calculatePrecisionTimeScale(px: number): number {
   const progress = calculatePrecisionProgress(px);
-  // Linear: 1.0 → 0.1 as progress goes 0 → 1
-  return 1 - (progress * 0.9);
+  // Linear: 1.0 → 0.2 as progress goes 0 → 1
+  return 1 - (progress * 0.8);
 }
 
 /**
