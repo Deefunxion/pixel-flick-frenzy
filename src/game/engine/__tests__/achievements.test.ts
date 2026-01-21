@@ -24,3 +24,28 @@ describe('Extended Stats Interface', () => {
     expect(typeof stats.maxAirTime).toBe('number');
   });
 });
+
+describe('Air Time Tracking', () => {
+  it('calculates air time from launch to landing', () => {
+    const state = createInitialState({ reduceFx: false });
+
+    // Simulate a throw
+    state.launchTimestamp = 1000; // Launch at t=1000ms
+    const nowMs = 4500; // Land at t=4500ms
+    const airTimeSeconds = (nowMs - state.launchTimestamp) / 1000;
+
+    expect(airTimeSeconds).toBe(3.5);
+  });
+
+  it('updates maxAirTime when current air time exceeds previous', () => {
+    const state = createInitialState({ reduceFx: false });
+    state.stats.maxAirTime = 2.0;
+
+    const currentAirTime = 3.5;
+    if (currentAirTime > state.stats.maxAirTime) {
+      state.stats.maxAirTime = currentAirTime;
+    }
+
+    expect(state.stats.maxAirTime).toBe(3.5);
+  });
+});

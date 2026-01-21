@@ -1071,6 +1071,12 @@ export function updateFrame(state: GameState, svc: GameServices) {
         // Update daily tasks (only for successful landings)
         if (!state.fellOff) {
           const airTimeSeconds = (nowMs - state.launchTimestamp) / 1000;
+
+          // Track max air time for achievements
+          if (airTimeSeconds > state.stats.maxAirTime) {
+            state.stats.maxAirTime = airTimeSeconds;
+          }
+
           const reachedZeno = state.dist >= state.zenoTarget;
           updateDailyProgress(state, state.dist, reachedZeno, airTimeSeconds);
           ui.setDailyTasks({ ...state.dailyTasks });
