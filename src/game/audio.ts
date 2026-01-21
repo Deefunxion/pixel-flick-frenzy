@@ -735,13 +735,18 @@ export function playCloseCall(refs: AudioRefs, settings: AudioSettings): void {
 // ============================================
 
 /**
- * Play ring collection sound
+ * Play ring collection sound with stereo positioning
  * Each ring has a different pitch (escalating A major chord)
  * Ring 0: A4 (440Hz) - low
  * Ring 1: C#5 (554Hz) - medium
  * Ring 2: E5 (659Hz) - high + bonus flourish
+ *
+ * Enhanced with:
+ * - Escalating pitch multiplier (1.0x, 1.1x, 1.2x)
+ * - Stereo pan based on ring X position
+ * - Short coin sound for immediate feedback
  */
-export function playRingCollect(refs: AudioRefs, settings: AudioSettings, ringIndex: number): void {
+export function playRingCollect(refs: AudioRefs, settings: AudioSettings, ringIndex: number, ringX: number = 240): void {
   if (settings.muted || settings.volume <= 0) return;
 
   const ctx = ensureAudioContext(refs);
@@ -749,9 +754,34 @@ export function playRingCollect(refs: AudioRefs, settings: AudioSettings, ringIn
 
   // A major chord frequencies (escalating)
   const frequencies = [440, 554, 659]; // A4, C#5, E5
-  const freq = frequencies[Math.min(ringIndex, 2)];
+  const pitchMultiplier = 1 + ringIndex * 0.1; // 1.0, 1.1, 1.2
+  const freq = frequencies[Math.min(ringIndex, 2)] * pitchMultiplier;
 
-  // Main chime
+  // Stereo pan based on ring X position (0-480 canvas width, center at 240)
+  // Pan range: -1 (left) to +1 (right)
+  const pan = Math.max(-1, Math.min(1, (ringX - 240) / 240));
+
+  // === COIN SOUND (immediate feedback) ===
+  const coinOsc = ctx.createOscillator();
+  coinOsc.type = 'square';
+  coinOsc.frequency.setValueAtTime(1200, now);
+  coinOsc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+
+  const coinGain = ctx.createGain();
+  coinGain.gain.setValueAtTime(0.1 * settings.volume, now);
+  coinGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+  // Apply stereo pan to coin sound
+  const coinPanner = ctx.createStereoPanner();
+  coinPanner.pan.setValueAtTime(pan, now);
+
+  coinOsc.connect(coinGain);
+  coinGain.connect(coinPanner);
+  coinPanner.connect(ctx.destination);
+  coinOsc.start(now);
+  coinOsc.stop(now + 0.1);
+
+  // === MAIN CHIME ===
   const osc = ctx.createOscillator();
   osc.type = 'sine';
   osc.frequency.value = freq;
@@ -761,12 +791,17 @@ export function playRingCollect(refs: AudioRefs, settings: AudioSettings, ringIn
   gain.gain.linearRampToValueAtTime(0.15 * settings.volume, now + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
 
+  // Apply stereo pan to main chime
+  const panner = ctx.createStereoPanner();
+  panner.pan.setValueAtTime(pan, now);
+
   osc.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(panner);
+  panner.connect(ctx.destination);
   osc.start(now);
   osc.stop(now + 0.35);
 
-  // Shimmer overtone
+  // === SHIMMER OVERTONE ===
   const shimmer = ctx.createOscillator();
   shimmer.type = 'sine';
   shimmer.frequency.value = freq * 2; // Octave above
@@ -776,28 +811,37 @@ export function playRingCollect(refs: AudioRefs, settings: AudioSettings, ringIn
   shimmerGain.gain.linearRampToValueAtTime(0.06 * settings.volume, now + 0.02);
   shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
 
+  // Apply stereo pan to shimmer
+  const shimmerPanner = ctx.createStereoPanner();
+  shimmerPanner.pan.setValueAtTime(pan, now);
+
   shimmer.connect(shimmerGain);
-  shimmerGain.connect(ctx.destination);
+  shimmerGain.connect(shimmerPanner);
+  shimmerPanner.connect(ctx.destination);
   shimmer.start(now);
   shimmer.stop(now + 0.25);
 
-  // Extra flourish for completing all 3 rings (ring index 2)
+  // === BONUS FLOURISH for completing all 3 rings ===
   if (ringIndex === 2) {
-    setTimeout(() => {
-      const bonus = ctx.createOscillator();
-      bonus.type = 'sine';
-      bonus.frequency.value = 880; // A5 - octave above root
+    // Quick ascending arpeggio for 3rd ring
+    const flourishNotes = [784, 988, 1175]; // G5, B5, D6
+    flourishNotes.forEach((flourishFreq, i) => {
+      setTimeout(() => {
+        const bonus = ctx.createOscillator();
+        bonus.type = 'sine';
+        bonus.frequency.value = flourishFreq;
 
-      const bonusGain = ctx.createGain();
-      const bonusNow = ctx.currentTime;
-      bonusGain.gain.setValueAtTime(0, bonusNow);
-      bonusGain.gain.linearRampToValueAtTime(0.12 * settings.volume, bonusNow + 0.01);
-      bonusGain.gain.exponentialRampToValueAtTime(0.001, bonusNow + 0.4);
+        const bonusGain = ctx.createGain();
+        const bonusNow = ctx.currentTime;
+        bonusGain.gain.setValueAtTime(0, bonusNow);
+        bonusGain.gain.linearRampToValueAtTime(0.10 * settings.volume, bonusNow + 0.01);
+        bonusGain.gain.exponentialRampToValueAtTime(0.001, bonusNow + 0.15);
 
-      bonus.connect(bonusGain);
-      bonusGain.connect(ctx.destination);
-      bonus.start(bonusNow);
-      bonus.stop(bonusNow + 0.45);
-    }, 80);
+        bonus.connect(bonusGain);
+        bonusGain.connect(ctx.destination);
+        bonus.start(bonusNow);
+        bonus.stop(bonusNow + 0.2);
+      }, 80 + i * 50);
+    });
   }
 }

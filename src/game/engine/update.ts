@@ -91,7 +91,7 @@ export type GameAudio = {
   newRecordJingle?: () => void;
   closeCall?: () => void;
   // Ring sounds
-  ringCollect?: (ringIndex: number) => void;
+  ringCollect?: (ringIndex: number, ringX?: number) => void;
 };
 
 export type GameUI = {
@@ -412,8 +412,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
           });
         }
 
-        // Play collection sound
-        audio.ringCollect?.(ring.ringIndex);
+        // Play collection sound (pass ring X for stereo pan)
+        audio.ringCollect?.(ring.ringIndex, ring.x);
       }
     }
 
