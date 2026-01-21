@@ -20,8 +20,8 @@ import {
   drawStyledTrajectory,
   LINE_WEIGHTS,
 } from './sketchy';
-import { drawPrecisionBar, drawPrecisionFallOverlay } from './precisionRender';
-import { drawRings, drawRingMultiplierIndicator } from './ringsRender';
+import { drawPrecisionBar } from './precisionRender';
+import { drawRings } from './ringsRender';
 import { updateRingPosition } from './rings';
 import type { RingJuicePopup } from './ringJuice';
 // TODO: Import sprite-based effects when assets are ready
@@ -494,10 +494,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   }
   drawRings(ctx, state.rings, COLORS, nowMs);
 
-  // Ring multiplier indicator (shows during flight when rings collected)
-  if (state.flying && state.ringsPassedThisThrow > 0) {
-    drawRingMultiplierIndicator(ctx, state.ringMultiplier, state.ringsPassedThisThrow, COLORS);
-  }
+  // Ring multiplier indicator removed - now shown in React ThrowScore HUD
 
   // Ring juice effects
   renderEdgeGlow(ctx, state.edgeGlowIntensity, W, H);
@@ -804,11 +801,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   }
 
   // Achievement popup removed - now handled by React component in Game.tsx
-
-  // "Almost!" overlay - stays visible until next throw starts
-  if (state.almostOverlayActive) {
-    drawPrecisionFallOverlay(ctx, state, W, H, COLORS, nowMs);
-  }
+  // "Almost!" overlay removed - feedback now handled by React LandingGrade component
 }
 
 // Noir Ink theme renderer - high contrast, minimal, film noir aesthetic
@@ -926,10 +919,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   }
   drawRings(ctx, state.rings, COLORS, nowMs);
 
-  // Ring multiplier indicator (shows during flight when rings collected)
-  if (state.flying && state.ringsPassedThisThrow > 0) {
-    drawRingMultiplierIndicator(ctx, state.ringMultiplier, state.ringsPassedThisThrow, COLORS);
-  }
+  // Ring multiplier indicator removed - now shown in React ThrowScore HUD
 
   // Ring juice effects
   renderEdgeGlow(ctx, state.edgeGlowIntensity, W, H);
@@ -1148,11 +1138,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   }
 
   // Achievement popup removed - now handled by React component in Game.tsx
-
-  // "Almost!" overlay - stays visible until next throw starts
-  if (state.almostOverlayActive) {
-    drawPrecisionFallOverlay(ctx, state, W, H, COLORS, nowMs);
-  }
+  // "Almost!" overlay removed - feedback now handled by React LandingGrade component
 
   // Apply film grain and vignette (always on for Noir, intensity varies with reduceFx)
   const grainIntensity = state.reduceFx ? 0.3 : 0.6;

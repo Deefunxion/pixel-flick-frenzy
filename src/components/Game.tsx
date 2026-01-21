@@ -103,7 +103,7 @@ import { UI_ASSETS } from '@/game/engine/uiAssets';
 import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { TutorialOverlay } from './TutorialOverlay';
-import { NearMissOverlay } from './NearMissOverlay';
+// NearMissOverlay removed - feedback consolidated in LandingGrade
 import { StreakCounter } from './StreakCounter';
 import { StreakBreak } from './StreakBreak';
 import { MiniGoalHUD } from './MiniGoalHUD';
@@ -1305,14 +1305,7 @@ const Game = () => {
           onDismiss={() => setShowGrade(false)}
         />
 
-        {/* Near-Miss Overlay */}
-        {nearMissState && (
-          <NearMissOverlay
-            distance={nearMissState.distance}
-            intensity={nearMissState.intensity}
-            visible={nearMissState.visible}
-          />
-        )}
+        {/* Near-Miss Overlay removed - feedback consolidated in LandingGrade */}
 
         {/* Streak Counter HUD */}
         <StreakCounter
