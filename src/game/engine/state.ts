@@ -166,6 +166,14 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     recordZoneIntensity: 0,
     recordZonePeak: false,
     epicMomentTriggered: false,
+    // Page flip transition
+    pageFlip: {
+      active: false,
+      startMs: 0,
+      durationMs: 450,
+      snapshotReady: false,
+      direction: 'left',
+    },
     failureAnimating: false,
     failureFrame: 0,
     failureType: null,
@@ -262,6 +270,8 @@ export function resetPhysics(state: GameState) {
   state.slowMo = 0;
   state.zoom = 1;
   state.celebrationBurst = false;
+  // Reset page flip state (but don't clear - let animation complete)
+  // Note: pageFlip.active is cleared by the transition renderer on completion
   state.currentMultiplier = 1;
   state.perfectLanding = false;
   state.runTrail = [];

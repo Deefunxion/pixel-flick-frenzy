@@ -68,6 +68,9 @@ import {
   playPbDing,
   playNewRecord,
   playCloseCall,
+  // Page flip sounds
+  playPaperFlip,
+  playPaperSettle,
   // Ring sounds
   playRingCollect,
   // Fail juice
@@ -100,6 +103,7 @@ import { bufferInput, isBuffering } from '@/game/engine/inputBuffer';
 import { backgroundRenderer } from '@/game/engine/backgroundRenderer';
 import { noirBackgroundRenderer } from '@/game/engine/noirBackgroundRenderer';
 import { UI_ASSETS } from '@/game/engine/uiAssets';
+import { renderPageFlip } from '@/game/engine/pageFlipRender';
 import { StatsOverlay } from './StatsOverlay';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { TutorialOverlay } from './TutorialOverlay';
@@ -638,6 +642,9 @@ const Game = () => {
       pbDing: () => playPbDing(audioRefs.current, audioSettingsRef.current),
       newRecordJingle: () => playNewRecord(audioRefs.current, audioSettingsRef.current),
       closeCall: () => playCloseCall(audioRefs.current, audioSettingsRef.current),
+      // Page flip sounds
+      playPaperFlip: () => playPaperFlip(audioRefs.current, audioSettingsRef.current),
+      playPaperSettle: () => playPaperSettle(audioRefs.current, audioSettingsRef.current),
       // Ring sounds (with stereo pan based on ring X position)
       ringCollect: (ringIndex: number, ringX?: number) => playRingCollect(audioRefs.current, audioSettingsRef.current, ringIndex, ringX),
       // Fail juice
@@ -862,10 +869,29 @@ const Game = () => {
             triggerHaptic,
             scheduleReset,
             getDailyStats: () => dailyStatsRef.current,
+            canvas: canvasRef.current!,
           });
           // Pass devicePixelRatio for high-res rendering
           if (!errorRef.current) {
-            renderFrame(ctx, state, currentTheme, now, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
+            // Check if page flip transition should consume the frame
+            const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+            const pageFlipConsumed = renderPageFlip(
+              ctx,
+              state,
+              currentTheme,
+              now,
+              dpr,
+              () => {
+                // Page flip complete callback - reset physics
+                resetPhysics(state);
+                audio.playPaperSettle?.();
+              }
+            );
+
+            // Only render normal game frame if page flip didn't consume it
+            if (!pageFlipConsumed) {
+              renderFrame(ctx, state, currentTheme, now, dpr);
+            }
           }
         } catch (err: any) {
           // Derive phase from existing state properties for error context

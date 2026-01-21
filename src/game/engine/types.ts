@@ -182,6 +182,14 @@ export interface GameState {
   precisionTimeScale: number;
   precisionBarTriggeredThisThrow: boolean;
   passedPbThisThrow: boolean;
+  // Page flip transition state
+  pageFlip: {
+    active: boolean;
+    startMs: number;
+    durationMs: number;
+    snapshotReady: boolean;
+    direction: 'left' | 'right';
+  };
   pbPaceActive: boolean;  // On track to beat PB during flight
   // "Almost!" overlay - stays visible until next throw
   almostOverlayActive: boolean;

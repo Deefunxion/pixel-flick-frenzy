@@ -44,6 +44,7 @@ import {
   calculatePrecisionTimeScale,
   hasPassedPb,
 } from './precisionBar';
+import { startPageFlip } from './pageFlip';
 import {
   updateRingPosition,
   checkRingCollision,
@@ -101,6 +102,9 @@ export type GameAudio = {
   pbDing?: () => void;
   newRecordJingle?: () => void;
   closeCall?: () => void;
+  // Page flip audio
+  playPaperFlip?: () => void;
+  playPaperSettle?: () => void;
   // Ring sounds
   ringCollect?: (ringIndex: number, ringX?: number) => void;
   // Fail juice
@@ -148,6 +152,7 @@ export type GameServices = {
   triggerHaptic: (pattern?: number | number[]) => void;
   scheduleReset: (ms: number) => void;
   getDailyStats: () => DailyStats;
+  canvas?: HTMLCanvasElement;
 };
 
 function checkAchievements(state: GameState, ui: GameUI, audio: GameAudio, clearAfterMs: number) {
@@ -1120,7 +1125,25 @@ export function updateFrame(state: GameState, svc: GameServices) {
         state.almostOverlayDistance = state.zenoTarget - state.dist; // Freeze the distance
       }
 
-      svc.scheduleReset(400);
+      // Trigger page flip transition
+      if (svc.canvas && !state.reduceFx) {
+        // Delay page flip for failure to let animation play
+        if (state.fellOff) {
+          setTimeout(() => {
+            if (svc.canvas) {
+              startPageFlip(state, svc.canvas, performance.now());
+              audio.playPaperFlip?.();
+            }
+          }, 800);
+        } else {
+          // Immediate page flip for success
+          startPageFlip(state, svc.canvas, nowMs);
+          audio.playPaperFlip?.();
+        }
+      } else {
+        // Fallback for reduceFx mode - use existing reset timing
+        svc.scheduleReset(400);
+      }
     }
 
     if (state.px >= CLIFF_EDGE && state.sliding) {
@@ -1236,7 +1259,19 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
       // Mark as landed to prevent new inputs
       state.landed = true;
-      svc.scheduleReset(1200); // Slightly longer for failure animation
+
+      // Trigger page flip transition after failure animation
+      if (svc.canvas && !state.reduceFx) {
+        setTimeout(() => {
+          if (svc.canvas) {
+            startPageFlip(state, svc.canvas, performance.now());
+            audio.playPaperFlip?.();
+          }
+        }, 800); // Let failure animation play for 800ms first
+      } else {
+        // Fallback for reduceFx mode
+        svc.scheduleReset(1200);
+      }
     }
   }
 
