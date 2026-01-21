@@ -2,7 +2,75 @@
 
 All notable changes to One-More-Flick are documented in this file.
 
-## [Unreleased] - 2026-01-17
+## [Unreleased] - 2026-01-20
+
+### Added - Rings System
+- **3 moving ring targets per throw** with different motion patterns:
+  - Ring 1 (100-180px): Oscillation - large vertical swings (40-80px)
+  - Ring 2 (200-320px): Circular orbit - sweeping circles (35-70px radius)
+  - Ring 3 (330-400px): Lissajous figure-8 - complex 2D paths (50-90px × 35-65px)
+- **Escalating score multipliers**: 1.1x → 1.25x → 1.5x (total 2.0625x for all 3)
+- **Visual effects**: Glow, pulse animation, expand + fade on collection, particle burst
+- **Audio feedback**: Ascending A major chord (440Hz → 554Hz → 659Hz) with bonus flourish
+- **Ring stats tracking**: totalRingsPassed, maxRingsInThrow, perfectRingThrows
+- **4 ring achievements**:
+  - `ring_rookie`: Pass through your first ring
+  - `ring_collector`: Pass through 100 rings total
+  - `ring_master`: Pass through all 3 rings in one throw
+  - `triple_threat`: Get all 3 rings in 10 different throws
+- **New files**: `rings.ts`, `ringsRender.ts`
+
+### Added - Streak Achievements (Phase 1)
+- **4 new achievements** expanding the achievement system from 10 to 14:
+  - `hot_streak_5` (Hot Streak): Land 5 consecutive throws at 419+
+  - `hot_streak_10` (On Fire): Land 10 consecutive throws at 419+
+  - `untouchable` (Untouchable): Land 10 times without falling
+  - `marathon` (Marathon): Make 50 throws in one session
+- **New state tracking**:
+  - `sessionThrows`: Session-volatile counter (resets on page load)
+  - `landingsWithoutFall`: Streak counter (resets on fall)
+- **Phase 2 (Ring achievements) and Phase 3 (Challenge achievements)** planned for after respective systems are implemented
+
+### Added - Tutorial System
+- **Contextual Tutorials**: Speech bubble overlays that appear at key moments
+  - **Charge tutorial**: Triggers on first touch (hold to charge, drag to aim)
+  - **Air tutorial**: Triggers at flight apex (TAP = float, HOLD = brake)
+  - **Slide tutorial**: Triggers on landing (TAP = slide, HOLD = brake)
+  - 4-second duration with 5% game speed (very slow-mo for reading)
+  - Progress bar shows remaining time
+  - localStorage persistence (`tutorial_*_seen` keys)
+  - Replay button (?) to reset all tutorials
+
+### Added - Air Float Mechanic
+- **Tap = Float**: During flight, tapping now reduces gravity (50% for 0.3s) instead of braking
+  - Costs 5 stamina (scaled by edge proximity)
+  - Creates "floaty" feel for precision landing
+- **Hold = Brake**: Still reduces velocity for emergency stops
+
+### Added - Hand-Drawn UI Assets
+- **New UI asset system**: `src/game/engine/uiAssets.ts` with centralized asset paths
+- **Replaced text labels with hand-drawn images**:
+  - LAST, TARGET, VS (level) labels in hero row
+  - SCORE, BEST labels in secondary row
+  - Leaderboard button
+  - Stats button
+  - Help/Tutorial (?) button
+  - Volume on/off icons
+  - Control directions (TAP FLOAT | HOLD BRAKE)
+- **Noir theme support**: `filter: invert(1)` for dark mode compatibility
+- **Assets location**: `public/assets/ui/elements/transparent/`
+
+### Added - Precision Bar System
+- **Visual precision indicator**: Animated bar showing landing accuracy
+  - Appears after successful landing
+  - Color-coded segments (green → yellow → red)
+  - Particle effects on high precision
+- **Audio feedback**: Tension drone, close-call sounds, personal best ding
+- **New files**: `precisionBar.ts`, `precisionRender.ts`
+
+### Changed
+- **Top button row reorganized**: [Help + Sound] | [Leaderboard] | [Stats]
+- **Control tips**: Replaced complex HTML with single hand-drawn image
 
 ### Added - Page Flip Transition
 - **Notebook page turn effect** between throws:

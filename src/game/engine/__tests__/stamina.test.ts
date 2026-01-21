@@ -88,6 +88,9 @@ function createMockServices(pressed: boolean): GameServices {
       setDailyStats: () => {},
       setDailyChallenge: () => {},
       setHotStreak: () => {},
+      setThrowState: () => {},
+      setPracticeMode: () => {},
+      setDailyTasks: () => {},
       onNewPersonalBest: async () => {},
       onFall: async () => {},
     },
@@ -133,25 +136,26 @@ describe('Input Edge Detection', () => {
   });
 });
 
-describe('Air Float/Brake Integration', () => {
-  it('applies air float (gravity reduction) when tapped during flight', () => {
+describe('Air Thrust/Brake Integration', () => {
+  it('applies air thrust (vx boost) when tapped during flight', () => {
     const state = createInitialState({ reduceFx: false });
     state.flying = true;
     state.px = 300;
     state.vx = 5;
     state.vy = -3;
+    state.initialSpeed = 8; // Cap at 12 (1.5 * 8)
     state.stamina = 100;
     state.precisionInput.lastPressedState = false;
 
-    // First frame with press (tap) - now applies air float instead of brake
+    const initialVx = state.vx;
+
+    // First frame with press (tap) - applies air thrust
     updateFrame(state, createMockServices(true));
 
-    // Air float: gravityMultiplier = 0.5, floatDuration = 0.3
-    // Velocity NOT reduced (float doesn't brake), but gravity is halved
-    // Physics: gravity 0.15 * 0.5 * 0.55 = 0.04125 added to vy
-    expect(state.gravityMultiplier).toBe(0.5);
-    expect(state.floatDuration).toBeGreaterThan(0);
-    expect(state.stamina).toBe(95);
+    // Air thrust: vx += 0.5, then physics/wind applied
+    // vx after thrust: 5 + 0.5 = 5.5, then wind and movement applied
+    expect(state.vx).toBeGreaterThan(initialVx); // Should have increased
+    expect(state.stamina).toBe(95); // Cost 5 stamina
   });
 
   it('applies air brake hold when held during flight', () => {

@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { loadJson, loadStringSet } from '@/game/storage';
 import { ACHIEVEMENTS } from '@/game/engine/achievements';
+import { getClosestAchievements } from '@/game/engine/achievementProgress';
 import { getPersonalLeaderboard, getCurrentPrecision, getMaxAtPrecision } from '@/game/leaderboard';
 import { useUser } from '@/contexts/UserContext';
-import type { Stats } from '@/game/engine/types';
+import type { DailyTasks, Stats } from '@/game/engine/types';
 import type { Theme } from '@/game/themes';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
+import { DailyTasksPanel } from './DailyTasksPanel';
 
 type StatsOverlayProps = {
   theme: Theme;
   onClose: () => void;
+  dailyTasks: DailyTasks;
+  onClaimTask: (taskId: string) => void;
 };
 
 type HistoryEntry = {
@@ -19,10 +23,19 @@ type HistoryEntry = {
   score: number;
 };
 
-export function StatsOverlay({ theme, onClose }: StatsOverlayProps) {
+export function StatsOverlay({ theme, onClose, dailyTasks, onClaimTask }: StatsOverlayProps) {
   const { profile, firebaseUser, refreshProfile } = useUser();
   const [stats] = useState<Stats>(() =>
-    loadJson('stats', { totalThrows: 0, successfulLandings: 0, totalDistance: 0, perfectLandings: 0, maxMultiplier: 1 }, 'omf_stats')
+    loadJson('stats', {
+      totalThrows: 0,
+      successfulLandings: 0,
+      totalDistance: 0,
+      perfectLandings: 0,
+      maxMultiplier: 1,
+      totalRingsPassed: 0,
+      maxRingsInThrow: 0,
+      perfectRingThrows: 0,
+    }, 'omf_stats')
   );
   const [history] = useState<HistoryEntry[]>(() =>
     loadJson('history', [], 'omf_history')
@@ -33,6 +46,25 @@ export function StatsOverlay({ theme, onClose }: StatsOverlayProps) {
   const [linkError, setLinkError] = useState<string | null>(null);
   const precision = getCurrentPrecision();
   const maxDistance = getMaxAtPrecision(precision);
+
+  // Get closest achievements for guidance section
+  const [closestAchievements] = useState(() => {
+    // Minimal state reconstruction for progress calculation
+    const savedState = {
+      zenoLevel: Number(localStorage.getItem('omf_zeno_level') || '0'),
+      best: Number(localStorage.getItem('omf_best') || '0'),
+      totalScore: Number(localStorage.getItem('omf_total_score') || '0'),
+      hotStreak: Number(localStorage.getItem('omf_best_hot_streak') || '0'),
+      landingsWithoutFall: 0,  // Session-only, can't restore
+      sessionThrows: 0,        // Session-only, can't restore
+    };
+    return getClosestAchievements(
+      stats,
+      savedState as any,  // Partial GameState is fine for progress calc
+      achievements,
+      3
+    );
+  });
 
   const handleLinkGoogle = async () => {
     if (!firebaseUser) return;
@@ -140,6 +172,11 @@ export function StatsOverlay({ theme, onClose }: StatsOverlayProps) {
           )}
         </div>
 
+        {/* Daily Tasks */}
+        <div className="mb-4">
+          <DailyTasksPanel dailyTasks={dailyTasks} onClaimTask={onClaimTask} />
+        </div>
+
         {/* Main stats grid */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <StatBox label="Total Throws" value={stats.totalThrows} theme={theme} />
@@ -174,6 +211,43 @@ export function StatsOverlay({ theme, onClose }: StatsOverlayProps) {
             </div>
             <div className="text-xs mt-2 opacity-70" style={{ color: theme.uiText }}>
               Next decimal unlocks at: {maxDistance.toFixed(precision)}
+            </div>
+          </div>
+        )}
+
+        {/* Closest to Unlock - Achievement Guidance */}
+        {closestAchievements.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-sm font-bold mb-2" style={{ color: theme.accent2 }}>
+              Almost There!
+            </h3>
+            <div className="space-y-2">
+              {closestAchievements.map((ach) => (
+                <div
+                  key={ach.id}
+                  className="p-2 rounded text-xs"
+                  style={{ background: `${theme.highlight}15`, border: `1px solid ${theme.highlight}40` }}
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-bold" style={{ color: theme.highlight }}>{ach.name}</span>
+                    <span style={{ color: theme.uiText }}>
+                      {ach.current}/{ach.target}
+                    </span>
+                  </div>
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: `${theme.accent3}40` }}>
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${ach.progress * 100}%`,
+                        background: theme.highlight,
+                      }}
+                    />
+                  </div>
+                  <div className="mt-1 opacity-70" style={{ color: theme.uiText }}>
+                    {ach.desc}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

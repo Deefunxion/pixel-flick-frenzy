@@ -20,7 +20,8 @@ export const UI_ASSETS = {
   // Hand-drawn labels
   lastLabel: assetPath('/assets/ui/elements/transparent/last.png'),
   targetLabel: assetPath('/assets/ui/elements/transparent/target.png'),
-  vsLabel: assetPath('/assets/ui/elements/transparent/vs.png'),
+  lvLabel: assetPath('/assets/ui/elements/transparent/LV.png'),
   statsLabel: assetPath('/assets/ui/elements/transparent/stats.png'),
   helpIcon: assetPath('/assets/ui/elements/transparent/25.png'),
+  directions: assetPath('/assets/ui/elements/transparent/directions.png'),
 };

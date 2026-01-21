@@ -108,6 +108,40 @@ idle → coil → launch → fly → descend → touchdown → slide → win
 ### Path Aliases
 `@/` maps to `src/` (configured in vite.config.ts and tsconfig.json)
 
+### Tutorial System (`src/game/engine/tutorial.ts`)
+
+Contextual tutorials with slow-motion for new players:
+
+- **Trigger points**: Charge (first touch), Air (flight apex), Slide (landing)
+- **Duration**: 4 seconds at 5% game speed
+- **Persistence**: localStorage keys `tutorial_charge_seen`, `tutorial_air_seen`, `tutorial_slide_seen`
+- **UI Component**: `TutorialOverlay.tsx` - speech bubble with progress bar
+- **Reset**: `resetTutorialProgress()` clears all seen flags
+
+### UI Assets System (`src/game/engine/uiAssets.ts`)
+
+Centralized hand-drawn UI asset paths:
+
+```typescript
+import { UI_ASSETS } from '@/game/engine/uiAssets';
+// UI_ASSETS.leaderboard, UI_ASSETS.statsLabel, UI_ASSETS.helpIcon, etc.
+```
+
+**Asset location**: `public/assets/ui/elements/transparent/`
+
+**Processing new assets**: Use ImageMagick to remove white background:
+```bash
+convert input.png -fuzz 15% -transparent white output.png
+```
+
+### Precision Bar System (`src/game/engine/`)
+
+Visual feedback for landing accuracy:
+
+- **`precisionBar.ts`** - State management, animation timing
+- **`precisionRender.ts`** - Canvas rendering with segments and particles
+- **Integration**: Called from `update.ts` after successful landing
+
 ## Deployment
 
 **Production URL:** https://one-more-flick.web.app

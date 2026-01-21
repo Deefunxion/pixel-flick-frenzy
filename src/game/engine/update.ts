@@ -1,9 +1,11 @@
 import {
+  ACHIEVEMENT_REWARDS,
   BASE_GRAV,
   CHARGE_MS,
   CLIFF_EDGE,
   H,
   MAX_ANGLE,
+  MAX_FINAL_MULTIPLIER,
   MAX_POWER,
   MIN_ANGLE,
   MIN_POWER,
@@ -27,11 +29,11 @@ import { addToPersonalLeaderboard } from '@/game/leaderboard';
 import { updateDailyChallenge, type DailyChallenge } from '@/game/dailyChallenge';
 import { updateGoals, type SessionGoal } from '@/game/goals';
 import type { DailyStats } from '@/game/storage';
-import type { GameState } from './types';
+import type { DailyTasks, GameState, ThrowState } from './types';
 import { nextWind, spawnCelebration, spawnParticles } from './state';
 import { ACHIEVEMENTS } from './achievements';
 import { updateAnimator } from './animationController';
-import { applyAirBrake, applySlideControl, applyAirFloat, decayFloatEffect } from './precision';
+import { applyAirBrake, applySlideControl, applyAirThrust } from './precision';
 import { checkTutorialTrigger, startTutorial, updateTutorial } from './tutorial';
 import {
   shouldActivatePrecisionBar,
@@ -39,6 +41,29 @@ import {
   hasPassedPb,
 } from './precisionBar';
 import { startPageFlip } from './pageFlip';
+import {
+  updateRingPosition,
+  checkRingCollision,
+  RING_MULTIPLIERS,
+} from './rings';
+import {
+  createRingPopup,
+  updateRingPopups,
+  shouldMicroFreeze,
+  getEdgeGlowIntensity,
+  shouldScreenFlash,
+  MICRO_FREEZE_MS,
+} from './ringJuice';
+import { addPermanentThrows, consumeThrow } from './throws';
+import { checkMilestones, awardZenoLevelUp } from './milestones';
+import { updateDailyProgress } from './dailyTasks';
+import {
+  startBuffering,
+  stopBuffering,
+  isBuffering,
+  hasBufferedInput,
+  clearBuffer
+} from './inputBuffer';
 
 export type GameAudio = {
   startCharge: (power01: number) => void;
@@ -76,6 +101,16 @@ export type GameAudio = {
   // Page flip audio
   playPaperFlip?: () => void;
   playPaperSettle?: () => void;
+  // Ring sounds
+  ringCollect?: (ringIndex: number, ringX?: number) => void;
+  // Fail juice
+  failImpact?: () => void;
+  // Charge sweet spot
+  sweetSpotClick?: () => void;
+  // Charge tension audio
+  startTensionDrone?: () => void;
+  updateTensionDrone?: (power01: number) => void;
+  stopTensionDrone?: () => void;
 };
 
 export type GameUI = {
@@ -94,8 +129,14 @@ export type GameUI = {
   setDailyStats: (v: DailyStats) => void;
   setDailyChallenge: (v: DailyChallenge) => void;
   setHotStreak: (current: number, best: number) => void;
+  setThrowState: (state: ThrowState) => void;
+  setPracticeMode: (mode: boolean) => void;
+  setDailyTasks: (tasks: DailyTasks) => void;
   onNewPersonalBest?: (totalScore: number, bestThrow: number) => void;
   onFall?: (totalFalls: number) => void;
+  onLanding?: (landingX: number, targetX: number, ringsPassedThisThrow: number, landingVelocity: number, fellOff: boolean) => void;
+  onChargeStart?: () => void;
+  onPbPassed?: () => void;  // Triggered on successful landing that beats PB
 };
 
 export type GameServices = {
@@ -114,10 +155,26 @@ function checkAchievements(state: GameState, ui: GameUI, audio: GameAudio, clear
   for (const [id, achievement] of Object.entries(ACHIEVEMENTS)) {
     if (!state.achievements.has(id) && achievement.check(state.stats, state)) {
       state.achievements.add(id);
-      state.newAchievement = achievement.name;
+
+      // Award throws if reward exists for this achievement
+      const reward = ACHIEVEMENT_REWARDS[id];
+      const rewardText = reward ? ` (+${reward} throws)` : '';
+      const toastMessage = `${achievement.name}${rewardText}`;
+
+      state.newAchievement = toastMessage;
       ui.setAchievements(new Set(state.achievements));
-      ui.setNewAchievement(achievement.name);
+      ui.setNewAchievement(toastMessage);
       saveJson('achievements', [...state.achievements]);
+      if (reward) {
+        // Check not already claimed (prevent double-dipping on reload)
+        if (!state.milestonesClaimed.achievements.includes(id)) {
+          state.throwState = addPermanentThrows(state.throwState, reward);
+          state.milestonesClaimed.achievements.push(id);
+          saveJson('throw_state', state.throwState);
+          saveJson('milestones_claimed', state.milestonesClaimed);
+          ui.setThrowState(state.throwState);
+        }
+      }
 
       audio.tone(523, 0.1, 'sine', 0.06);
       setTimeout(() => audio.tone(659, 0.1, 'sine', 0.06), 80);
@@ -137,6 +194,24 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
   if (state.paused) return;
 
+  // Input buffering during slow-mo
+  // When entering significant slow-mo, start buffering
+  if (state.slowMo > 0.8 && !isBuffering()) {
+    startBuffering();
+  }
+
+  // Track if we should process buffered inputs
+  let processBufferedInputs = false;
+
+  // When exiting slow-mo, apply buffered inputs
+  if (state.slowMo < 0.3 && isBuffering()) {
+    processBufferedInputs = true;
+    stopBuffering();
+  }
+
+  // Calculate effective delta time (assuming 60fps = ~16.67ms per frame)
+  const effectiveDeltaMs = 16.67;
+
   // Track previous vy for tutorial apex detection
   const prevVy = state.vy;
 
@@ -151,6 +226,17 @@ export function updateFrame(state: GameState, svc: GameServices) {
     const wasPressed = state.precisionInput.lastPressedState;
     state.precisionInput.pressedThisFrame = pressed && !wasPressed;
     state.precisionInput.releasedThisFrame = !pressed && wasPressed;
+
+    // Apply buffered inputs from slow-mo period
+    if (processBufferedInputs) {
+      if (hasBufferedInput('tap') || hasBufferedInput('press')) {
+        state.precisionInput.pressedThisFrame = true;
+      }
+      if (hasBufferedInput('release')) {
+        state.precisionInput.releasedThisFrame = true;
+      }
+      clearBuffer();
+    }
 
     if (pressed) {
       state.precisionInput.holdDuration++;
@@ -168,8 +254,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
   if (!state.flying && !state.sliding && !state.landed && pressed && !state.charging) {
     state.charging = true;
     state.chargeStart = nowMs;
+    state.almostOverlayActive = false; // Hide "Almost!" overlay when starting new throw
     ui.setFellOff(false);
+    ui.onChargeStart?.(); // Dismiss grade overlay immediately
     audio.startCharge(0);
+    audio.startTensionDrone?.();  // Start low tension drone
   }
 
   // Charging update (power only) - bounces 0→100→0→100 continuously
@@ -181,17 +270,66 @@ export function updateFrame(state: GameState, svc: GameServices) {
     const dt = cyclePosition <= 1 ? cyclePosition : 2 - cyclePosition;
     state.chargePower = dt;
     audio.updateCharge(dt);
+    audio.updateTensionDrone?.(dt);  // Update tension drone pitch/volume
 
-    // Emit charging swirls every 4 frames
+    // Sweet spot detection (70-85% power)
+    const SWEET_SPOT_MIN = 0.70;
+    const SWEET_SPOT_MAX = 0.85;
+    const inSweetSpot = dt >= SWEET_SPOT_MIN && dt <= SWEET_SPOT_MAX;
+
+    // Track entry into sweet spot
+    if (inSweetSpot && !state.chargeSweetSpot) {
+      state.sweetSpotJustEntered = true;
+      audio.sweetSpotClick?.();  // Satisfying click
+
+      // Micro zoom
+      if (!state.reduceFx) {
+        state.zoom = 1.02;  // Subtle 2% zoom
+      }
+    } else {
+      state.sweetSpotJustEntered = false;
+    }
+
+    state.chargeSweetSpot = inSweetSpot;
+
+    // Build charge visual intensity
+    state.chargeGlowIntensity = dt;
+    state.chargeVignetteActive = dt > 0.5;
+
+    // Emit charging swirls every 4 frames (intensified with charge level)
     if (Math.floor(nowMs / 64) % 4 === 0 && state.particleSystem) {
       state.particleSystem.emitChargingSwirls(state.px, state.py, dt, theme.accent1);
+    }
+
+    // Extra particles at high charge
+    if (dt > 0.6 && !state.reduceFx && state.particleSystem) {
+      const particleChance = dt * 0.3;  // Up to 30% chance per frame
+      if (Math.random() < particleChance) {
+        state.particleSystem.emitChargingSwirls(state.px, state.py, dt, '#FFD700');
+      }
     }
   }
 
   // Launch
   if (state.charging && !pressed) {
     state.charging = false;
+
+    // Reset charge visual tension
+    state.chargeGlowIntensity = 0;
+    state.chargeVignetteActive = false;
+
+    // Consume a throw when launching
+    const { newState: newThrowState, practiceMode, throwConsumed } = consumeThrow(state.throwState);
+    state.throwState = newThrowState;
+    state.practiceMode = practiceMode;
+
+    // Save throw state
+    if (throwConsumed) {
+      saveJson('throw_state', state.throwState);
+    }
+
     state.flying = true;
+    state.launchTimestamp = nowMs; // Track launch time for air time calculation
     const power = MIN_POWER + (MAX_POWER - MIN_POWER) * state.chargePower;
     const angleRad = (state.angle * Math.PI) / 180;
     state.vx = power * Math.cos(angleRad);
@@ -209,6 +347,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
     }
 
     audio.stopCharge();
+    audio.stopTensionDrone?.();  // Release tension on launch
     audio.whoosh();
     audio.startFly?.(); // Start fly sound while in air
   }
@@ -249,11 +388,28 @@ export function updateFrame(state: GameState, svc: GameServices) {
     if (!state.landed && !precisionAppliedThisFrame) {
       const deltaTime = 1/60;
       if (state.precisionInput.pressedThisFrame) {
-        // Tap: gravity reduction (float)
-        const result = applyAirFloat(state);
+        // Tap: forward velocity boost (thrust)
+        const result = applyAirThrust(state);
         if (result.applied) {
           precisionAppliedThisFrame = true;
-          audio.airBrakeTap?.(); // TODO: add airFloat sound
+          state.lastControlAction = 'thrust';
+          state.controlActionTime = nowMs;
+          audio.airBrakeTap?.(); // TODO: add airThrust sound
+
+          // Visual feedback: backward exhaust particles for thrust
+          if (state.particleSystem && !state.reduceFx) {
+            state.particleSystem.emit('spark', {
+              x: state.px,
+              y: state.py,
+              count: 5,
+              baseAngle: Math.PI,  // Backward (exhaust)
+              spread: 0.5,
+              speed: 1.5,
+              life: 15,
+              color: '#FFA500',  // Orange
+              gravity: 0,
+            });
+          }
         } else if (result.denied) {
           audio.actionDenied?.();
           state.staminaDeniedShake = 8;
@@ -263,6 +419,26 @@ export function updateFrame(state: GameState, svc: GameServices) {
         const result = applyAirBrake(state, 'hold', deltaTime);
         if (result.applied) {
           precisionAppliedThisFrame = true;
+          // Track brake action once hold duration reaches threshold
+          if (state.precisionInput.holdDuration === 12) {  // ~200ms at 60fps
+            state.lastControlAction = 'brake';
+            state.controlActionTime = nowMs;
+
+            // Visual feedback: downward/backward particles for brake
+            if (state.particleSystem && !state.reduceFx) {
+              state.particleSystem.emit('spark', {
+                x: state.px,
+                y: state.py,
+                count: 3,
+                baseAngle: Math.PI,  // Backward
+                spread: 0.3,
+                speed: 2,
+                life: 12,
+                color: '#FF6B6B',
+                gravity: 0,
+              });
+            }
+          }
           // Play hold sound every 6 frames to avoid spam
           if (state.precisionInput.holdDuration % 6 === 0) {
             audio.airBrakeHold?.();
@@ -281,13 +457,12 @@ export function updateFrame(state: GameState, svc: GameServices) {
       }
     }
 
-    const effectiveGravity = BASE_GRAV * state.gravityMultiplier;
-    state.vy += effectiveGravity * effectiveTimeScale;
+    state.vy += BASE_GRAV * effectiveTimeScale;
 
-    // Decay float effect
-    decayFloatEffect(state, effectiveTimeScale / 60);
-
-    state.vx += state.wind * 0.3 * effectiveTimeScale;
+    // Wind effect with 50% resistance when air-braking (holding)
+    const isAirBraking = pressed && state.precisionInput.holdDuration > 0;
+    const windResistance = isAirBraking ? 0.5 : 1.0;
+    state.vx += state.wind * 0.3 * effectiveTimeScale * windResistance;
 
     state.px += state.vx * effectiveTimeScale;
     state.py += state.vy * effectiveTimeScale;
@@ -315,6 +490,67 @@ export function updateFrame(state: GameState, svc: GameServices) {
     if (state.runTrail.length === 0 || state.runTrail.length % 2 === 0) {
       state.runTrail.push({ x: state.px, y: state.py });
     }
+
+    // Ring collision: only check during flight
+    for (const ring of state.rings) {
+      if (!ring.passed && checkRingCollision(state.px, state.py, ring)) {
+        ring.passed = true;
+        ring.passedAt = nowMs;
+        state.ringsPassedThisThrow++;
+
+        // Apply escalating multiplier
+        state.ringMultiplier *= RING_MULTIPLIERS[ring.ringIndex];
+
+        // === RING JUICE ===
+
+        // 1. Create text popup
+        state.ringJuicePopups.push(
+          createRingPopup(ring.x, ring.y, state.ringsPassedThisThrow - 1, nowMs)
+        );
+
+        // 2. Micro-freeze (if not already in slow-mo)
+        if (shouldMicroFreeze(state.slowMo)) {
+          state.slowMo = Math.max(state.slowMo, 0.95);  // Brief pause
+          state.lastRingCollectTime = nowMs;
+        }
+
+        // 3. Screen flash (stronger on 3rd ring)
+        if (!state.reduceFx) {
+          if (shouldScreenFlash(state.ringsPassedThisThrow)) {
+            state.screenFlash = 0.5;  // Stronger flash for 3rd ring
+          } else {
+            state.screenFlash = 0.3;  // Normal flash
+          }
+        }
+
+        // 4. Edge glow (stored for render)
+        state.edgeGlowIntensity = getEdgeGlowIntensity(state.ringsPassedThisThrow);
+
+        // Spawn ring collection particles
+        for (let i = 0; i < 10; i++) {
+          const angle = (i / 10) * Math.PI * 2;
+          state.particles.push({
+            x: ring.x,
+            y: ring.y,
+            vx: Math.cos(angle) * 2,
+            vy: Math.sin(angle) * 2,
+            life: 1,
+            maxLife: 20,
+            color: ring.color,
+          });
+        }
+
+        // Play collection sound (pass ring X for stereo pan)
+        audio.ringCollect?.(ring.ringIndex, ring.x);
+      }
+    }
+
+    // Update ring juice popups (outside collision check, every frame)
+    state.ringJuicePopups = updateRingPopups(
+      state.ringJuicePopups,
+      effectiveDeltaMs,
+      nowMs
+    );
 
     if (state.py >= H - 20) {
       state.flying = false;
@@ -347,6 +583,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
     if (state.px < CLIFF_EDGE) {
       state.lastValidPx = state.px;
     }
+  }
+
+  // Ring system: ALWAYS update positions for smooth animation
+  for (const ring of state.rings) {
+    updateRingPosition(ring, nowMs);
   }
 
   // Age trail
@@ -487,56 +728,48 @@ export function updateFrame(state: GameState, svc: GameServices) {
     audio.stopEdgeWarning();
   }
 
-  // DEBUG: Log when px crosses thresholds (outside the flying/sliding check)
-  if (state.px >= 400 && state.px < 401) {
-    console.log('📍 px crossed 400:', { px: state.px.toFixed(2), flying: state.flying, sliding: state.sliding, landed: state.landed });
-  }
-
   // Precision bar activation check
   if ((state.flying || state.sliding) && !state.landed) {
     const shouldActivate = shouldActivatePrecisionBar(state);
 
-    // DEBUG: Log precision bar activation
-    if (state.px >= 405) {
-      console.log('PrecisionBar check:', {
-        px: state.px.toFixed(2),
-        flying: state.flying,
-        sliding: state.sliding,
-        landed: state.landed,
-        shouldActivate,
-        precisionBarActive: state.precisionBarActive
-      });
-    }
-
     if (shouldActivate && !state.precisionBarActive) {
-      console.log('🎯 ACTIVATING PRECISION BAR at px:', state.px.toFixed(2));
       state.precisionBarActive = true;
       state.precisionBarTriggeredThisThrow = true;
       audio.precisionDrone?.(); // Start tension drone
     }
 
-    // Apply precision time scale when active
-    if (state.precisionBarActive && state.px >= 410) {
+    // Apply precision time scale when active (only in 410-420 zone)
+    if (state.precisionBarActive && state.px >= 410 && state.px <= CLIFF_EDGE) {
       state.precisionTimeScale = calculatePrecisionTimeScale(state.px);
     }
 
-    // Track if we passed PB
+    // Deactivate slow-mo when past cliff edge (420) - player fell off
+    if (state.px > CLIFF_EDGE && state.precisionBarActive) {
+      state.precisionTimeScale = 1; // Reset to normal speed
+      state.precisionBarActive = false;
+      audio.stopPrecisionDrone?.();
+    }
+
+    // Track PB pace (within 10px of best)
+    if (!state.pbPaceActive && state.px > state.best - 10 && state.best > 0) {
+      state.pbPaceActive = true;
+    }
+
+    // Track if we passed PB position (for precision bar visual only, not notification)
     if (state.precisionBarActive && !state.passedPbThisThrow && hasPassedPb(state.px, state.best)) {
       state.passedPbThisThrow = true;
-      audio.pbDing?.(); // Play PB ding
+      audio.pbDing?.(); // Play PB ding sound
+      // NOTE: Notification moved to actual landing success path
     }
   } else if (!state.flying && !state.sliding && state.precisionBarActive) {
     // Deactivate when not flying/sliding
     state.precisionBarActive = false;
+    state.precisionTimeScale = 1; // Reset to normal speed
     audio.stopPrecisionDrone?.();
   }
 
-  if ((state.flying || state.sliding) && state.px > 50) {
-    const riskFactor = (state.px - 50) / (CLIFF_EDGE - 50);
-    state.currentMultiplier = 1 + riskFactor * riskFactor * 4;
-  } else {
-    state.currentMultiplier = 1;
-  }
+  // Risk multiplier removed - only ring multiplier affects score now
+  state.currentMultiplier = 1;
 
   // Sliding (scaled by effectiveTimeScale for slowmo support)
   if (state.sliding) {
@@ -616,15 +849,56 @@ export function updateFrame(state: GameState, svc: GameServices) {
         audio.stopSlide?.();
         audio.stopFly?.();
 
-        // Increment and sync total falls
-        state.totalFalls++;
-        saveNumber('total_falls', state.totalFalls);
-        ui.onFall?.(state.totalFalls);
+        // Increment and sync total falls - only if NOT in practice mode
+        if (!state.practiceMode) {
+          state.totalFalls++;
+          saveNumber('total_falls', state.totalFalls);
+          ui.onFall?.(state.totalFalls);
+
+          // Reset landingsWithoutFall streak on fall
+          state.landingsWithoutFall = 0;
+        }
 
         // Trigger comedic failure
         state.failureAnimating = true;
         state.failureFrame = 0;
         state.failureType = Math.random() > 0.5 ? 'tumble' : 'dive';
+
+        // === FAIL JUICE ===
+        if (!state.failJuiceActive) {
+          state.failJuiceActive = true;
+          state.failJuiceStartTime = nowMs;
+          state.failImpactX = state.px;
+          state.failImpactY = state.py;
+
+          // Hit-stop (brief freeze on impact)
+          state.slowMo = Math.max(state.slowMo, 0.95);
+
+          // Screen shake
+          state.screenShake = state.reduceFx ? 0 : 5;
+
+          // Fail impact sound (plays via failureSound below)
+          audio.failImpact?.();
+
+          // Haptic feedback
+          svc.triggerHaptic(60);
+
+          // Spawn dust particles at impact point
+          if (!state.reduceFx) {
+            for (let i = 0; i < 8; i++) {
+              const angle = (i / 8) * Math.PI + Math.PI;  // Upward arc
+              state.particles.push({
+                x: state.failImpactX,
+                y: H - 20,  // Ground level
+                vx: Math.cos(angle) * (1 + Math.random()),
+                vy: Math.sin(angle) * 2,
+                life: 1,
+                maxLife: 20 + Math.random() * 10,
+                color: '#8B7355',  // Dust brown
+              });
+            }
+          }
+        }
 
         // 10% chance of Wilhelm scream easter egg
         if (Math.random() < 0.1) {
@@ -636,7 +910,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
         state.dist = Math.max(0, landedAt);
         ui.setFellOff(false);
 
-        const finalMultiplier = state.currentMultiplier;
+        // Ring multiplier only (capped to prevent runaway)
+        const finalMultiplier = Math.min(MAX_FINAL_MULTIPLIER, state.ringMultiplier);
         state.lastMultiplier = finalMultiplier;
         ui.setLastMultiplier(finalMultiplier);
 
@@ -650,126 +925,201 @@ export function updateFrame(state: GameState, svc: GameServices) {
         const perfectBonus = isPerfect ? 10 : 0;
         const scoreGained = multipliedPoints + perfectBonus;
 
-        state.totalScore += scoreGained;
-        saveNumber('total_score', state.totalScore);
-        ui.setTotalScore(state.totalScore);
-
-        const today = todayLocalISODate();
-        const cachedDaily = svc.getDailyStats();
-        const daily = cachedDaily.date === today ? cachedDaily : loadDailyStats();
-        const nextDaily: DailyStats = {
-          date: today,
-          bestDistance: Math.max(daily.bestDistance, state.dist),
-          bestScore: Math.max(daily.bestScore, state.totalScore),
-        };
-        saveDailyStats(nextDaily);
-        ui.setDailyStats(nextDaily);
-
-        if (state.dist >= state.zenoTarget) {
-          state.zenoLevel++;
-          state.best = state.dist;
-          state.zenoTarget = (state.best + CLIFF_EDGE) / 2;
-
-          saveNumber('best', state.best);
-          saveNumber('zeno_target', state.zenoTarget);
-          saveNumber('zeno_level', state.zenoLevel);
-
-          ui.setBestScore(state.best);
-          ui.setZenoTarget(state.zenoTarget);
-          ui.setZenoLevel(state.zenoLevel);
-
-          state.screenFlash = state.reduceFx ? 0 : 1;
-          state.celebrationBurst = true;
-          spawnCelebration(state, state.px, state.py, [theme.accent2, theme.accent1, theme.highlight, theme.accent4, theme.accent3]);
-
-          audio.zenoJingle();
-          audio.stopEdgeWarning();
-
-          if (state.runTrail.length > 0) {
-            state.bestTrail = state.runTrail.slice(0, 240);
-            saveJson('best_trail', state.bestTrail);
+        // Only update stats/progression if NOT in practice mode
+        if (!state.practiceMode) {
+          // Track ring stats
+          state.stats.totalRingsPassed += state.ringsPassedThisThrow;
+          if (state.ringsPassedThisThrow > state.stats.maxRingsInThrow) {
+            state.stats.maxRingsInThrow = state.ringsPassedThisThrow;
+          }
+          if (state.ringsPassedThisThrow === 3) {
+            state.stats.perfectRingThrows++;
           }
 
-          ui.setSessionGoals((prev) => updateGoals(prev, { beat_target_once: 1 }));
-
-          // Sync new personal best to Firebase
-          ui.onNewPersonalBest?.(state.totalScore, state.best);
-        } else if (state.dist > state.best) {
-          state.best = state.dist;
-          saveNumber('best', state.best);
-          ui.setBestScore(state.best);
-          audio.tone(660, 0.08, 'sine', 0.08);
-
-          if (state.runTrail.length > 0) {
-            state.bestTrail = state.runTrail.slice(0, 240);
-            saveJson('best_trail', state.bestTrail);
+          // Dev-only: Log scoring for tuning
+          if (import.meta.env.DEV) {
+            console.log('[DEV] Landing stats:', {
+              ringsPassedThisThrow: state.ringsPassedThisThrow,
+              ringMultiplier: state.ringMultiplier.toFixed(3),
+              basePoints,
+              scoreGained: scoreGained.toFixed(1),
+            });
           }
 
-          // Sync new personal best to Firebase
-          ui.onNewPersonalBest?.(state.totalScore, state.best);
+          state.totalScore += scoreGained;
+          saveNumber('total_score', state.totalScore);
+          ui.setTotalScore(state.totalScore);
+
+          const today = todayLocalISODate();
+          const cachedDaily = svc.getDailyStats();
+          const daily = cachedDaily.date === today ? cachedDaily : loadDailyStats();
+          const nextDaily: DailyStats = {
+            date: today,
+            bestDistance: Math.max(daily.bestDistance, state.dist),
+            bestScore: Math.max(daily.bestScore, state.totalScore),
+          };
+          saveDailyStats(nextDaily);
+          ui.setDailyStats(nextDaily);
+        }
+
+        // Only update personal best/Zeno progression if NOT in practice mode
+        if (!state.practiceMode) {
+          if (state.dist >= state.zenoTarget) {
+            state.zenoLevel++;
+            state.best = state.dist;
+            state.zenoTarget = (state.best + CLIFF_EDGE) / 2;
+
+            saveNumber('best', state.best);
+            saveNumber('zeno_target', state.zenoTarget);
+            saveNumber('zeno_level', state.zenoLevel);
+
+            ui.setBestScore(state.best);
+            ui.setZenoTarget(state.zenoTarget);
+            ui.setZenoLevel(state.zenoLevel);
+
+            // Award Zeno level up bonus
+            awardZenoLevelUp(state, state.zenoLevel, ui);
+
+            state.screenFlash = state.reduceFx ? 0 : 1;
+            state.celebrationBurst = true;
+            spawnCelebration(state, state.px, state.py, [theme.accent2, theme.accent1, theme.highlight, theme.accent4, theme.accent3]);
+
+            audio.zenoJingle();
+            audio.stopEdgeWarning();
+
+            if (state.runTrail.length > 0) {
+              state.bestTrail = state.runTrail.slice(0, 240);
+              saveJson('best_trail', state.bestTrail);
+            }
+
+            ui.setSessionGoals((prev) => updateGoals(prev, { beat_target_once: 1 }));
+
+            // Sync new personal best to Firebase
+            ui.onNewPersonalBest?.(state.totalScore, state.best);
+            ui.onPbPassed?.();  // Show PB notification on actual successful landing
+          } else if (state.dist > state.best) {
+            state.best = state.dist;
+            saveNumber('best', state.best);
+            ui.setBestScore(state.best);
+            audio.tone(660, 0.08, 'sine', 0.08);
+
+            if (state.runTrail.length > 0) {
+              state.bestTrail = state.runTrail.slice(0, 240);
+              saveJson('best_trail', state.bestTrail);
+            }
+
+            // Sync new personal best to Firebase
+            ui.onNewPersonalBest?.(state.totalScore, state.best);
+            ui.onPbPassed?.();  // Show PB notification on actual successful landing
+          }
         }
 
         audio.stopEdgeWarning();
 
+        // Perfect landing audio feedback plays in all modes
         if (isPerfect) {
           setTimeout(() => audio.tone(1320, 0.05, 'sine', 0.06), 50);
           setTimeout(() => audio.tone(1760, 0.04, 'sine', 0.05), 100);
-          ui.setSessionGoals((prev) => updateGoals(prev, { two_perfects: 1 }));
         }
 
-        state.stats.successfulLandings++;
-        state.stats.totalDistance += state.dist;
-        if (isPerfect) state.stats.perfectLandings++;
-        if (finalMultiplier > state.stats.maxMultiplier) state.stats.maxMultiplier = finalMultiplier;
+        // Stats, streaks, goals, achievements - only if NOT in practice mode
+        if (!state.practiceMode) {
+          if (isPerfect) {
+            ui.setSessionGoals((prev) => updateGoals(prev, { two_perfects: 1 }));
+          }
 
-        // Play win sound on successful landing
+          state.stats.successfulLandings++;
+          state.stats.totalDistance += state.dist;
+          if (isPerfect) state.stats.perfectLandings++;
+          if (finalMultiplier > state.stats.maxMultiplier) state.stats.maxMultiplier = finalMultiplier;
+
+          // Increment landingsWithoutFall streak
+          state.landingsWithoutFall++;
+
+          ui.setSessionGoals((prev) => updateGoals(prev, { land_5_times: 1 }));
+          if (finalMultiplier >= 3) ui.setSessionGoals((prev) => updateGoals(prev, { reach_multiplier_3: 1 }));
+        }
+
+        // Play win sound on successful landing (plays in all modes)
         audio.win?.();
         audio.stopSlide?.();
-
-        ui.setSessionGoals((prev) => updateGoals(prev, { land_5_times: 1 }));
-        if (finalMultiplier >= 3) ui.setSessionGoals((prev) => updateGoals(prev, { reach_multiplier_3: 1 }));
       }
 
-      state.stats.totalThrows++;
-      saveJson('stats', state.stats);
-      ui.setStats({ ...state.stats });
+      // Stats tracking and progression - only if NOT in practice mode
+      if (!state.practiceMode) {
+        state.stats.totalThrows++;
+        state.sessionThrows++; // Session-volatile counter for Marathon achievement
+        saveJson('stats', state.stats);
+        ui.setStats({ ...state.stats });
 
-      // Update history tracking for stats page
-      updateTodayHistory(state.best, state.stats.totalThrows, state.totalScore);
+        // Update history tracking for stats page
+        updateTodayHistory(state.best, state.stats.totalThrows, state.totalScore);
 
-      // Add to personal leaderboard (only meaningful distances)
-      if (state.dist > 50) {
-        addToPersonalLeaderboard(state.dist);
-      }
-
-      // Update daily challenge
-      const updatedChallenge = updateDailyChallenge(state.dist, state.lastMultiplier, state.fellOff);
-      ui.setDailyChallenge(updatedChallenge);
-
-      // Hot streak tracking (consecutive 419+ throws)
-      if (!state.fellOff && state.dist >= 419) {
-        state.hotStreak++;
-        if (state.hotStreak > state.bestHotStreak) {
-          state.bestHotStreak = state.hotStreak;
-          saveNumber('best_hot_streak', state.bestHotStreak);
+        // Add to personal leaderboard (only meaningful distances)
+        if (state.dist > 50) {
+          addToPersonalLeaderboard(state.dist);
         }
-      } else {
-        state.hotStreak = 0;
+
+        // Update daily challenge
+        const updatedChallenge = updateDailyChallenge(state.dist, state.lastMultiplier, state.fellOff);
+        ui.setDailyChallenge(updatedChallenge);
+
+        // Update daily tasks (only for successful landings)
+        if (!state.fellOff) {
+          const airTimeSeconds = (nowMs - state.launchTimestamp) / 1000;
+          const reachedZeno = state.dist >= state.zenoTarget;
+          updateDailyProgress(state, state.dist, reachedZeno, airTimeSeconds);
+          ui.setDailyTasks({ ...state.dailyTasks });
+        }
+
+        // Hot streak tracking (consecutive 419+ throws)
+        if (!state.fellOff && state.dist >= 419) {
+          state.hotStreak++;
+          if (state.hotStreak > state.bestHotStreak) {
+            state.bestHotStreak = state.hotStreak;
+            saveNumber('best_hot_streak', state.bestHotStreak);
+          }
+        } else {
+          state.hotStreak = 0;
+        }
+        ui.setHotStreak(state.hotStreak, state.bestHotStreak);
+
+        // Session heat (builds across session, doesn't reset on fail)
+        if (!state.fellOff) {
+          state.sessionHeat = Math.min(100, state.sessionHeat + 5);
+        }
+        // ON FIRE mode triggers at streak 5+
+        state.onFireMode = state.hotStreak >= 5;
+
+        // Check achievements
+        checkAchievements(state, ui, audio, 3000);
+
+        // Check milestones
+        checkMilestones(state, ui);
       }
-      ui.setHotStreak(state.hotStreak, state.bestHotStreak);
-
-      // Session goals
-      // score_250 increments handled by caller by passing score deltas; keep minimal here
-
-      checkAchievements(state, ui, audio, 3000);
 
       ui.setLastDist(state.fellOff ? null : state.dist);
+
+      // Trigger landing grade calculation
+      ui.onLanding?.(
+        state.px,
+        state.zenoTarget,
+        state.ringsPassedThisThrow,
+        Math.abs(state.vx),
+        state.fellOff
+      );
 
       state.tryCount++;
       if (state.tryCount % 5 === 0) nextWind(state);
 
       // Mark as landed to prevent new inputs, then quick reset
       state.landed = true;
+
+      // Show "Almost!" overlay if didn't reach target
+      if (!state.fellOff && state.dist < state.zenoTarget) {
+        state.almostOverlayActive = true;
+        state.almostOverlayDistance = state.zenoTarget - state.dist; // Freeze the distance
+      }
 
       // Trigger page flip transition
       if (svc.canvas && !state.reduceFx) {
@@ -798,15 +1148,89 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.dist = 0;
       ui.setFellOff(true);
 
-      // Increment and sync total falls
-      state.totalFalls++;
-      saveNumber('total_falls', state.totalFalls);
-      ui.onFall?.(state.totalFalls);
+      // Increment and sync total falls - only if NOT in practice mode
+      if (!state.practiceMode) {
+        state.totalFalls++;
+        saveNumber('total_falls', state.totalFalls);
+        ui.onFall?.(state.totalFalls);
+
+        // Reset landingsWithoutFall streak on fall
+        state.landingsWithoutFall = 0;
+      }
 
       // Comedic failure
       state.failureAnimating = true;
       state.failureFrame = 0;
       state.failureType = state.vx > 2 ? 'dive' : 'tumble';
+
+      // === FAIL JUICE (slide off edge) ===
+      if (!state.failJuiceActive) {
+        state.failJuiceActive = true;
+        state.failJuiceStartTime = nowMs;
+        state.failImpactX = state.px;
+        state.failImpactY = state.py;
+
+        // Hit-stop (brief freeze)
+        state.slowMo = Math.max(state.slowMo, 0.95);
+
+        // Screen shake
+        state.screenShake = state.reduceFx ? 0 : 5;
+
+        // Fail impact sound
+        audio.failImpact?.();
+
+        // Haptic feedback
+        svc.triggerHaptic(60);
+
+        // Spawn dust particles
+        if (!state.reduceFx) {
+          for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI + Math.PI;
+            state.particles.push({
+              x: state.failImpactX,
+              y: H - 20,
+              vx: Math.cos(angle) * (1 + Math.random()),
+              vy: Math.sin(angle) * 2,
+              life: 1,
+              maxLife: 20 + Math.random() * 10,
+              color: '#8B7355',
+            });
+          }
+        }
+      }
+
+      // === NEAR-MISS DETECTION ===
+      if (!state.nearMissActive) {
+        const distFromTarget = Math.abs(state.px - state.zenoTarget);
+        const distFromEdge = CLIFF_EDGE - state.px;  // How close to edge they got
+
+        // Determine intensity based on distance
+        let intensity: 'extreme' | 'close' | 'near' | null = null;
+        if (distFromEdge < 0.5 || distFromTarget < 2) {
+          intensity = 'extreme';  // < 0.5px from edge or < 2px from target
+          state.nearMissDistance = Math.min(distFromEdge, distFromTarget);
+        } else if (distFromEdge < 2 || distFromTarget < 5) {
+          intensity = 'close';
+          state.nearMissDistance = Math.min(distFromEdge, distFromTarget);
+        } else if (distFromEdge < 5 || distFromTarget < 10) {
+          intensity = 'near';
+          state.nearMissDistance = Math.min(distFromEdge, distFromTarget);
+        }
+
+        if (intensity) {
+          state.nearMissActive = true;
+          state.nearMissIntensity = intensity;
+          state.nearMissAnimationStart = nowMs;
+
+          // Trigger heartbeat for all players (no unlock required)
+          if (intensity === 'extreme' || intensity === 'close') {
+            audio.heartbeat(intensity === 'extreme' ? 1.0 : 0.7);
+          }
+
+          // Dramatic slowdown
+          state.slowMo = 0.9;  // Slow to 10% speed briefly
+        }
+      }
 
       // 10% chance of Wilhelm scream easter egg
       if (Math.random() < 0.1) {
@@ -816,6 +1240,16 @@ export function updateFrame(state: GameState, svc: GameServices) {
       }
 
       ui.setLastDist(null);
+
+      // Trigger landing grade calculation (fell off = D grade)
+      ui.onLanding?.(
+        state.px,
+        state.zenoTarget,
+        state.ringsPassedThisThrow,
+        Math.abs(state.vx),
+        true  // fellOff = true
+      );
+
       state.tryCount++;
       if (state.tryCount % 5 === 0) nextWind(state);
 
@@ -834,6 +1268,30 @@ export function updateFrame(state: GameState, svc: GameServices) {
         // Fallback for reduceFx mode
         svc.scheduleReset(1200);
       }
+    }
+  }
+
+  // === NEAR-MISS DRAMATIC PAUSE MANAGEMENT ===
+  const NEAR_MISS_PAUSE_DURATION = 1000;  // 1 second pause
+
+  // If near-miss is active, maintain slow-mo for dramatic effect
+  if (state.nearMissActive) {
+    const timeSinceNearMiss = nowMs - state.nearMissAnimationStart;
+
+    if (timeSinceNearMiss < NEAR_MISS_PAUSE_DURATION) {
+      // Maintain heavy slow-mo during pause
+      state.slowMo = Math.max(state.slowMo, 0.85);
+
+      // Screen pulse effect synced with heartbeat
+      if (timeSinceNearMiss < 200 || (timeSinceNearMiss > 400 && timeSinceNearMiss < 600)) {
+        // Pulse the screen slightly during heartbeats
+        if (!state.reduceFx) {
+          state.screenFlash = 0.1;
+        }
+      }
+    } else {
+      // Release dramatic pause, allow normal reset
+      state.nearMissActive = false;
     }
   }
 

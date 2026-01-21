@@ -2,7 +2,7 @@
 
 import { assetLoader } from './assets';
 import { BACKGROUND_ASSETS, getAllBackgroundAssetPaths, ASSET_SCALE, ASSET_DIMENSIONS } from './backgroundAssets';
-import { BackgroundState, createBackgroundState, WindParticle, WindSwoosh } from './backgroundState';
+import { BackgroundState, createBackgroundState, WindParticle, WindSwoosh, BirdState } from './backgroundState';
 import { W, H, CLIFF_EDGE } from '../constants';
 
 /**
@@ -43,6 +43,7 @@ export class BackgroundRenderer {
     this.updateFlag(wind, deltaMs);
     this.updateWindParticles(wind, deltaMs);
     this.updateWindSwooshes(wind, deltaMs);
+    this.updateBirds(wind, deltaMs);
   }
 
   /** Render all background layers in order */
@@ -50,9 +51,16 @@ export class BackgroundRenderer {
     if (!this.ready) return;
 
     this.drawPaperBackground(ctx);
+    this.drawSun(ctx);           // Top right, behind clouds
     this.drawVoidLayers(ctx);
     this.drawClouds(ctx);
+    this.drawBirds(ctx);         // Animated birds in sky
+    this.drawBush(ctx);          // Background decoration
     this.drawTerrain(ctx);
+    this.drawTree(ctx);          // Golden ratio position
+    this.drawRocks(ctx);         // Foreground rocks
+    this.drawGrass(ctx);         // Scattered grass
+    this.drawSignpost(ctx);      // Near cliff edge
     this.drawWindSwooshes(ctx);
     this.drawWindParticles(ctx);
   }
@@ -325,6 +333,133 @@ export class BackgroundRenderer {
       ctx.drawImage(img, -size / 2, -size / 2, size, size);
       ctx.restore();
     }
+  }
+
+  // --- Decorative elements ---
+
+  private drawSun(ctx: CanvasRenderingContext2D): void {
+    const img = assetLoader.getImage(BACKGROUND_ASSETS.decor.sun);
+    if (!img) return;
+
+    const w = ASSET_DIMENSIONS.sun.width * ASSET_SCALE * 1.6;
+    const h = ASSET_DIMENSIONS.sun.height * ASSET_SCALE * 1.6;
+
+    // Top right corner
+    ctx.drawImage(img, W - w - 15, 8, w, h);
+  }
+
+  private updateBirds(wind: number, deltaMs: number): void {
+    if (!this.state.birds) return;
+    const deltaS = deltaMs / 1000;
+
+    for (const bird of this.state.birds) {
+      // Move with wind influence
+      bird.x += (bird.vx + wind * 0.3) * deltaS * 60;
+
+      // Gentle vertical bobbing
+      bird.wingPhase += deltaS * 4;
+      bird.y = bird.baseY + Math.sin(bird.wingPhase) * 3;
+
+      // Wrap around screen
+      if (bird.x > W + 30) bird.x = -30;
+      if (bird.x < -30) bird.x = W + 30;
+    }
+  }
+
+  private drawBirds(ctx: CanvasRenderingContext2D): void {
+    if (!this.state.birds) return;
+    for (const bird of this.state.birds) {
+      const assetKey = bird.asset === 'dove' ? 'birdDove' : 'birdSeagull';
+      const img = assetLoader.getImage(BACKGROUND_ASSETS.decor[assetKey]);
+      if (!img) continue;
+
+      const w = ASSET_DIMENSIONS.bird.width * ASSET_SCALE * 1.6;
+      const h = ASSET_DIMENSIONS.bird.height * ASSET_SCALE * 1.6;
+
+      // Flip based on movement direction
+      ctx.save();
+      if (bird.vx < 0) {
+        ctx.scale(-1, 1);
+        ctx.drawImage(img, -bird.x - w / 2, bird.y - h / 2, w, h);
+      } else {
+        ctx.drawImage(img, bird.x - w / 2, bird.y - h / 2, w, h);
+      }
+      ctx.restore();
+    }
+  }
+
+  private drawTree(ctx: CanvasRenderingContext2D): void {
+    const img = assetLoader.getImage(BACKGROUND_ASSETS.decor.tree);
+    if (!img) return;
+
+    const w = ASSET_DIMENSIONS.tree.width * ASSET_SCALE * 1.4;
+    const h = ASSET_DIMENSIONS.tree.height * ASSET_SCALE * 1.4;
+    const groundY = H - 20;
+
+    // Golden ratio position (~61.8% from left)
+    const goldenX = W * 0.618;
+    ctx.drawImage(img, goldenX - w / 2, groundY - h + 5, w, h);
+  }
+
+  private drawBush(ctx: CanvasRenderingContext2D): void {
+    const img = assetLoader.getImage(BACKGROUND_ASSETS.decor.bush);
+    if (!img) return;
+
+    const w = ASSET_DIMENSIONS.bush.width * ASSET_SCALE * 1.4;
+    const h = ASSET_DIMENSIONS.bush.height * ASSET_SCALE * 1.4;
+    const groundY = H - 20;
+
+    // Background position (behind main action)
+    ctx.globalAlpha = 0.7;  // Slightly faded for depth
+    ctx.drawImage(img, 180, groundY - h + 8, w, h);
+    ctx.globalAlpha = 1;
+  }
+
+  private drawRocks(ctx: CanvasRenderingContext2D): void {
+    const img = assetLoader.getImage(BACKGROUND_ASSETS.decor.rocks);
+    if (!img) return;
+
+    const w = ASSET_DIMENSIONS.rocks.width * ASSET_SCALE * 1.2;
+    const h = ASSET_DIMENSIONS.rocks.height * ASSET_SCALE * 1.2;
+    const groundY = H - 20;
+
+    // Foreground position
+    ctx.drawImage(img, 60, groundY - h + 10, w, h);
+  }
+
+  private drawGrass(ctx: CanvasRenderingContext2D): void {
+    const img = assetLoader.getImage(BACKGROUND_ASSETS.decor.grass);
+    if (!img) return;
+
+    const w = ASSET_DIMENSIONS.grass.width * ASSET_SCALE * 1.0;
+    const h = ASSET_DIMENSIONS.grass.height * ASSET_SCALE * 1.0;
+    const groundY = H - 20;
+
+    // Scatter 3 grass tufts
+    const positions = [
+      { x: 100, alpha: 0.8 },
+      { x: 220, alpha: 0.6 },
+      { x: 340, alpha: 0.7 },
+    ];
+
+    for (const pos of positions) {
+      ctx.globalAlpha = pos.alpha;
+      ctx.drawImage(img, pos.x, groundY - h + 8, w, h);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  private drawSignpost(ctx: CanvasRenderingContext2D): void {
+    const img = assetLoader.getImage(BACKGROUND_ASSETS.decor.signpost);
+    if (!img) return;
+
+    const w = ASSET_DIMENSIONS.signpost.width * ASSET_SCALE * 1.2;
+    const h = ASSET_DIMENSIONS.signpost.height * ASSET_SCALE * 1.2;
+    const groundY = H - 20;
+
+    // Near edge, ~50px behind cliff (CLIFF_EDGE = 420)
+    const signX = CLIFF_EDGE - 50;
+    ctx.drawImage(img, signX - w / 2, groundY - h + 5, w, h);
   }
 }
 

@@ -27,6 +27,13 @@ import {
   playNewRecordFile,
   playCloseCallFile,
 } from './audioFiles';
+import {
+  canPlaySound,
+  registerSoundPlay,
+  getRandomPitch,
+  getDecayedVolume,
+  SOUND_COOLDOWNS,
+} from './engine/audioPool';
 
 export type AudioSettings = {
   muted: boolean;
@@ -39,6 +46,9 @@ export type AudioRefs = {
   chargeGain: GainNode | null;
   edgeOsc: OscillatorNode | null;
   edgeGain: GainNode | null;
+  // Tension drone for charge buildup
+  tensionOsc: OscillatorNode | null;
+  tensionGain: GainNode | null;
   unlocked: boolean; // Track if audio has been unlocked by user gesture
   stateChangeHandler: (() => void) | null; // For cleanup
 };
@@ -308,6 +318,69 @@ export function updateEdgeWarning(refs: AudioRefs, settings: AudioSettings, prox
   } else {
     stopEdgeWarning(refs);
   }
+}
+
+// ============================================
+// CHARGE TENSION DRONE
+// ============================================
+
+/**
+ * Start tension drone during charge - low rumble that builds
+ */
+export function startTensionDrone(refs: AudioRefs, settings: AudioSettings): void {
+  if (settings.muted || settings.volume <= 0 || refs.tensionOsc) return;
+
+  const ctx = ensureAudioContext(refs);
+
+  refs.tensionOsc = ctx.createOscillator();
+  refs.tensionGain = ctx.createGain();
+
+  refs.tensionOsc.type = 'sine';
+  refs.tensionOsc.frequency.setValueAtTime(80, ctx.currentTime);
+
+  refs.tensionGain.gain.setValueAtTime(0, ctx.currentTime);
+
+  refs.tensionOsc.connect(refs.tensionGain);
+  refs.tensionGain.connect(ctx.destination);
+
+  refs.tensionOsc.start();
+}
+
+/**
+ * Update tension drone pitch based on charge level
+ */
+export function updateTensionDrone(refs: AudioRefs, settings: AudioSettings, power01: number): void {
+  if (!refs.ctx || !refs.tensionOsc || !refs.tensionGain) return;
+  if (settings.muted || settings.volume <= 0) return;
+
+  // Pitch rises with charge: 80Hz → 200Hz
+  const freq = 80 + power01 * 120;
+  refs.tensionOsc.frequency.setValueAtTime(freq, refs.ctx.currentTime);
+
+  // Volume rises too: 0 → 0.1
+  const volume = power01 * 0.1 * settings.volume;
+  refs.tensionGain.gain.setValueAtTime(volume, refs.ctx.currentTime);
+}
+
+/**
+ * Stop/release tension drone on launch
+ */
+export function stopTensionDrone(refs: AudioRefs): void {
+  if (!refs.tensionOsc || !refs.tensionGain || !refs.ctx) return;
+
+  // Quick fade out
+  refs.tensionGain.gain.setValueAtTime(refs.tensionGain.gain.value, refs.ctx.currentTime);
+  refs.tensionGain.gain.exponentialRampToValueAtTime(0.001, refs.ctx.currentTime + 0.1);
+
+  const osc = refs.tensionOsc;
+  setTimeout(() => {
+    try {
+      osc.stop();
+    } catch { /* already stopped */ }
+  }, 100);
+
+  refs.tensionOsc = null;
+  refs.tensionGain = null;
 }
 
 export function playHeartbeat(refs: AudioRefs, settings: AudioSettings, intensity01: number) {
@@ -728,6 +801,333 @@ export function playCloseCall(refs: AudioRefs, settings: AudioSettings): void {
     playTone(refs, settings, 554, 0.15, 'sine', 0.05);
     playTone(refs, settings, 659, 0.15, 'sine', 0.05);
   }
+}
+
+// ============================================
+// FAIL JUICE SOUNDS
+// ============================================
+
+/**
+ * Play fail impact sound - dull thud for any fall
+ * Provides satisfying feedback even for failures
+ */
+export function playFailImpact(refs: AudioRefs, settings: AudioSettings): void {
+  if (settings.muted || settings.volume <= 0) return;
+
+  // Anti-fatigue: Check cooldown
+  if (!canPlaySound('failImpact', SOUND_COOLDOWNS.impact)) return;
+  registerSoundPlay('failImpact');
+
+  const ctx = ensureAudioContext(refs);
+  const now = ctx.currentTime;
+
+  // Apply session volume decay
+  const effectiveVolume = getDecayedVolume(settings.volume);
+
+  // Low frequency thud
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(80, now);
+  osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.25 * effectiveVolume, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.start(now);
+  osc.stop(now + 0.25);
+
+  // Add a subtle crunch/debris sound
+  const noise = ctx.createOscillator();
+  noise.type = 'sawtooth';
+  noise.frequency.setValueAtTime(100, now);
+  noise.frequency.exponentialRampToValueAtTime(30, now + 0.1);
+
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.setValueAtTime(0.08 * effectiveVolume, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+  noise.connect(noiseGain);
+  noiseGain.connect(ctx.destination);
+
+  noise.start(now);
+  noise.stop(now + 0.15);
+}
+
+// ============================================
+// RING COLLECTION SOUNDS
+// ============================================
+
+/**
+ * Play ring collection sound with stereo positioning
+ * Each ring has a different pitch (escalating A major chord)
+ * Ring 0: A4 (440Hz) - low
+ * Ring 1: C#5 (554Hz) - medium
+ * Ring 2: E5 (659Hz) - high + bonus flourish
+ *
+ * Enhanced with:
+ * - Escalating pitch multiplier (1.0x, 1.1x, 1.2x)
+ * - Stereo pan based on ring X position
+ * - Short coin sound for immediate feedback
+ */
+export function playRingCollect(refs: AudioRefs, settings: AudioSettings, ringIndex: number, ringX: number = 240): void {
+  if (settings.muted || settings.volume <= 0) return;
+
+  // Anti-fatigue: Check cooldown before playing
+  if (!canPlaySound('ringCollect', SOUND_COOLDOWNS.ringCollect)) return;
+  registerSoundPlay('ringCollect');
+
+  const ctx = ensureAudioContext(refs);
+  const now = ctx.currentTime;
+
+  // A major chord frequencies (escalating)
+  const frequencies = [440, 554, 659]; // A4, C#5, E5
+  const pitchMultiplier = 1 + ringIndex * 0.1; // 1.0, 1.1, 1.2
+  // Anti-fatigue: Add random pitch variation (+/- 10%)
+  const randomPitch = getRandomPitch(0.1);
+  const freq = frequencies[Math.min(ringIndex, 2)] * pitchMultiplier * randomPitch;
+
+  // Anti-fatigue: Apply session volume decay
+  const effectiveVolume = getDecayedVolume(settings.volume);
+
+  // Stereo pan based on ring X position (0-480 canvas width, center at 240)
+  // Pan range: -1 (left) to +1 (right)
+  const pan = Math.max(-1, Math.min(1, (ringX - 240) / 240));
+
+  // === COIN SOUND (immediate feedback) ===
+  const coinOsc = ctx.createOscillator();
+  coinOsc.type = 'square';
+  coinOsc.frequency.setValueAtTime(1200 * randomPitch, now);
+  coinOsc.frequency.exponentialRampToValueAtTime(800 * randomPitch, now + 0.05);
+
+  const coinGain = ctx.createGain();
+  coinGain.gain.setValueAtTime(0.1 * effectiveVolume, now);
+  coinGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+  // Apply stereo pan to coin sound
+  const coinPanner = ctx.createStereoPanner();
+  coinPanner.pan.setValueAtTime(pan, now);
+
+  coinOsc.connect(coinGain);
+  coinGain.connect(coinPanner);
+  coinPanner.connect(ctx.destination);
+  coinOsc.start(now);
+  coinOsc.stop(now + 0.1);
+
+  // === MAIN CHIME ===
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.15 * effectiveVolume, now + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+  // Apply stereo pan to main chime
+  const panner = ctx.createStereoPanner();
+  panner.pan.setValueAtTime(pan, now);
+
+  osc.connect(gain);
+  gain.connect(panner);
+  panner.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.35);
+
+  // === SHIMMER OVERTONE ===
+  const shimmer = ctx.createOscillator();
+  shimmer.type = 'sine';
+  shimmer.frequency.value = freq * 2; // Octave above
+
+  const shimmerGain = ctx.createGain();
+  shimmerGain.gain.setValueAtTime(0, now);
+  shimmerGain.gain.linearRampToValueAtTime(0.06 * effectiveVolume, now + 0.02);
+  shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+  // Apply stereo pan to shimmer
+  const shimmerPanner = ctx.createStereoPanner();
+  shimmerPanner.pan.setValueAtTime(pan, now);
+
+  shimmer.connect(shimmerGain);
+  shimmerGain.connect(shimmerPanner);
+  shimmerPanner.connect(ctx.destination);
+  shimmer.start(now);
+  shimmer.stop(now + 0.25);
+
+  // === BONUS FLOURISH for completing all 3 rings ===
+  if (ringIndex === 2) {
+    // Quick ascending arpeggio for 3rd ring
+    const flourishNotes = [784, 988, 1175]; // G5, B5, D6
+    flourishNotes.forEach((flourishFreq, i) => {
+      setTimeout(() => {
+        const bonus = ctx.createOscillator();
+        bonus.type = 'sine';
+        bonus.frequency.value = flourishFreq;
+
+        const bonusGain = ctx.createGain();
+        const bonusNow = ctx.currentTime;
+        bonusGain.gain.setValueAtTime(0, bonusNow);
+        bonusGain.gain.linearRampToValueAtTime(0.10 * effectiveVolume, bonusNow + 0.01);
+        bonusGain.gain.exponentialRampToValueAtTime(0.001, bonusNow + 0.15);
+
+        bonus.connect(bonusGain);
+        bonusGain.connect(ctx.destination);
+        bonus.start(bonusNow);
+        bonus.stop(bonusNow + 0.2);
+      }, 80 + i * 50);
+    });
+  }
+}
+
+/**
+ * Play sound for landing grade
+ */
+export function playGradeSound(refs: AudioRefs, settings: AudioSettings, grade: 'S' | 'A' | 'B' | 'C' | 'D'): void {
+  if (settings.muted || !refs.ctx) return;
+
+  const ctx = refs.ctx;
+  const vol = settings.volume;
+
+  switch (grade) {
+    case 'S':
+      // Fanfare - quick ascending arpeggio
+      playGradeFanfare(ctx, vol);
+      break;
+    case 'A':
+      // Success chime (3 notes)
+      playTone(refs, settings, 659, 0.15, 'sine', 0.3);
+      setTimeout(() => playTone(refs, settings, 784, 0.15, 'sine', 0.3), 100);
+      setTimeout(() => playTone(refs, settings, 988, 0.2, 'sine', 0.4), 200);
+      break;
+    case 'B':
+      // Soft ding
+      playTone(refs, settings, 523, 0.2, 'sine', 0.25);
+      break;
+    case 'C':
+      // Neutral
+      playTone(refs, settings, 392, 0.15, 'triangle', 0.15);
+      break;
+    case 'D':
+      // Womp womp (descending)
+      playGradeWomp(ctx, vol);
+      break;
+  }
+}
+
+function playGradeFanfare(ctx: AudioContext, volume: number): void {
+  // Quick ascending fanfare: C5, E5, G5, C6
+  const notes = [523, 659, 784, 1047];
+  const now = ctx.currentTime;
+
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const startTime = now + i * 0.1;
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, startTime);
+
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(0.35 * volume, startTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.25);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + 0.3);
+  });
+}
+
+function playGradeWomp(ctx: AudioContext, volume: number): void {
+  const now = ctx.currentTime;
+
+  // First womp
+  const osc1 = ctx.createOscillator();
+  const gain1 = ctx.createGain();
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(200, now);
+
+  gain1.gain.setValueAtTime(0.2 * volume, now);
+  gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+  osc1.connect(gain1);
+  gain1.connect(ctx.destination);
+  osc1.start(now);
+  osc1.stop(now + 0.35);
+
+  // Second womp (descending)
+  const osc2 = ctx.createOscillator();
+  const gain2 = ctx.createGain();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(180, now + 0.2);
+  osc2.frequency.exponentialRampToValueAtTime(80, now + 0.6);
+
+  gain2.gain.setValueAtTime(0.2 * volume, now + 0.2);
+  gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+  osc2.connect(gain2);
+  gain2.connect(ctx.destination);
+  osc2.start(now + 0.2);
+  osc2.stop(now + 0.65);
+}
+
+/**
+ * Sweet spot click - satisfying feedback when entering optimal charge range
+ */
+export function playSweetSpotClick(refs: AudioRefs, settings: AudioSettings): void {
+  if (settings.muted || !refs.ctx) return;
+
+  const ctx = refs.ctx;
+  const vol = settings.volume;
+  const now = ctx.currentTime;
+
+  // Short, satisfying click
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(1000, now);
+
+  gain.gain.setValueAtTime(0.2 * vol, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.start(now);
+  osc.stop(now + 0.06);
+}
+
+/**
+ * Streak break sound (sad fizzle)
+ * Plays when a hot streak is lost
+ */
+export function playStreakBreakSound(refs: AudioRefs, settings: AudioSettings): void {
+  if (settings.muted || !refs.ctx) return;
+
+  const ctx = refs.ctx;
+  const vol = settings.volume;
+  const now = ctx.currentTime;
+
+  // Fizzle sound - descending sawtooth
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(200, now);
+  osc.frequency.exponentialRampToValueAtTime(50, now + 0.5);
+
+  gain.gain.setValueAtTime(0.15 * vol, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.start(now);
+  osc.stop(now + 0.55);
 }
 
 // ============================================

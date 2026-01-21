@@ -20,9 +20,182 @@ import {
   drawStyledTrajectory,
   LINE_WEIGHTS,
 } from './sketchy';
-import { drawPrecisionBar, drawPrecisionFallOverlay } from './precisionRender';
+import { drawPrecisionBar } from './precisionRender';
+import { drawRings } from './ringsRender';
+import { updateRingPosition } from './rings';
+import type { RingJuicePopup } from './ringJuice';
 // TODO: Import sprite-based effects when assets are ready
 // import { renderParticles } from './particles';
+
+/**
+ * Render ring juice text popups ("Nice!", "Great!", "PERFECT!")
+ * Popups rise and fade out over time
+ */
+function renderRingPopups(
+  ctx: CanvasRenderingContext2D,
+  popups: RingJuicePopup[]
+): void {
+  for (const popup of popups) {
+    ctx.save();
+    ctx.globalAlpha = popup.opacity;
+    ctx.translate(popup.x, popup.y);
+    ctx.scale(popup.scale, popup.scale);
+
+    // Draw text with outline for visibility
+    ctx.font = 'bold 14px "Comic Sans MS", cursive';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Outline
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.strokeText(popup.text, 0, 0);
+
+    // Fill
+    ctx.fillStyle = popup.color;
+    ctx.fillText(popup.text, 0, 0);
+
+    ctx.restore();
+  }
+}
+
+/**
+ * Render screen edge glow effect when collecting multiple rings
+ */
+function renderEdgeGlow(
+  ctx: CanvasRenderingContext2D,
+  intensity: number,
+  width: number,
+  height: number
+): void {
+  if (intensity <= 0) return;
+
+  // Left edge glow
+  const leftGradient = ctx.createLinearGradient(0, 0, 30, 0);
+  leftGradient.addColorStop(0, `rgba(255, 215, 0, ${intensity * 0.4})`);
+  leftGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+  ctx.fillStyle = leftGradient;
+  ctx.fillRect(0, 0, 30, height);
+
+  // Right edge glow (mirror)
+  const rightGradient = ctx.createLinearGradient(width - 30, 0, width, 0);
+  rightGradient.addColorStop(0, 'rgba(255, 215, 0, 0)');
+  rightGradient.addColorStop(1, `rgba(255, 215, 0, ${intensity * 0.4})`);
+  ctx.fillStyle = rightGradient;
+  ctx.fillRect(width - 30, 0, 30, height);
+}
+
+/**
+ * Render near-miss spotlight effect
+ * Vignette that focuses on target zone
+ */
+function renderNearMissSpotlight(
+  ctx: CanvasRenderingContext2D,
+  targetX: number,
+  intensity: 'extreme' | 'close' | 'near',
+  width: number,
+  height: number
+): void {
+  // Dimming intensity based on near-miss level
+  const dimAmount = intensity === 'extreme' ? 0.5
+                  : intensity === 'close' ? 0.4
+                  : 0.3;
+
+  // Create radial gradient centered on target
+  const gradient = ctx.createRadialGradient(
+    targetX, height - 30,  // Target position
+    30,  // Inner radius (bright)
+    targetX, height - 30,
+    150  // Outer radius (dim)
+  );
+
+  gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');  // Clear center
+  gradient.addColorStop(0.5, `rgba(0, 0, 0, ${dimAmount * 0.5})`);
+  gradient.addColorStop(1, `rgba(0, 0, 0, ${dimAmount})`);
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  // Glow on target zone
+  const glowGradient = ctx.createRadialGradient(
+    targetX, height - 30, 0,
+    targetX, height - 30, 40
+  );
+  glowGradient.addColorStop(0, 'rgba(255, 215, 0, 0.3)');
+  glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+
+  ctx.fillStyle = glowGradient;
+  ctx.fillRect(targetX - 50, height - 80, 100, 100);
+}
+
+/**
+ * Render ON FIRE mode visual effects
+ * - Warm background tint
+ * - Flame border effect at bottom of screen
+ */
+function renderOnFireMode(
+  ctx: CanvasRenderingContext2D,
+  intensity: number,  // sessionHeat / 100
+  width: number,
+  height: number
+): void {
+  // Warm background tint
+  ctx.fillStyle = `rgba(255, 100, 0, ${intensity * 0.1})`;
+  ctx.fillRect(0, 0, width, height);
+
+  // Flame border effect at bottom
+  const gradient = ctx.createLinearGradient(0, height, 0, height - 40);
+  gradient.addColorStop(0, `rgba(255, 100, 0, ${intensity * 0.3})`);
+  gradient.addColorStop(1, 'rgba(255, 100, 0, 0)');
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, height - 40, width, 40);
+}
+
+/**
+ * Render charge glow around Zeno during charge
+ */
+function renderChargeGlow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  intensity: number  // 0-1
+): void {
+  if (intensity <= 0) return;
+
+  const radius = 30 + intensity * 20;  // 30-50px
+  const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+
+  gradient.addColorStop(0, `rgba(255, 215, 0, ${intensity * 0.4})`);
+  gradient.addColorStop(0.5, `rgba(255, 165, 0, ${intensity * 0.2})`);
+  gradient.addColorStop(1, 'rgba(255, 165, 0, 0)');
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+}
+
+/**
+ * Render charge vignette (subtle edge darkening)
+ */
+function renderChargeVignette(
+  ctx: CanvasRenderingContext2D,
+  intensity: number,
+  width: number,
+  height: number
+): void {
+  if (intensity <= 0) return;
+
+  const gradient = ctx.createRadialGradient(
+    width / 2, height / 2, height * 0.3,
+    width / 2, height / 2, height * 0.8
+  );
+
+  gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  gradient.addColorStop(1, `rgba(0, 0, 0, ${intensity * 0.3})`);
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+}
 
 /**
  * Draw stamina bar above Zeno.
@@ -64,11 +237,14 @@ function drawStaminaBar(
     fillColor = '#eab308'; // Yellow
   } else {
     fillColor = '#ef4444'; // Red
-    // Flash effect when low
-    if (Math.floor(nowMs / 200) % 2 === 0) {
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
-      ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
-    }
+    // Pulsing glow effect when low (Task 8.2)
+    const pulseAlpha = 0.3 + Math.sin(nowMs * 0.01) * 0.2;
+    ctx.save();
+    ctx.shadowColor = 'red';
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = `rgba(239, 68, 68, ${pulseAlpha})`;
+    ctx.fillRect(barX - 3, barY - 3, barWidth + 6, barHeight + 6);
+    ctx.restore();
   }
 
   // Fill bar
@@ -158,6 +334,16 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   // Update and render background layers using asset-based renderer
   backgroundRenderer.update(state.wind, nowMs);
   backgroundRenderer.render(ctx);
+
+  // Practice mode badge
+  if (state.practiceMode) {
+    ctx.save();
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255, 165, 0, 0.8)';
+    ctx.fillText('PRACTICE MODE', W / 2, 12);
+    ctx.restore();
+  }
 
   // Best marker - animated flag using background assets
   if (state.best > 0 && state.best <= CLIFF_EDGE) {
@@ -273,17 +459,19 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   // Animated wind lines in the sky showing direction
   ctx.strokeStyle = COLORS.accent3;
   ctx.lineWidth = 1;
-  const lineCount = Math.max(2, Math.ceil(windStrength * 25));
+  ctx.globalAlpha = 0.4;
+  const lineCount = Math.max(2, Math.min(5, Math.ceil(windStrength * 10)));
   for (let i = 0; i < lineCount; i++) {
-    const lineX = (100 + i * 80 + (nowMs / 20) * windDir) % (W + 100) - 50;
-    const lineY = 50 + (i % 3) * 25 + Math.sin(i * 2) * 10;
-    const lineLen = 15 + windStrength * 80;
+    const lineX = (100 + i * 100 + (nowMs / 25) * windDir) % (W + 100) - 50;
+    const lineY = 40 + (i % 3) * 30;  // Fixed Y positions, no wobble
+    const lineLen = 20 + windStrength * 40;
 
     ctx.beginPath();
     ctx.moveTo(lineX, lineY);
     ctx.lineTo(lineX + lineLen * windDir, lineY);
     ctx.stroke();
   }
+  ctx.globalAlpha = 1;
 
   // Decorative birds
   drawBird(ctx, 150 + Math.sin(nowMs / 2000) * 30, 90, 6, COLORS.accent3, 1.5, nowMs);
@@ -298,6 +486,36 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.globalAlpha = 0.3;
     drawDashedCurve(ctx, ghostPoints, COLORS.player, 5, 8, 6);
     ctx.globalAlpha = 1;
+  }
+
+  // Rings - update positions and draw (visible during idle for planning, during flight for collection)
+  for (const ring of state.rings) {
+    updateRingPosition(ring, nowMs);
+  }
+  drawRings(ctx, state.rings, COLORS, nowMs);
+
+  // Ring multiplier indicator removed - now shown in React ThrowScore HUD
+
+  // Ring juice effects
+  renderEdgeGlow(ctx, state.edgeGlowIntensity, W, H);
+  renderRingPopups(ctx, state.ringJuicePopups);
+
+  // ON FIRE mode visual effects
+  if (state.onFireMode && !state.reduceFx) {
+    renderOnFireMode(ctx, state.sessionHeat / 100, W, H);
+  }
+
+  // Near-miss spotlight effect
+  if (state.nearMissActive && state.nearMissIntensity) {
+    renderNearMissSpotlight(ctx, state.zenoTarget, state.nearMissIntensity, W, H);
+  }
+
+  // Charge visual tension effects (before Zeno for glow effect behind character)
+  if (state.charging && !state.reduceFx) {
+    renderChargeGlow(ctx, zenoX, zenoY, state.chargeGlowIntensity);
+    if (state.chargeVignetteActive) {
+      renderChargeVignette(ctx, state.chargeGlowIntensity - 0.5, W, H);
+    }
   }
 
   // Player rendering - prefer sprites, fallback to procedural (using zenoX/zenoY for visual offset)
@@ -333,6 +551,14 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
       // Idle or other states
       drawStickFigure(ctx, zenoX, zenoY, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
     }
+  }
+
+  // Action denied red pulse on Zeno (Task 8.3)
+  if (state.staminaDeniedShake && state.staminaDeniedShake > 0) {
+    ctx.fillStyle = `rgba(255, 0, 0, ${state.staminaDeniedShake * 0.04})`;
+    ctx.beginPath();
+    ctx.arc(zenoX, zenoY, 25, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   // Stamina bar (only during flight/slide when stamina used)
@@ -484,29 +710,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     }
   }
 
-  // Multiplier display when flying
-  if ((state.flying || state.sliding) && state.currentMultiplier > 1.01) {
-    const mult = state.currentMultiplier;
-    const multX = 50;
-    const multY = 35;
-
-    let multColor = COLORS.accent1;
-    if (mult > 3) multColor = COLORS.danger;
-    else if (mult > 2) multColor = COLORS.highlight;
-
-    // Hand-drawn box
-    ctx.strokeStyle = multColor;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(multX, multY, 55, 22, 3);
-    ctx.stroke();
-
-    // Multiplier text
-    ctx.fillStyle = multColor;
-    ctx.font = 'bold 14px "Comic Sans MS", cursive, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(`x${mult.toFixed(1)}`, multX + 27, multY + 16);
-  }
+  // Risk multiplier display removed - rings shown via React HUD
 
   // Slow-mo corners
   if (state.slowMo > 0.1) {
@@ -596,50 +800,8 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.stroke();
   }
 
-  // Achievement popup
-  if (state.newAchievement) {
-    const achBlink = Math.floor(nowMs / 250) % 2;
-    const achX = W / 2 - 60;
-    const achY = 10;
-
-    // Banner background
-    ctx.fillStyle = COLORS.background;
-    ctx.fillRect(achX, achY, 120, 28);
-
-    // Banner border
-    ctx.strokeStyle = COLORS.highlight;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(achX, achY, 120, 28);
-
-    // Star
-    if (achBlink) {
-      const starX = achX + 18;
-      const starY = achY + 14;
-      ctx.strokeStyle = COLORS.highlight;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      for (let i = 0; i < 5; i++) {
-        const angle = (i * 144 - 90) * Math.PI / 180;
-        const px = starX + Math.cos(angle) * 6;
-        const py = starY + Math.sin(angle) * 6;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      ctx.closePath();
-      ctx.stroke();
-    }
-
-    // Achievement text
-    ctx.fillStyle = COLORS.uiText;
-    ctx.font = '10px "Comic Sans MS", cursive, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('NEW!', achX + 32, achY + 18);
-  }
-
-  // Precision zone fall overlay
-  if (state.fellOff && state.lastValidPx >= 410 && state.precisionBarTriggeredThisThrow) {
-    drawPrecisionFallOverlay(ctx, state, W, H, COLORS, nowMs);
-  }
+  // Achievement popup removed - now handled by React component in Game.tsx
+  // "Almost!" overlay removed - feedback now handled by React LandingGrade component
 }
 
 // Noir Ink theme renderer - high contrast, minimal, film noir aesthetic
@@ -654,6 +816,16 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   // Update and render noir background layers using asset-based renderer
   noirBackgroundRenderer.update(state.wind, nowMs);
   noirBackgroundRenderer.render(ctx);
+
+  // Practice mode badge
+  if (state.practiceMode) {
+    ctx.save();
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255, 165, 0, 0.8)';
+    ctx.fillText('PRACTICE MODE', W / 2, 12);
+    ctx.restore();
+  }
 
   // Best marker - animated flag using noir assets
   if (state.best > 0 && state.best <= CLIFF_EDGE) {
@@ -741,6 +913,36 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.setLineDash([]);
   }
 
+  // Rings - update positions and draw (visible during idle for planning, during flight for collection)
+  for (const ring of state.rings) {
+    updateRingPosition(ring, nowMs);
+  }
+  drawRings(ctx, state.rings, COLORS, nowMs);
+
+  // Ring multiplier indicator removed - now shown in React ThrowScore HUD
+
+  // Ring juice effects
+  renderEdgeGlow(ctx, state.edgeGlowIntensity, W, H);
+  renderRingPopups(ctx, state.ringJuicePopups);
+
+  // ON FIRE mode visual effects
+  if (state.onFireMode && !state.reduceFx) {
+    renderOnFireMode(ctx, state.sessionHeat / 100, W, H);
+  }
+
+  // Near-miss spotlight effect
+  if (state.nearMissActive && state.nearMissIntensity) {
+    renderNearMissSpotlight(ctx, state.zenoTarget, state.nearMissIntensity, W, H);
+  }
+
+  // Charge visual tension effects (before Zeno for glow effect behind character)
+  if (state.charging && !state.reduceFx) {
+    renderChargeGlow(ctx, state.px, zenoY, state.chargeGlowIntensity);
+    if (state.chargeVignetteActive) {
+      renderChargeVignette(ctx, state.chargeGlowIntensity - 0.5, W, H);
+    }
+  }
+
   // Player rendering - prefer sprites, fallback to procedural (using zenoY for visual offset)
   const spriteDrawnNoir = drawZenoSprite(ctx, state, state.px, zenoY);
 
@@ -765,6 +967,14 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
       // Idle or other states
       drawStickFigure(ctx, state.px, zenoY, playerColor, nowMs, playerState, state.angle, { vx: state.vx, vy: state.vy }, state.chargePower);
     }
+  }
+
+  // Action denied red pulse on Zeno (Task 8.3)
+  if (state.staminaDeniedShake && state.staminaDeniedShake > 0) {
+    ctx.fillStyle = `rgba(255, 0, 0, ${state.staminaDeniedShake * 0.04})`;
+    ctx.beginPath();
+    ctx.arc(state.px, zenoY, 25, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   // Stamina bar (only during flight/slide when stamina used)
@@ -874,21 +1084,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     }
   }
 
-  // Multiplier display
-  if ((state.flying || state.sliding) && state.currentMultiplier > 1.01) {
-    const mult = state.currentMultiplier;
-    const multX = 50;
-    const multY = 28;
-
-    let multColor = COLORS.accent1;
-    if (mult > 3) multColor = COLORS.danger;
-    else if (mult > 2) multColor = COLORS.highlight;
-
-    ctx.fillStyle = multColor;
-    ctx.font = 'bold 12px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(`x${mult.toFixed(1)}`, multX, multY);
-  }
+  // Risk multiplier display removed - rings shown via React HUD
 
   // Slow-mo indicator
   if (state.slowMo > 0.1) {
@@ -941,27 +1137,8 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.stroke();
   }
 
-  // Achievement popup
-  if (state.newAchievement) {
-    const achX = W / 2 - 50;
-    const achY = 8;
-
-    ctx.fillStyle = COLORS.background;
-    ctx.fillRect(achX, achY, 100, 22);
-    ctx.strokeStyle = COLORS.highlight;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(achX, achY, 100, 22);
-
-    ctx.fillStyle = COLORS.highlight;
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('★ NEW', achX + 50, achY + 15);
-  }
-
-  // Precision zone fall overlay
-  if (state.fellOff && state.lastValidPx >= 410 && state.precisionBarTriggeredThisThrow) {
-    drawPrecisionFallOverlay(ctx, state, W, H, COLORS, nowMs);
-  }
+  // Achievement popup removed - now handled by React component in Game.tsx
+  // "Almost!" overlay removed - feedback now handled by React LandingGrade component
 
   // Apply film grain and vignette (always on for Noir, intensity varies with reduceFx)
   const grainIntensity = state.reduceFx ? 0.3 : 0.6;

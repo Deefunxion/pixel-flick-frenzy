@@ -1,8 +1,10 @@
 import {
   CLIFF_EDGE,
+  FREE_THROWS_CAP,
   H,
   LAUNCH_PAD_X,
   MIN_ANGLE,
+  NEW_PLAYER_BONUS_THROWS,
   OPTIMAL_ANGLE,
   W,
 } from '@/game/constants';
@@ -11,10 +13,13 @@ import {
   loadJson,
   loadNumber,
   loadStringSet,
+  saveJson,
   todayLocalISODate,
 } from '@/game/storage';
-import type { GameState, Star, TutorialState } from './types';
+import type { DailyTasks, GameState, MilestonesClaimed, Star, ThrowState, TutorialState } from './types';
 import { ParticleSystem } from './particles';
+import { generateRings, resetRings } from './rings';
+import { calculateThrowRegen } from './throws';
 
 function loadTutorialProgress(): Pick<TutorialState, 'hasSeenCharge' | 'hasSeenAir' | 'hasSeenSlide'> {
   if (typeof window === 'undefined') {
@@ -24,6 +29,36 @@ function loadTutorialProgress(): Pick<TutorialState, 'hasSeenCharge' | 'hasSeenA
     hasSeenCharge: localStorage.getItem('tutorial_charge_seen') === 'true',
     hasSeenAir: localStorage.getItem('tutorial_air_seen') === 'true',
     hasSeenSlide: localStorage.getItem('tutorial_slide_seen') === 'true',
+  };
+}
+
+function getDefaultThrowState(): ThrowState {
+  return {
+    freeThrows: FREE_THROWS_CAP,
+    permanentThrows: 0,
+    lastRegenTimestamp: Date.now(),
+    isPremium: false,
+  };
+}
+
+function getDefaultDailyTasks(): DailyTasks {
+  return {
+    date: new Date().toISOString().split('T')[0],
+    landCount: 0,
+    zenoTargetCount: 0,
+    landed400: false,
+    airTime3s: false,
+    airTime4s: false,
+    airTime5s: false,
+    claimed: [],
+  };
+}
+
+function getDefaultMilestonesClaimed(): MilestonesClaimed {
+  return {
+    achievements: [],
+    milestones: [],
+    newPlayerBonus: false,
   };
 }
 
@@ -45,6 +80,28 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
       brightness: 0.3 + Math.random() * 0.7,
       size: Math.random() > 0.8 ? 2 : 1,
     });
+  }
+
+  // Load throw state
+  const savedThrowState = loadJson<ThrowState>('throw_state', getDefaultThrowState());
+  const savedDailyTasks = loadJson<DailyTasks>('daily_tasks', getDefaultDailyTasks());
+  const savedMilestones = loadJson<MilestonesClaimed>('milestones_claimed', getDefaultMilestonesClaimed());
+
+  // Check if daily tasks need reset (new day)
+  const dailyTasks = savedDailyTasks.date === today
+    ? savedDailyTasks
+    : getDefaultDailyTasks();
+
+  // Calculate free throw regeneration
+  const throwState = calculateThrowRegen(savedThrowState);
+
+  // Check for new player bonus
+  const milestonesClaimed = savedMilestones;
+  if (!milestonesClaimed.newPlayerBonus) {
+    throwState.permanentThrows += NEW_PLAYER_BONUS_THROWS;
+    milestonesClaimed.newPlayerBonus = true;
+    saveJson('milestones_claimed', milestonesClaimed);
+    saveJson('throw_state', throwState);
   }
 
   return {
@@ -86,7 +143,16 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     perfectLanding: false,
     totalScore: loadNumber('total_score', 0, 'omf_total_score'),
     totalFalls: loadNumber('total_falls', 0, 'omf_total_falls'),
-    stats: loadJson('stats', { totalThrows: 0, successfulLandings: 0, totalDistance: 0, perfectLandings: 0, maxMultiplier: 1 }, 'omf_stats'),
+    stats: loadJson('stats', {
+      totalThrows: 0,
+      successfulLandings: 0,
+      totalDistance: 0,
+      perfectLandings: 0,
+      maxMultiplier: 1,
+      totalRingsPassed: 0,
+      maxRingsInThrow: 0,
+      perfectRingThrows: 0,
+    }, 'omf_stats'),
     achievements: loadStringSet('achievements', 'omf_achievements'),
     newAchievement: null,
     touchActive: false,
@@ -111,9 +177,15 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     failureAnimating: false,
     failureFrame: 0,
     failureType: null,
+    // Fail juice
+    failJuiceActive: false,
+    failJuiceStartTime: 0,
+    failImpactX: 0,
+    failImpactY: 0,
     hotStreak: 0,
     bestHotStreak: loadNumber('best_hot_streak', 0, 'omf_best_hot_streak'),
     launchFrame: 0,
+    launchTimestamp: 0,
     particleSystem: new ParticleSystem(),
     zenoAnimator: null,
     stamina: 100,
@@ -124,8 +196,6 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
       lastPressedState: false,
     },
     staminaDeniedShake: 0,
-    gravityMultiplier: 1,
-    floatDuration: 0,
     tutorialState: {
       phase: 'none',
       active: false,
@@ -138,6 +208,45 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     precisionTimeScale: 1,
     precisionBarTriggeredThisThrow: false,
     passedPbThisThrow: false,
+    pbPaceActive: false,
+    almostOverlayActive: false,
+    almostOverlayDistance: 0,
+    // Streak tracking (session-volatile)
+    sessionThrows: 0,
+    landingsWithoutFall: 0,
+    // Rings system
+    rings: generateRings(seed),
+    ringsPassedThisThrow: 0,
+    ringMultiplier: 1,
+    // Ring juice
+    ringJuicePopups: [],
+    lastRingCollectTime: 0,
+    edgeGlowIntensity: 0,
+    // Landing grade system
+    lastGrade: null,
+    gradeDisplayTime: 0,
+    // Near-miss drama state
+    nearMissActive: false,
+    nearMissDistance: 0,
+    nearMissIntensity: null,
+    nearMissAnimationStart: 0,
+    // Session heat (ON FIRE mode)
+    sessionHeat: 0,
+    onFireMode: false,
+    // Charge sweet spot
+    chargeSweetSpot: false,
+    sweetSpotJustEntered: false,
+    // Charge visual tension
+    chargeGlowIntensity: 0,
+    chargeVignetteActive: false,
+    // Air control feedback
+    lastControlAction: null,
+    controlActionTime: 0,
+    // Monetization - Throw system
+    throwState,
+    dailyTasks,
+    milestonesClaimed,
+    practiceMode: throwState.freeThrows === 0 && throwState.permanentThrows === 0 && !throwState.isPremium,
   };
 }
 
@@ -173,7 +282,11 @@ export function resetPhysics(state: GameState) {
   state.failureAnimating = false;
   state.failureFrame = 0;
   state.failureType = null;
+  // Fail juice reset
+  state.failJuiceActive = false;
+  state.failJuiceStartTime = 0;
   state.launchFrame = 0;
+  state.launchTimestamp = 0;
   state.stamina = 100;
   state.precisionInput = {
     pressedThisFrame: false,
@@ -182,17 +295,43 @@ export function resetPhysics(state: GameState) {
     lastPressedState: false,
   };
   state.staminaDeniedShake = 0;
-  state.gravityMultiplier = 1;
-  state.floatDuration = 0;
   // Precision bar reset
   state.precisionBarActive = false;
   state.lastValidPx = 0;
   state.precisionTimeScale = 1;
   state.precisionBarTriggeredThisThrow = false;
   state.passedPbThisThrow = false;
+  state.pbPaceActive = false;
+  // Note: almostOverlayActive is NOT reset here - it clears when charging starts
   if (state.particleSystem) {
     state.particleSystem.clear();
   }
+  // Rings reset - generate new rings for each throw
+  // Use derived seed (base seed + throw count) for unique layouts per throw
+  state.rings = generateRings(state.seed + state.stats.totalThrows);
+  state.ringsPassedThisThrow = 0;
+  state.ringMultiplier = 1;
+  // Reset ring juice
+  state.ringJuicePopups = [];
+  state.lastRingCollectTime = 0;
+  state.edgeGlowIntensity = 0;
+  // Reset landing grade
+  state.lastGrade = null;
+  state.gradeDisplayTime = 0;
+  // Reset near-miss drama
+  state.nearMissActive = false;
+  state.nearMissDistance = 0;
+  state.nearMissIntensity = null;
+  state.nearMissAnimationStart = 0;
+  // Reset charge sweet spot
+  state.chargeSweetSpot = false;
+  state.sweetSpotJustEntered = false;
+  // Reset charge visual tension
+  state.chargeGlowIntensity = 0;
+  state.chargeVignetteActive = false;
+  // Reset air control feedback
+  state.lastControlAction = null;
+  state.controlActionTime = 0;
 }
 
 export function nextWind(state: GameState) {
