@@ -72,6 +72,9 @@ export type GameAudio = {
   pbDing?: () => void;
   newRecordJingle?: () => void;
   closeCall?: () => void;
+  // Page flip audio
+  playPaperFlip?: () => void;
+  playPaperSettle?: () => void;
 };
 
 export type GameUI = {
