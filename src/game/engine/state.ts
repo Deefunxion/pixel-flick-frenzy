@@ -250,6 +250,10 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     dailyTasks,
     milestonesClaimed,
     practiceMode: throwState.freeThrows === 0 && throwState.permanentThrows === 0 && !throwState.isPremium,
+    // Achievement notification queue
+    achievementQueue: [],
+    achievementDisplaying: null,
+    achievementDisplayStartTime: 0,
   };
 }
 

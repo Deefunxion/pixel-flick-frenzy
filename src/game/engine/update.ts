@@ -154,28 +154,62 @@ export type GameServices = {
   canvas?: HTMLCanvasElement;
 };
 
-function checkAchievements(state: GameState, ui: GameUI, audio: GameAudio, clearAfterMs: number) {
+const ACHIEVEMENT_DISPLAY_MS = 1500; // 1.5 seconds per achievement
+
+function checkAchievements(state: GameState, ui: GameUI, audio: GameAudio, _clearAfterMs: number) {
+  // Collect ALL newly unlocked achievements (don't break after first)
+  const newlyUnlocked: string[] = [];
+
   for (const [id, achievement] of Object.entries(ACHIEVEMENTS)) {
     if (!state.achievements.has(id) && achievement.check(state.stats, state)) {
       state.achievements.add(id);
-
-      // Rewards now claimed manually via Stats UI - just show unlock notification
-      const toastMessage = `${achievement.name} - Claim in Stats!`;
-
-      state.newAchievement = toastMessage;
-      ui.setAchievements(new Set(state.achievements));
-      ui.setNewAchievement(toastMessage);
+      newlyUnlocked.push(id);
       saveJson('achievements', [...state.achievements]);
+    }
+  }
 
-      audio.tone(523, 0.1, 'sine', 0.06);
-      setTimeout(() => audio.tone(659, 0.1, 'sine', 0.06), 80);
-      setTimeout(() => audio.tone(784, 0.15, 'sine', 0.08), 160);
+  // Add all newly unlocked to queue
+  if (newlyUnlocked.length > 0) {
+    state.achievementQueue.push(...newlyUnlocked);
+    ui.setAchievements(new Set(state.achievements));
 
-      setTimeout(() => {
+    // Play unlock sound (once for batch)
+    audio.tone(523, 0.1, 'sine', 0.06);
+    setTimeout(() => audio.tone(659, 0.1, 'sine', 0.06), 80);
+    setTimeout(() => audio.tone(784, 0.15, 'sine', 0.08), 160);
+  }
+}
+
+function updateAchievementDisplay(state: GameState, ui: GameUI, nowMs: number) {
+  // If nothing displaying and queue has items, start showing next
+  if (!state.achievementDisplaying && state.achievementQueue.length > 0) {
+    const nextId = state.achievementQueue.shift()!;
+    state.achievementDisplaying = nextId;
+    state.achievementDisplayStartTime = nowMs;
+
+    const achievement = ACHIEVEMENTS[nextId];
+    if (achievement) {
+      const remaining = state.achievementQueue.length;
+      const message = remaining > 0
+        ? `${achievement.name} - Claim in Stats! 🏆 +${remaining} more...`
+        : `${achievement.name} - Claim in Stats!`;
+      state.newAchievement = message;
+      ui.setNewAchievement(message);
+    }
+  }
+
+  // Check if current display time elapsed
+  if (state.achievementDisplaying) {
+    const elapsed = nowMs - state.achievementDisplayStartTime;
+    if (elapsed >= ACHIEVEMENT_DISPLAY_MS) {
+      state.achievementDisplaying = null;
+
+      // If more in queue, don't clear - next iteration will show it
+      // If queue empty, clear the notification
+      if (state.achievementQueue.length === 0) {
+        state.newAchievement = null;
         ui.setNewAchievement(null);
-      }, clearAfterMs);
-
-      break;
+      }
     }
   }
 }
@@ -325,6 +359,10 @@ export function updateFrame(state: GameState, svc: GameServices) {
     const { newState: newThrowState, practiceMode, throwConsumed } = consumeThrow(state.throwState);
     state.throwState = newThrowState;
     state.practiceMode = practiceMode;
+
+    // Sync throw state to React UI
+    ui.setThrowState(newThrowState);
+    ui.setPracticeMode(practiceMode);
 
     // Save throw state
     if (throwConsumed) {
@@ -1156,9 +1194,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
         // Check milestones
         checkMilestones(state, ui);
-      }
 
-      ui.setLastDist(state.fellOff ? null : state.dist);
+        ui.setLastDist(state.fellOff ? null : state.dist);
+      }
 
       // Trigger landing grade calculation
       ui.onLanding?.(
@@ -1364,6 +1402,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
   if (tutorialPhase !== 'none') {
     startTutorial(state, tutorialPhase);
   }
+
+  // Update achievement display queue (runs every frame for smooth cycling)
+  updateAchievementDisplay(state, ui, nowMs);
 
   // Update sprite animation (deltaTime ~16.67ms at 60fps)
   updateAnimator(state, 1 / 60);

@@ -234,4 +234,8 @@ export interface GameState {
   dailyTasks: DailyTasks;
   milestonesClaimed: MilestonesClaimed;
   practiceMode: boolean;  // Computed: freeThrows=0 AND permanentThrows=0
+  // Achievement notification queue
+  achievementQueue: string[];  // Queue of achievement IDs waiting to display
+  achievementDisplaying: string | null;  // Currently showing achievement ID
+  achievementDisplayStartTime: number;  // When current achievement started showing
 }

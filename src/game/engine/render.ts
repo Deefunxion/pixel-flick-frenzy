@@ -1107,34 +1107,34 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     // Vignette effect (darker edges)
     const gradient = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * 0.7);
     gradient.addColorStop(0, 'rgba(0,0,0,0)');
-    gradient.addColorStop(0.7, `rgba(0,0,0,${intensity * 0.2})`);
-    gradient.addColorStop(1, `rgba(0,0,0,${intensity * 0.5})`);
+    gradient.addColorStop(0.7, `rgba(0,0,0,${intensity * 0.15})`);
+    gradient.addColorStop(1, `rgba(0,0,0,${intensity * 0.4})`);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, W, H);
 
-    // Pulsing border glow - gold for success, red for failure
+    // Pulsing border glow - intense orange
     const pulse = Math.sin(nowMs / 100) * 0.5 + 0.5;
-    if (isFailing) {
-      ctx.strokeStyle = `rgba(220, 20, 60, ${pulse * 0.9})`;
-    } else {
-      ctx.strokeStyle = `rgba(255, 215, 0, ${intensity * pulse * 0.8})`;
-    }
+    ctx.strokeStyle = `rgba(255, 107, 53, ${intensity * pulse * 0.9})`; // Intense orange
     ctx.lineWidth = 4 + intensity * 4;
     ctx.strokeRect(2, 2, W - 4, H - 4);
 
-    // Text display - "RECORD ZONE" or "FAIL!"
-    ctx.font = 'bold 16px "Comic Sans MS", cursive, sans-serif';
+    // Text display - supportive messages
+    ctx.font = 'bold 14px "Comic Sans MS", cursive, sans-serif';
     ctx.textAlign = 'center';
     const textPulse = Math.sin(nowMs / 150) * 2;
 
     if (isFailing) {
-      // FAIL! text in bloody red
-      ctx.fillStyle = 'rgba(220, 20, 60, 1)';
-      ctx.fillText('FAIL!', W / 2, 25 + textPulse);
-    } else if (intensity > 0.5) {
-      // RECORD ZONE text in celebratory gold
-      ctx.fillStyle = `rgba(255, 215, 0, ${(intensity - 0.5) * 2})`;
-      ctx.fillText('RECORD ZONE', W / 2, 25 + textPulse);
+      // Encouraging fail messages
+      const failMessages = ["Don't Worry...", "SO CLOSE...", "next time maybe..."];
+      const msgIndex = Math.floor(nowMs / 2000) % failMessages.length;
+      ctx.fillStyle = 'rgba(255, 107, 53, 0.95)'; // Intense orange
+      ctx.fillText(failMessages[msgIndex], W / 2, 22 + textPulse);
+    } else if (intensity > 0.8) {
+      // About to beat record - chill success
+      const successMessages = ["nice.", "there you go...", "smooth..."];
+      const msgIndex = Math.floor(nowMs / 1500) % successMessages.length;
+      ctx.fillStyle = 'rgba(255, 107, 53, 0.95)'; // Intense orange
+      ctx.fillText(successMessages[msgIndex], W / 2, 22 + textPulse);
     }
   }
 
@@ -1458,22 +1458,24 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     const intensity = state.recordZoneIntensity || 1;
     const isFailing = state.fellOff || state.failureAnimating;
 
-    // Subtle golden/red border glow
+    // Subtle orange border glow
     const pulse = Math.sin(nowMs / 100) * 0.3 + 0.7;
-    if (isFailing) {
-      ctx.strokeStyle = `rgba(220, 20, 60, ${pulse * 0.7})`;
-    } else {
-      ctx.strokeStyle = `rgba(240, 230, 140, ${intensity * pulse * 0.6})`;
-    }
+    ctx.strokeStyle = `rgba(255, 107, 53, ${intensity * pulse * 0.6})`; // Orange
     ctx.lineWidth = 3;
     ctx.strokeRect(1, 1, W - 2, H - 2);
 
-    // Text
-    if (intensity > 0.5 || isFailing) {
-      ctx.font = 'bold 14px sans-serif';
+    // Supportive messages (minimal for noir)
+    if (intensity > 0.7 || isFailing) {
+      ctx.font = 'bold 12px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillStyle = isFailing ? COLORS.danger : COLORS.highlight;
-      ctx.fillText(isFailing ? '!' : 'RECORD', W / 2, 20);
+      ctx.fillStyle = 'rgba(255, 107, 53, 0.8)'; // Orange
+      if (isFailing) {
+        const failMessages = ["...", "so close", "next time"];
+        const msgIndex = Math.floor(nowMs / 2000) % failMessages.length;
+        ctx.fillText(failMessages[msgIndex], W / 2, 18);
+      } else {
+        ctx.fillText("!", W / 2, 18);
+      }
     }
   }
 

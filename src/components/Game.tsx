@@ -1363,25 +1363,38 @@ const Game = () => {
           </p>
         </div>
 
-        {/* Achievement popup - transparent with border */}
+        {/* Achievement popup - fully transparent, stacked cascade */}
         {newAchievement && (() => {
-          const achievementName = newAchievement.split(' - ')[0]; // Updated for new toast format
+          const parts = newAchievement.split(' - ');
+          const achievementName = parts[0];
           const achievement = Object.values(ACHIEVEMENTS).find(a => a.name === achievementName);
+          const hasMore = newAchievement.includes('+');
+
           return (
             <div
-              className="fixed top-16 left-1/2 transform -translate-x-1/2 px-4 py-3 rounded-lg z-50 animate-in slide-in-from-top-4 duration-300"
+              key={newAchievement} // Force re-mount for animation
+              className="fixed top-16 left-1/2 transform -translate-x-1/2 px-4 py-3 rounded-lg z-50
+                         animate-in slide-in-from-bottom-4 fade-in duration-300"
               style={{
                 backgroundColor: 'transparent',
                 border: `2px solid ${theme.highlight}`,
-                backdropFilter: 'blur(2px)',
+                // NO backdropFilter - fully transparent
               }}
             >
               <p className="text-base font-bold text-center" style={{ color: theme.highlight }}>
-                {newAchievement}
+                🏆 {achievementName}
               </p>
               {achievement && (
                 <p className="text-sm text-center mt-1" style={{ color: theme.accent2 }}>
                   {achievement.desc}
+                </p>
+              )}
+              <p className="text-xs text-center mt-1 opacity-70" style={{ color: theme.uiText }}>
+                Claim in Stats!
+              </p>
+              {hasMore && (
+                <p className="text-xs text-center mt-2 animate-pulse" style={{ color: theme.accent1 }}>
+                  {newAchievement.split('🏆')[1]}
                 </p>
               )}
             </div>
