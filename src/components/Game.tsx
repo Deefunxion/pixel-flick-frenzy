@@ -765,8 +765,8 @@ const Game = () => {
         const canvasX = (e.clientX - rect.left) * scaleX;
         const canvasY = (e.clientY - rect.top) * scaleY;
 
-        // Hamburger hit area: top-left 35x25 pixels
-        if (canvasX < 35 && canvasY < 25) {
+        // Hamburger hit area: top-left, below notifications (Y: 35-60)
+        if (canvasX < 35 && canvasY > 35 && canvasY < 60) {
           setMenuOpen(true);
           return; // Don't start charging
         }

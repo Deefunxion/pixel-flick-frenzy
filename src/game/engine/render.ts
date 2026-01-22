@@ -667,11 +667,11 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
     renderFlipbookFrame(ctx, state, COLORS, nowMs);
   }
 
-  // Hamburger menu icon (top-left corner, inside canvas)
+  // Hamburger menu icon (top-left corner, below notifications)
   // Only render if not in flight (avoid distraction during gameplay)
   if (!state.flying && !state.sliding) {
     const menuX = 8;
-    const menuY = 8;
+    const menuY = 38;  // Below the mini-goal notifications
     const menuSize = 20;
     const lineHeight = 3;
     const gap = 5;
