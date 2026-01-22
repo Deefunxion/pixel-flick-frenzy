@@ -22,26 +22,40 @@ export function getAchievementProgress(
 ): AchievementProgress[] {
   const progressList: AchievementProgress[] = [];
 
-  // Define progress tracking for each achievement
+  // Define progress tracking for each achievement (IDs must match generated achievements)
   const progressDefs: Record<string, { current: (s: Stats, g: GameState) => number; target: number }> = {
-    first_zeno: { current: (_, g) => g.zenoLevel, target: 1 },
-    level_5: { current: (_, g) => g.zenoLevel, target: 5 },
-    level_10: { current: (_, g) => g.zenoLevel, target: 10 },
-    perfect_140: { current: (_, g) => g.best, target: 140 },
-    perfect_landing: { current: (s) => s.perfectLandings, target: 1 },
-    ten_perfects: { current: (s) => s.perfectLandings, target: 10 },
-    hundred_throws: { current: (s) => s.totalThrows, target: 100 },
-    high_roller: { current: (s) => s.maxMultiplier, target: 4 },
-    thousand_score: { current: (_, g) => g.totalScore, target: 1000 },
+    // Zeno levels
+    zeno_1: { current: (_, g) => g.zenoLevel, target: 1 },
+    zeno_5: { current: (_, g) => g.zenoLevel, target: 5 },
+    zeno_10: { current: (_, g) => g.zenoLevel, target: 10 },
+    // Distances
     dist_400: { current: (_, g) => g.best, target: 400 },
-    hot_streak_5: { current: (_, g) => g.hotStreak, target: 5 },
-    hot_streak_10: { current: (_, g) => g.hotStreak, target: 10 },
-    untouchable: { current: (_, g) => g.landingsWithoutFall, target: 10 },
-    marathon: { current: (_, g) => g.sessionThrows, target: 50 },
-    ring_rookie: { current: (s) => s.totalRingsPassed, target: 1 },
-    ring_collector: { current: (s) => s.totalRingsPassed, target: 100 },
-    ring_master: { current: (s) => s.maxRingsInThrow, target: 3 },
-    triple_threat: { current: (s) => s.perfectRingThrows, target: 10 },
+    dist_410: { current: (_, g) => g.best, target: 410 },
+    dist_419: { current: (_, g) => g.best, target: 419 },
+    // Perfect landings
+    perfect_1: { current: (s) => s.perfectLandings, target: 1 },
+    perfect_10: { current: (s) => s.perfectLandings, target: 10 },
+    perfect_100: { current: (s) => s.perfectLandings, target: 100 },
+    // Total throws
+    throws_50: { current: (s) => s.totalThrows, target: 50 },
+    throws_100: { current: (s) => s.totalThrows, target: 100 },
+    throws_1000: { current: (s) => s.totalThrows, target: 1000 },
+    // Score
+    score_500: { current: (_, g) => g.totalScore, target: 500 },
+    score_1000: { current: (_, g) => g.totalScore, target: 1000 },
+    score_10000: { current: (_, g) => g.totalScore, target: 10000 },
+    // Hot streaks
+    streak_hot_5: { current: (_, g) => g.hotStreak, target: 5 },
+    streak_hot_10: { current: (_, g) => g.hotStreak, target: 10 },
+    // Safe landings
+    streak_safe_10: { current: (_, g) => g.landingsWithoutFall, target: 10 },
+    // Session marathon
+    session_50: { current: (_, g) => g.sessionThrows, target: 50 },
+    // Rings
+    rings_1: { current: (s) => s.totalRingsPassed, target: 1 },
+    rings_100: { current: (s) => s.totalRingsPassed, target: 100 },
+    rings_perfect_1: { current: (s) => s.perfectRingThrows, target: 1 },
+    rings_perfect_10: { current: (s) => s.perfectRingThrows, target: 10 },
   };
 
   for (const [id, ach] of Object.entries(ACHIEVEMENTS)) {
