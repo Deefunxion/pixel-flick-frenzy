@@ -1009,7 +1009,7 @@ const Game = () => {
           theme={theme}
           themeId={themeId}
           lastDist={lastDist}
-          best={best}
+          best={bestScore}
           zenoTarget={zenoTarget}
           zenoLevel={zenoLevel}
           totalScore={totalScore}
