@@ -248,8 +248,9 @@ export function renderPageFlip(
 
   // Snapshot not ready yet - wait (show frozen frame)
   if (!isSnapshotReady(state)) {
-    // Early in animation, give snapshot time to load
-    if (progress < 0.1) {
+    // Early in animation, give snapshot time to load (90ms at 450ms duration)
+    // Increased from 0.1 to 0.2 for mobile devices with slower image encoding
+    if (progress < 0.2) {
       return true; // Hold frame, don't render normal game
     }
     // Taking too long - abort and complete

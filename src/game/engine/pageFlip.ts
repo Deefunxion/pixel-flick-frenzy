@@ -6,6 +6,7 @@
  */
 
 import type { GameState } from './types';
+import { W, H } from '../constants';
 
 // Configuration
 const SLICE_COUNT = 32; // Balance of quality vs performance
@@ -40,6 +41,7 @@ function smoothstep(edge0: number, edge1: number, x: number): number {
 
 /**
  * Capture current canvas as snapshot for page flip
+ * Creates a 1x scale snapshot regardless of DPR for fast mobile performance
  */
 export function captureSnapshot(canvas: HTMLCanvasElement): Promise<boolean> {
   return new Promise((resolve) => {
@@ -57,7 +59,24 @@ export function captureSnapshot(canvas: HTMLCanvasElement): Promise<boolean> {
     snapshotLoading = true;
 
     try {
-      const url = canvas.toDataURL('image/png');
+      // Create a 1x scale canvas for faster mobile performance
+      // High-DPI canvases (e.g., 1440×720 at DPR 3) are too slow to encode
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = W;  // 480
+      tempCanvas.height = H; // 240
+      const tempCtx = tempCanvas.getContext('2d');
+
+      if (!tempCtx) {
+        snapshotLoading = false;
+        resolve(false);
+        return;
+      }
+
+      // Draw scaled-down version (canvas may be DPR-scaled, this normalizes to 1x)
+      tempCtx.drawImage(canvas, 0, 0, W, H);
+
+      // Use JPEG for faster encoding (quality 0.85 is visually good for 450ms animation)
+      const url = tempCanvas.toDataURL('image/jpeg', 0.85);
       const img = new Image();
 
       img.onload = () => {

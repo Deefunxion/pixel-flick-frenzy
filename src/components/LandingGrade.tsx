@@ -19,7 +19,7 @@ export function LandingGrade({ result, visible, onDismiss }: LandingGradeProps) 
 
   // Memoize tip so it doesn't change on every render
   const showTip = result && (result.grade === 'C' || result.grade === 'D');
-  const tip = useMemo(() => showTip ? getRandomTip() : null, [showTip, result]);
+  const tip = useMemo(() => showTip ? getRandomTip() : null, [showTip]);
 
   useEffect(() => {
     if (!visible || !result) {
