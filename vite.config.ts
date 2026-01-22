@@ -8,6 +8,10 @@ export default defineConfig(({ mode }) => ({
   // Firebase hosting works best with an absolute base.
   // itch.io hosts HTML games under a subpath, so we use a relative base there.
   base: mode === "itch" ? "./" : "/",
+  define: {
+    // Inject build timestamp for cache busting
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   server: {
     host: "::",
     port: 8080,
