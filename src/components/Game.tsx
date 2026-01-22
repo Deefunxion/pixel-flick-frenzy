@@ -766,7 +766,9 @@ const Game = () => {
         const canvasY = (e.clientY - rect.top) * scaleY;
 
         // Hamburger hit area: top-left, below notifications (Y: 35-60)
-        if (canvasX < 35 && canvasY > 35 && canvasY < 60) {
+        // Only in landscape mode (window.innerHeight < 500)
+        const isLandscape = window.innerHeight < 500 && window.innerWidth > window.innerHeight;
+        if (isLandscape && canvasX < 35 && canvasY > 35 && canvasY < 60) {
           setMenuOpen(true);
           return; // Don't start charging
         }
@@ -1002,7 +1004,7 @@ const Game = () => {
       <div
         className={`w-full max-w-md flex flex-col items-center ${isMobileRef.current ? 'gap-1 p-1' : 'gap-2 p-2'}`}
       >
-        {/* Slide-out Menu */}
+        {/* Slide-out Menu - Only for landscape mode */}
         <SlideOutMenu
           isOpen={menuOpen}
           onClose={() => setMenuOpen(false)}
@@ -1021,7 +1023,6 @@ const Game = () => {
             setAudioContextState(getAudioState(audioRefs.current));
             setAudioSettings((s) => ({ ...s, muted: !s.muted }));
           }}
-          onToggleHaptics={toggleHaptics}
           onReplayTutorial={() => {
             resetTutorialProgress();
             if (stateRef.current) {
@@ -1031,8 +1032,6 @@ const Game = () => {
             }
           }}
           isMuted={audioSettings.muted}
-          hapticsEnabled={hapticsEnabled}
-          hasHaptics={hasHapticSupport()}
           throwState={throwState}
         />
 

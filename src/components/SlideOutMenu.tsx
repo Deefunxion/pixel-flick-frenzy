@@ -1,14 +1,20 @@
+/**
+ * SlideOutMenu - Landscape-only menu with flipbook aesthetic
+ *
+ * Only appears in landscape mode when hamburger is clicked.
+ * Styled to match the hand-drawn notebook look.
+ */
+
 import React from 'react';
 import type { Theme } from '@/game/themes';
 import type { ThrowState } from '@/game/engine/types';
-import { UI_ASSETS } from '@/game/engine/uiAssets';
 
 interface SlideOutMenuProps {
   isOpen: boolean;
   onClose: () => void;
   theme: Theme;
   themeId: string;
-  // Stats data
+  // Stats
   lastDist: number | null;
   best: number;
   zenoTarget: number;
@@ -18,12 +24,9 @@ interface SlideOutMenuProps {
   onOpenStats: () => void;
   onOpenLeaderboard: () => void;
   onToggleSound: () => void;
-  onToggleHaptics: () => void;
   onReplayTutorial: () => void;
   // State
   isMuted: boolean;
-  hapticsEnabled: boolean;
-  hasHaptics: boolean;
   throwState: ThrowState;
 }
 
@@ -40,149 +43,134 @@ export function SlideOutMenu({
   onOpenStats,
   onOpenLeaderboard,
   onToggleSound,
-  onToggleHaptics,
   onReplayTutorial,
   isMuted,
-  hapticsEnabled,
-  hasHaptics,
   throwState,
 }: SlideOutMenuProps) {
   if (!isOpen) return null;
 
   const isNoir = themeId === 'noir';
-  const filterStyle = isNoir ? 'invert(1)' : 'none';
+
+  // Flipbook style colors
+  const paperBg = isNoir ? '#1a1a2e' : '#f5f0e1';
+  const inkColor = isNoir ? '#e0e0e0' : '#1e3a5f';
+  const accentColor = isNoir ? '#4a9eff' : '#d35400';
+  const lineColor = isNoir ? '#333' : '#c9d4dc';
 
   const formatScore = (n: number) => {
     const int = Math.floor(n);
     const dec = ((n - int) * 100).toFixed(0).padStart(2, '0');
-    return { int, dec };
+    return `${int}.${dec}`;
   };
 
   return (
     <>
-      {/* Backdrop - tap to close */}
+      {/* Backdrop */}
       <div
         className="fixed inset-0 z-40"
-        style={{ background: 'rgba(0,0,0,0.5)' }}
+        style={{ background: 'rgba(0,0,0,0.4)' }}
         onClick={onClose}
       />
 
-      {/* Panel */}
+      {/* Menu Panel - Notebook style popup */}
       <div
-        className="fixed left-0 top-0 bottom-0 z-50 w-72 overflow-y-auto"
+        className="fixed z-50"
         style={{
-          background: `${theme.uiBg}f0`,
-          borderRight: `2px solid ${theme.accent3}`,
-          transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
-          transition: 'transform 250ms ease-out',
+          left: '8px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          width: '180px',
+          background: paperBg,
+          border: `3px solid ${inkColor}`,
+          borderRadius: '4px',
+          boxShadow: isNoir
+            ? '4px 4px 0 rgba(0,0,0,0.5)'
+            : '3px 3px 0 rgba(0,0,0,0.2)',
+          // Ruled paper lines
+          backgroundImage: isNoir
+            ? 'none'
+            : `repeating-linear-gradient(transparent, transparent 19px, ${lineColor} 19px, ${lineColor} 20px)`,
+          backgroundPosition: '0 10px',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex justify-between items-center p-4 border-b" style={{ borderColor: theme.accent3 }}>
-          <span className="font-bold" style={{ color: theme.accent1 }}>Menu</span>
+        {/* Header with close X */}
+        <div
+          className="flex justify-between items-center px-3 py-2"
+          style={{
+            borderBottom: `2px solid ${inkColor}`,
+            fontFamily: '"Comic Sans MS", cursive, sans-serif',
+          }}
+        >
+          <span style={{ color: inkColor, fontWeight: 'bold', fontSize: '14px' }}>
+            MENU
+          </span>
           <button
             onClick={onClose}
-            className="text-2xl px-2 hover:opacity-70"
-            style={{ color: theme.uiText }}
+            className="hover:opacity-70"
+            style={{
+              color: inkColor,
+              fontSize: '18px',
+              fontWeight: 'bold',
+              lineHeight: 1,
+            }}
           >
             ×
           </button>
         </div>
 
         {/* Quick Stats */}
-        <div className="p-4 border-b" style={{ borderColor: theme.accent3 }}>
-          <div className="grid grid-cols-2 gap-3 text-center">
+        <div className="px-3 py-2" style={{ borderBottom: `1px dashed ${lineColor}` }}>
+          <div className="grid grid-cols-2 gap-1 text-center" style={{ fontSize: '11px' }}>
             <div>
-              <div className="text-xs opacity-70" style={{ color: theme.uiText }}>LAST</div>
-              <div className="text-lg font-bold font-mono" style={{ color: theme.accent1 }}>
-                {lastDist !== null ? (
-                  <>{formatScore(lastDist).int}<span className="text-sm opacity-60">.{formatScore(lastDist).dec}</span></>
-                ) : '-'}
+              <div style={{ color: inkColor, opacity: 0.6 }}>LAST</div>
+              <div style={{ color: accentColor, fontWeight: 'bold', fontFamily: 'monospace' }}>
+                {lastDist !== null ? formatScore(lastDist) : '-'}
               </div>
             </div>
             <div>
-              <div className="text-xs opacity-70" style={{ color: theme.uiText }}>BEST</div>
-              <div className="text-lg font-bold font-mono" style={{ color: theme.highlight }}>
-                {formatScore(best).int}<span className="text-sm opacity-60">.{formatScore(best).dec}</span>
+              <div style={{ color: inkColor, opacity: 0.6 }}>BEST</div>
+              <div style={{ color: theme.highlight, fontWeight: 'bold', fontFamily: 'monospace' }}>
+                {formatScore(best)}
               </div>
             </div>
             <div>
-              <div className="text-xs opacity-70" style={{ color: theme.uiText }}>TARGET</div>
-              <div className="text-lg font-bold font-mono" style={{ color: theme.accent2 }}>
-                {formatScore(zenoTarget).int}<span className="text-sm opacity-60">.{formatScore(zenoTarget).dec}</span>
+              <div style={{ color: inkColor, opacity: 0.6 }}>TARGET</div>
+              <div style={{ color: inkColor, fontWeight: 'bold', fontFamily: 'monospace' }}>
+                {formatScore(zenoTarget)}
               </div>
             </div>
             <div>
-              <div className="text-xs opacity-70" style={{ color: theme.uiText }}>LEVEL</div>
-              <div className="text-lg font-bold font-mono" style={{ color: theme.highlight }}>
+              <div style={{ color: inkColor, opacity: 0.6 }}>LV</div>
+              <div style={{ color: accentColor, fontWeight: 'bold', fontFamily: 'monospace' }}>
                 {zenoLevel}
               </div>
             </div>
           </div>
-          <div className="mt-3 text-center">
-            <div className="text-xs opacity-70" style={{ color: theme.uiText }}>SCORE</div>
-            <div className="text-xl font-bold font-mono" style={{ color: theme.accent1 }}>
-              {totalScore.toLocaleString()}
-            </div>
-          </div>
-          {/* Throws remaining */}
-          <div className="mt-2 text-center text-xs" style={{ color: theme.uiText }}>
-            Throws: {throwState.freeThrows + throwState.permanentThrows}
-            {throwState.isPremium && ' ∞'}
+          <div className="text-center mt-1" style={{ fontSize: '10px' }}>
+            <span style={{ color: inkColor, opacity: 0.6 }}>SCORE: </span>
+            <span style={{ color: inkColor, fontWeight: 'bold', fontFamily: 'monospace' }}>
+              {Math.floor(totalScore).toLocaleString()}
+            </span>
+            <span style={{ color: inkColor, opacity: 0.5, marginLeft: '8px' }}>
+              [{throwState.freeThrows + throwState.permanentThrows}]
+            </span>
           </div>
         </div>
 
-        {/* Navigation Buttons */}
-        <div className="p-4 space-y-2">
-          <MenuButton
-            onClick={() => { onOpenLeaderboard(); onClose(); }}
-            theme={theme}
-          >
-            <img src={UI_ASSETS.leaderboard} alt="" className="h-6" style={{ filter: filterStyle }} />
-            <span>Leaderboard</span>
+        {/* Action Buttons */}
+        <div className="p-2 space-y-1">
+          <MenuButton onClick={() => { onOpenLeaderboard(); onClose(); }} inkColor={inkColor} paperBg={paperBg}>
+            Leaderboard
           </MenuButton>
-
-          <MenuButton
-            onClick={() => { onOpenStats(); onClose(); }}
-            theme={theme}
-          >
-            <img src={UI_ASSETS.statsLabel} alt="" className="h-6" style={{ filter: filterStyle }} />
-            <span>Stats & Achievements</span>
+          <MenuButton onClick={() => { onOpenStats(); onClose(); }} inkColor={inkColor} paperBg={paperBg}>
+            Stats
           </MenuButton>
-        </div>
-
-        {/* Settings */}
-        <div className="p-4 border-t" style={{ borderColor: theme.accent3 }}>
-          <div className="text-xs font-bold mb-3" style={{ color: theme.accent2 }}>Settings</div>
-
-          {/* Sound toggle */}
-          <ToggleRow
-            label="Sound"
-            enabled={!isMuted}
-            onToggle={onToggleSound}
-            theme={theme}
-            icon={isMuted ? UI_ASSETS.volumeOff : UI_ASSETS.volumeOn}
-            filterStyle={filterStyle}
-          />
-
-          {/* Haptics toggle */}
-          {hasHaptics && (
-            <ToggleRow
-              label="Haptics"
-              enabled={hapticsEnabled}
-              onToggle={onToggleHaptics}
-              theme={theme}
-              emoji={hapticsEnabled ? '📳' : '📴'}
-            />
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="p-4 border-t" style={{ borderColor: theme.accent3 }}>
-          <MenuButton onClick={onReplayTutorial} theme={theme}>
-            <img src={UI_ASSETS.helpIcon} alt="" className="h-6" style={{ filter: filterStyle }} />
-            <span>Replay Tutorial</span>
+          <MenuButton onClick={onToggleSound} inkColor={inkColor} paperBg={paperBg}>
+            Sound: {isMuted ? 'OFF' : 'ON'}
+          </MenuButton>
+          <MenuButton onClick={onReplayTutorial} inkColor={inkColor} paperBg={paperBg}>
+            Tutorial
           </MenuButton>
         </div>
       </div>
@@ -192,66 +180,28 @@ export function SlideOutMenu({
 
 function MenuButton({
   onClick,
-  theme,
   children,
+  inkColor,
+  paperBg
 }: {
   onClick: () => void;
-  theme: Theme;
   children: React.ReactNode;
+  inkColor: string;
+  paperBg: string;
 }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 p-3 rounded hover:opacity-80 transition-opacity"
+      className="w-full text-left px-2 py-1 rounded hover:opacity-80 transition-opacity"
       style={{
-        background: `${theme.accent3}30`,
-        border: `1px solid ${theme.accent3}`,
-        color: theme.uiText,
+        fontSize: '12px',
+        fontFamily: '"Comic Sans MS", cursive, sans-serif',
+        color: inkColor,
+        background: `${inkColor}10`,
+        border: `1px solid ${inkColor}40`,
       }}
     >
       {children}
     </button>
-  );
-}
-
-function ToggleRow({
-  label,
-  enabled,
-  onToggle,
-  theme,
-  icon,
-  emoji,
-  filterStyle,
-}: {
-  label: string;
-  enabled: boolean;
-  onToggle: () => void;
-  theme: Theme;
-  icon?: string;
-  emoji?: string;
-  filterStyle?: string;
-}) {
-  return (
-    <div className="flex items-center justify-between py-2">
-      <div className="flex items-center gap-2">
-        {icon && <img src={icon} alt="" className="w-5 h-5" style={{ filter: filterStyle }} />}
-        {emoji && <span>{emoji}</span>}
-        <span className="text-sm" style={{ color: theme.uiText }}>{label}</span>
-      </div>
-      <button
-        onClick={onToggle}
-        className="w-12 h-6 rounded-full transition-colors relative"
-        style={{
-          background: enabled ? theme.highlight : `${theme.accent3}50`,
-        }}
-      >
-        <div
-          className="absolute top-1 w-4 h-4 rounded-full bg-white transition-transform"
-          style={{
-            transform: enabled ? 'translateX(26px)' : 'translateX(2px)',
-          }}
-        />
-      </button>
-    </div>
   );
 }

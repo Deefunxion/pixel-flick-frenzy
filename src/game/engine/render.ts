@@ -667,9 +667,13 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
     renderFlipbookFrame(ctx, state, COLORS, nowMs);
   }
 
-  // Hamburger menu icon (top-left corner, below notifications)
-  // Only render if not in flight (avoid distraction during gameplay)
-  if (!state.flying && !state.sliding) {
+  // Hamburger menu icon - ONLY in landscape mode
+  // Check if landscape (height < 500 and width > height)
+  const isLandscape = typeof window !== 'undefined' &&
+    window.innerHeight < 500 &&
+    window.innerWidth > window.innerHeight;
+
+  if (isLandscape && !state.flying && !state.sliding) {
     const menuX = 8;
     const menuY = 38;  // Below the mini-goal notifications
     const menuSize = 20;
@@ -678,9 +682,9 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
 
     ctx.save();
     ctx.fillStyle = state.menuOpen ? theme.highlight : theme.accent3;
-    ctx.globalAlpha = 0.8;
+    ctx.globalAlpha = 0.9;
 
-    // Three horizontal lines
+    // Three horizontal lines (hamburger)
     for (let i = 0; i < 3; i++) {
       ctx.fillRect(menuX, menuY + i * gap, menuSize, lineHeight);
     }
