@@ -683,16 +683,16 @@ export function updateFrame(state: GameState, svc: GameServices) {
   if ((state.flying || state.sliding) && state.px > 90 && hasEstablishedBest) {
     const edgeProximity = (state.px - 90) / (CLIFF_EDGE - 90);
 
-    // Slow-mo is an unlockable feature - requires 'bullet_time' achievement (best > 400)
-    const hasBulletTime = state.achievements.has('bullet_time');
+    // Slow-mo is an unlockable feature - requires 'dist_400' achievement (best >= 400)
+    const hasSlowMoUnlocked = state.achievements.has('dist_400');
 
     // Base slowMo from edge proximity (only if bullet_time unlocked)
-    let targetSlowMo = (state.reduceFx || !hasBulletTime) ? 0 : Math.min(0.7, edgeProximity * 0.8);
+    let targetSlowMo = (state.reduceFx || !hasSlowMoUnlocked) ? 0 : Math.min(0.7, edgeProximity * 0.8);
     let targetZoom = state.reduceFx ? 1 : (1 + edgeProximity * 0.3);
 
 
     // Record Zone Bullet Time - Two Levels (only if bullet_time unlocked)
-    if (state.recordZoneActive && !state.reduceFx && hasBulletTime) {
+    if (state.recordZoneActive && !state.reduceFx && hasSlowMoUnlocked) {
       // Level 1: Instant bullet time when entering record zone
       // Base slowMo jumps to 0.7 immediately
       targetSlowMo = Math.max(0.7, targetSlowMo);
@@ -706,13 +706,13 @@ export function updateFrame(state: GameState, svc: GameServices) {
     }
 
     // Peak moment - maximum freeze (only if bullet_time unlocked)
-    if (state.recordZonePeak && !state.reduceFx && hasBulletTime) {
+    if (state.recordZonePeak && !state.reduceFx && hasSlowMoUnlocked) {
       targetSlowMo = 0.98;
       targetZoom = 2.5;
     }
 
     // CINEMATIC ZONE - 2x zoom and 2x slowdown when passing threshold (only if bullet_time unlocked)
-    if (state.px > CINEMATIC_THRESHOLD && !state.reduceFx && hasBulletTime) {
+    if (state.px > CINEMATIC_THRESHOLD && !state.reduceFx && hasSlowMoUnlocked) {
       targetZoom = 2;
       targetSlowMo = 0.5; // 2x slower (effectiveTimeScale = 0.75 * 0.5 = 0.375)
       // Focus on the finish area instead of Zeno
@@ -723,7 +723,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
     // ZENO RULER ZONE - Extreme bullet time for fractal ruler visualization (px > 419)
     // This lets players appreciate the infinite decimal zoom effect
     // ONLY activates during SLIDING, not flying - prevents slow-mo during fall
-    if (state.px > 419 && state.sliding && !state.reduceFx && hasBulletTime) {
+    if (state.px > 419 && state.sliding && !state.reduceFx && hasSlowMoUnlocked) {
       // Calculate decimal level for progressive slow-mo
       const decimal = state.px - 419; // 0.0 to 1.0
       let zenoLevel = 0;
@@ -742,7 +742,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
     }
 
     // Heartbeat audio during record zone (only if bullet_time unlocked)
-    if (state.recordZoneActive && !state.reduceFx && hasBulletTime) {
+    if (state.recordZoneActive && !state.reduceFx && hasSlowMoUnlocked) {
       // Play heartbeat every ~400ms based on frame count (faster when intense)
       const heartbeatInterval = state.recordZoneIntensity > 0.6 ? 300 : 400;
       if (Math.floor(nowMs / heartbeatInterval) !== Math.floor((nowMs - 16) / heartbeatInterval)) {

@@ -33,7 +33,7 @@ export function getAchievementProgress(
     hundred_throws: { current: (s) => s.totalThrows, target: 100 },
     high_roller: { current: (s) => s.maxMultiplier, target: 4 },
     thousand_score: { current: (_, g) => g.totalScore, target: 1000 },
-    bullet_time: { current: (_, g) => g.best, target: 401 },
+    dist_400: { current: (_, g) => g.best, target: 400 },
     hot_streak_5: { current: (_, g) => g.hotStreak, target: 5 },
     hot_streak_10: { current: (_, g) => g.hotStreak, target: 10 },
     untouchable: { current: (_, g) => g.landingsWithoutFall, target: 10 },
