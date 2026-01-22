@@ -123,19 +123,24 @@
   }
 }
 
-/* Mobile responsive - Landscape */
+/* Mobile responsive - Landscape (Canvas-Centric) */
 @media (max-height: 500px) and (orientation: landscape) {
   .game-canvas {
     width: auto;
-    height: 70vh;
+    height: 95vh;
     aspect-ratio: 2 / 1;
     max-width: 100vw;
   }
 
-  /* Compact UI in landscape */
-  .landscape-compact {
-    transform: scale(0.85);
-    transform-origin: top center;
+  /* Hide external UI in landscape - hamburger menu takes over */
+  .external-ui {
+    display: none !important;
+  }
+
+  /* Compact body in landscape */
+  body {
+    padding: 0;
+    margin: 0;
   }
 }
 
@@ -151,6 +156,24 @@
 @media (max-width: 500px) {
   body {
     padding: 0.5rem;
+  }
+}
+
+/* Canvas container - zoom resistant */
+.canvas-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 100vw;
+  overflow: hidden;
+}
+
+/* Landscape: full viewport canvas */
+@media (max-height: 500px) and (orientation: landscape) {
+  .canvas-container {
+    height: 100vh;
+    height: 100svh; /* Safe viewport height for mobile */
   }
 }
 
