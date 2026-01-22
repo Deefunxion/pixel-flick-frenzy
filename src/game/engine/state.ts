@@ -194,9 +194,11 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
       pressedThisFrame: false,
       releasedThisFrame: false,
       holdDuration: 0,
+      holdDurationAtRelease: 0,
       lastPressedState: false,
     },
     staminaDeniedShake: 0,
+    pendingTapVelocity: 0,
     tutorialState: {
       phase: 'none',
       active: false,
@@ -293,9 +295,11 @@ export function resetPhysics(state: GameState) {
     pressedThisFrame: false,
     releasedThisFrame: false,
     holdDuration: 0,
+    holdDurationAtRelease: 0,
     lastPressedState: false,
   };
   state.staminaDeniedShake = 0;
+  state.pendingTapVelocity = 0;
   // Precision bar reset
   state.precisionBarActive = false;
   state.lastValidPx = 0;

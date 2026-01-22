@@ -78,6 +78,7 @@ export interface PrecisionInput {
   pressedThisFrame: boolean;   // True only on the frame input started
   releasedThisFrame: boolean;  // True only on the frame input released
   holdDuration: number;        // Frames held (for continuous hold)
+  holdDurationAtRelease: number; // Duration captured at release (for tap detection)
   lastPressedState: boolean;   // Previous frame's pressed state
 }
 
@@ -176,6 +177,7 @@ export interface GameState {
   // Precision mechanics - input state tracking
   precisionInput: PrecisionInput;
   staminaDeniedShake: number; // Frames of shake remaining
+  pendingTapVelocity: number; // Track tap velocity boost for potential undo on hold
   // Tutorial system
   tutorialState: TutorialState;
   // Precision bar system (419-420 zone)

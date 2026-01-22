@@ -291,6 +291,355 @@ function drawZenoSprite(
   return true;
 }
 
+// Detail zoom window constants
+const DETAIL_WINDOW = {
+  width: 140,      // Window width
+  height: 100,     // Window height
+  margin: 10,      // Margin from edge
+  zoom: 2,         // Zoom multiplier (2x - shows full Zeno)
+  threshold: 415,  // px threshold to show window
+  focusX: 405,     // Center of zoom focus (near cliff edge)
+  focusY: 210,     // Y focus (lower to show feet)
+};
+
+// Zeno Ruler constants
+const ZENO_RULER = {
+  height: 24,      // Ruler height in pixels
+  tickCount: 10,   // Number of tick marks per level
+  threshold: 419,  // Position threshold to show ruler
+};
+
+/**
+ * Calculate the current decimal level and bounds for Zeno's position
+ * Level 0: 419.0 - 420.0 (tenths)
+ * Level 1: 419.9 - 420.0 (hundredths)
+ * Level 2: 419.99 - 420.0 (thousandths)
+ * etc.
+ */
+function getZenoRulerLevel(px: number): { level: number; lowerBound: number; progress: number } {
+  if (px < 419) {
+    return { level: 0, lowerBound: 419, progress: 0 };
+  }
+
+  const upperBound = 420;
+  let level = 0;
+  let lowerBound = 419;
+
+  // Find the deepest level where px has passed the 90% mark
+  while (level < 6) { // Max 6 levels (419.999999)
+    const nextThreshold = upperBound - (upperBound - lowerBound) * 0.1;
+    if (px >= nextThreshold) {
+      lowerBound = nextThreshold;
+      level++;
+    } else {
+      break;
+    }
+  }
+
+  const range = upperBound - lowerBound;
+  const progress = range > 0 ? (px - lowerBound) / range : 0;
+
+  return { level, lowerBound, progress };
+}
+
+/**
+ * Format a number for the Zeno ruler display
+ */
+function formatRulerLabel(value: number, level: number): string {
+  const decimals = Math.max(1, level + 1);
+  return value.toFixed(decimals);
+}
+
+/**
+ * Render the Zeno Paradox ruler - a fractal ruler that "grows" as you approach 420
+ * The ruler zooms in as Zeno passes each decimal threshold
+ */
+function renderZenoRuler(
+  ctx: CanvasRenderingContext2D,
+  px: number,
+  isSliding: boolean,
+  windowX: number,
+  windowY: number,
+  windowWidth: number,
+  windowHeight: number,
+  theme: Theme,
+  nowMs: number
+): void {
+  // Only show during sliding, not flying
+  if (px < ZENO_RULER.threshold || !isSliding) {
+    return;
+  }
+
+  const { height: rulerHeight, tickCount } = ZENO_RULER;
+  const { level, lowerBound, progress } = getZenoRulerLevel(px);
+  const upperBound = 420;
+
+  // Ruler position (at bottom of detail window)
+  const rulerY = windowY + windowHeight - rulerHeight - 4;
+  const rulerX = windowX + 8;
+  const rulerWidth = windowWidth - 16;
+
+  // Background for ruler
+  ctx.fillStyle = theme.renderStyle.kind === 'noir'
+    ? 'rgba(0, 0, 0, 0.8)'
+    : 'rgba(255, 255, 255, 0.9)';
+  ctx.fillRect(rulerX - 2, rulerY - 2, rulerWidth + 4, rulerHeight + 4);
+
+  // Ruler base line
+  ctx.strokeStyle = theme.foreground;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(rulerX, rulerY + rulerHeight - 8);
+  ctx.lineTo(rulerX + rulerWidth, rulerY + rulerHeight - 8);
+  ctx.stroke();
+
+  // Tick marks
+  const tickSpacing = rulerWidth / tickCount;
+  for (let i = 0; i <= tickCount; i++) {
+    const tickX = rulerX + i * tickSpacing;
+    const isMajor = i === 0 || i === tickCount || i === 5;
+    const tickHeight = isMajor ? 8 : 4;
+
+    ctx.strokeStyle = theme.foreground;
+    ctx.lineWidth = isMajor ? 1.5 : 0.8;
+    ctx.beginPath();
+    ctx.moveTo(tickX, rulerY + rulerHeight - 8);
+    ctx.lineTo(tickX, rulerY + rulerHeight - 8 - tickHeight);
+    ctx.stroke();
+  }
+
+  // Zeno's toe marker (triangle pointing down)
+  const toeX = rulerX + progress * rulerWidth;
+  const toeY = rulerY + rulerHeight - 10;
+
+  // Pulsing glow effect
+  const pulse = Math.sin(nowMs / 150) * 0.3 + 0.7;
+  ctx.shadowColor = theme.highlight;
+  ctx.shadowBlur = 6 * pulse;
+
+  // Toe marker triangle
+  ctx.fillStyle = theme.highlight;
+  ctx.beginPath();
+  ctx.moveTo(toeX, toeY);
+  ctx.lineTo(toeX - 4, toeY - 6);
+  ctx.lineTo(toeX + 4, toeY - 6);
+  ctx.closePath();
+  ctx.fill();
+
+  // Vertical line from toe
+  ctx.strokeStyle = theme.highlight;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(toeX, toeY - 6);
+  ctx.lineTo(toeX, rulerY + 2);
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+
+  // Labels
+  ctx.font = '7px monospace';
+  ctx.textBaseline = 'top';
+
+  // Left label (lower bound)
+  ctx.textAlign = 'left';
+  ctx.fillStyle = theme.foreground;
+  ctx.fillText(formatRulerLabel(lowerBound, level), rulerX, rulerY);
+
+  // Right label (420)
+  ctx.textAlign = 'right';
+  ctx.fillStyle = theme.danger || '#ff4444';
+  ctx.fillText(formatRulerLabel(upperBound, level), rulerX + rulerWidth, rulerY);
+
+  // Level indicator (∞ symbol gets bigger with level)
+  if (level > 0) {
+    ctx.textAlign = 'center';
+    ctx.font = `${8 + level}px serif`;
+    ctx.fillStyle = theme.highlight;
+    const infinitySymbol = '∞'.repeat(Math.min(level, 3));
+    ctx.fillText(infinitySymbol, rulerX + rulerWidth / 2, rulerY - 1);
+  }
+
+  // Current position label (above the toe)
+  ctx.font = 'bold 8px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = theme.highlight;
+  const posLabel = px.toFixed(Math.min(level + 2, 6));
+  ctx.fillText(posLabel, toeX, rulerY + 2);
+}
+
+/**
+ * Render a zoomed detail window showing the cliff edge area
+ * Appears when approaching high scores (px > 415)
+ */
+function renderDetailZoomWindow(
+  ctx: CanvasRenderingContext2D,
+  state: GameState,
+  theme: Theme,
+  nowMs: number,
+  dpr: number
+): void {
+  // Only show when approaching cliff edge during flight/slide
+  if (state.px < DETAIL_WINDOW.threshold || (!state.flying && !state.sliding)) {
+    return;
+  }
+
+  // Don't show if reduceFx is enabled
+  if (state.reduceFx) {
+    return;
+  }
+
+  const { width, height, margin, zoom, focusX, focusY } = DETAIL_WINDOW;
+
+  // Position: bottom-right corner
+  const x = W - width - margin;
+  const y = H - height - margin;
+
+  // Calculate the source area to zoom into
+  const sourceWidth = width / zoom;
+  const sourceHeight = height / zoom;
+
+  // Dynamic focus - follow Zeno horizontally, keep vertical centered on ground
+  const dynamicFocusX = Math.max(focusX, Math.min(state.px, CLIFF_EDGE - 5));
+  const sourceX = dynamicFocusX - sourceWidth / 2;
+  const sourceY = focusY - sourceHeight / 2;
+
+  ctx.save();
+  ctx.scale(dpr, dpr);
+
+  // Draw window border/frame (sketchy style)
+  const borderWidth = 3;
+  const pulse = Math.sin(nowMs / 200) * 0.3 + 0.7;
+
+  // Outer glow for emphasis
+  ctx.shadowColor = theme.highlight;
+  ctx.shadowBlur = 8 * pulse;
+
+  // Border background
+  ctx.fillStyle = theme.background;
+  ctx.strokeStyle = theme.foreground;
+  ctx.lineWidth = borderWidth;
+
+  // Draw rounded rectangle border
+  const radius = 6;
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Reset shadow
+  ctx.shadowBlur = 0;
+
+  // Clip to window area
+  ctx.beginPath();
+  ctx.rect(x + borderWidth, y + borderWidth, width - borderWidth * 2, height - borderWidth * 2);
+  ctx.clip();
+
+  // Translate and scale to create zoom effect
+  ctx.translate(x + borderWidth, y + borderWidth);
+  ctx.scale(zoom, zoom);
+  ctx.translate(-sourceX, -sourceY);
+
+  // Render the scene content (simplified - just key elements)
+  const groundY = H - 20;
+  const ZENO_Y_OFFSET = theme.renderStyle.kind === 'noir' ? -24 : -20;
+  const zenoY = state.py + ZENO_Y_OFFSET;
+  const zenoX = state.px + (theme.renderStyle.kind === 'noir' ? 0 : 2);
+
+  // Draw background snippet (ground area only for performance)
+  ctx.fillStyle = theme.background;
+  ctx.fillRect(sourceX - 10, sourceY - 10, sourceWidth + 20, sourceHeight + 20);
+
+  // Draw ground line
+  ctx.strokeStyle = theme.foreground;
+  ctx.lineWidth = 1.5 / zoom;
+  ctx.beginPath();
+  ctx.moveTo(sourceX - 10, groundY);
+  ctx.lineTo(CLIFF_EDGE, groundY);
+  ctx.stroke();
+
+  // Draw cliff edge
+  ctx.beginPath();
+  ctx.moveTo(CLIFF_EDGE, groundY);
+  ctx.lineTo(CLIFF_EDGE, groundY + 30);
+  ctx.lineTo(CLIFF_EDGE - 15, groundY + 30);
+  ctx.stroke();
+
+  // Draw Zeno target marker (star)
+  if (state.zenoTarget > 0 && state.zenoTarget <= CLIFF_EDGE) {
+    const targetX = Math.floor(state.zenoTarget);
+    ctx.fillStyle = theme.highlight;
+    ctx.beginPath();
+    const starSize = 4;
+    for (let i = 0; i < 5; i++) {
+      const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+      const px = targetX + Math.cos(angle) * starSize;
+      const py = groundY - 8 + Math.sin(angle) * starSize;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Draw best marker (flag)
+  if (state.best > 0 && state.best <= CLIFF_EDGE) {
+    const flagX = Math.floor(state.best);
+    ctx.strokeStyle = theme.accent1;
+    ctx.lineWidth = 1 / zoom;
+    ctx.beginPath();
+    ctx.moveTo(flagX, groundY);
+    ctx.lineTo(flagX, groundY - 20);
+    ctx.stroke();
+
+    // Flag
+    ctx.fillStyle = theme.accent1;
+    ctx.beginPath();
+    ctx.moveTo(flagX, groundY - 20);
+    ctx.lineTo(flagX + 8, groundY - 16);
+    ctx.lineTo(flagX, groundY - 12);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Draw Zeno character (simplified stick figure in detail view)
+  if (state.zenoAnimator) {
+    state.zenoAnimator.draw(ctx, zenoX, zenoY, state.vx < 0);
+  } else {
+    // Fallback simple circle for Zeno
+    ctx.fillStyle = theme.foreground;
+    ctx.beginPath();
+    ctx.arc(zenoX, zenoY, 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Restore from zoom transform
+  ctx.restore();
+  ctx.save();
+  ctx.scale(dpr, dpr);
+
+  // Render Zeno Ruler (fractal ruler showing decimal precision) - only during slide
+  renderZenoRuler(ctx, state.px, state.sliding, x, y, width, height, theme, nowMs);
+
+  // "DETAIL" label (top-left corner of window)
+  ctx.font = '8px "Comic Sans MS", cursive';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = theme.foreground;
+  ctx.globalAlpha = 0.7;
+  ctx.fillText('DETAIL', x + 5, y - 4);
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
+
 export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, theme: Theme, nowMs: number, dpr: number = 1) {
   const COLORS = theme;
 
@@ -319,6 +668,9 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
   }
 
   ctx.restore();
+
+  // Render detail zoom window (after main render, as overlay)
+  renderDetailZoomWindow(ctx, state, theme, nowMs, dpr);
 }
 
 function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS: Theme, nowMs: number) {

@@ -219,14 +219,26 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.precisionInput.releasedThisFrame = !pressed && wasPressed;
 
     // Apply buffered inputs from slow-mo period
+    let bufferedTapApplied = false;
     if (processBufferedInputs) {
-      if (hasBufferedInput('tap') || hasBufferedInput('press')) {
+      if (hasBufferedInput('tap')) {
+        // Buffered tap = complete press+release, trigger tap action
+        state.precisionInput.releasedThisFrame = true;
+        state.precisionInput.holdDurationAtRelease = 1; // Quick tap
+        bufferedTapApplied = true;
+      } else if (hasBufferedInput('press')) {
         state.precisionInput.pressedThisFrame = true;
       }
-      if (hasBufferedInput('release')) {
+      if (hasBufferedInput('release') && !bufferedTapApplied) {
         state.precisionInput.releasedThisFrame = true;
+        state.precisionInput.holdDurationAtRelease = state.precisionInput.holdDuration;
       }
       clearBuffer();
+    }
+
+    // Capture hold duration at release BEFORE resetting (skip if buffered tap already set it)
+    if (state.precisionInput.releasedThisFrame && !bufferedTapApplied) {
+      state.precisionInput.holdDurationAtRelease = state.precisionInput.holdDuration;
     }
 
     if (pressed) {
@@ -375,16 +387,19 @@ export function updateFrame(state: GameState, svc: GameServices) {
   if (state.flying) {
     state.launchFrame++; // Increment for launch burst effect
 
-    // Precision control: Air brake (FIX 1: check flag)
+    // Precision control: Air thrust/brake (FIX 1: check flag)
+    // Tap triggers on PRESS for responsiveness, but if held past grace period, we undo the tap effect
     if (!state.landed && !precisionAppliedThisFrame) {
       const deltaTime = 1/60;
+      const vxBefore = state.vx; // Track for potential undo
       if (state.precisionInput.pressedThisFrame) {
-        // Tap: forward velocity boost (thrust)
+        // Tap: forward velocity boost (thrust) - immediate on press for responsiveness
         const result = applyAirThrust(state);
         if (result.applied) {
           precisionAppliedThisFrame = true;
           state.lastControlAction = 'thrust';
           state.controlActionTime = nowMs;
+          state.pendingTapVelocity = state.vx - vxBefore; // Track actual boost for undo
           audio.airBrakeTap?.(); // TODO: add airThrust sound
 
           // Visual feedback: backward exhaust particles for thrust
@@ -405,7 +420,17 @@ export function updateFrame(state: GameState, svc: GameServices) {
           audio.actionDenied?.();
           state.staminaDeniedShake = 8;
         }
-      } else if (pressed && state.precisionInput.holdDuration > TAP_GRACE_FRAMES) {
+      } else if (state.precisionInput.releasedThisFrame && state.precisionInput.holdDurationAtRelease <= TAP_GRACE_FRAMES) {
+        // Quick release - confirm tap (clear pending, no undo needed)
+        state.pendingTapVelocity = 0;
+      } else if (pressed && state.precisionInput.holdDuration === TAP_GRACE_FRAMES + 1) {
+        // Just crossed grace period - undo the tap effect if there was one
+        if (state.pendingTapVelocity && state.pendingTapVelocity > 0) {
+          state.vx = Math.max(0, state.vx - state.pendingTapVelocity);
+          state.pendingTapVelocity = 0;
+        }
+      }
+      if (pressed && state.precisionInput.holdDuration > TAP_GRACE_FRAMES) {
         // Hold: continuous reduction (grace period allows clean taps)
         const result = applyAirBrake(state, 'hold', deltaTime);
         if (result.applied) {
@@ -695,6 +720,27 @@ export function updateFrame(state: GameState, svc: GameServices) {
       state.zoomTargetY = H - 60; // Ground level area
     }
 
+    // ZENO RULER ZONE - Extreme bullet time for fractal ruler visualization (px > 419)
+    // This lets players appreciate the infinite decimal zoom effect
+    // ONLY activates during SLIDING, not flying - prevents slow-mo during fall
+    if (state.px > 419 && state.sliding && !state.reduceFx && hasBulletTime) {
+      // Calculate decimal level for progressive slow-mo
+      const decimal = state.px - 419; // 0.0 to 1.0
+      let zenoLevel = 0;
+      if (decimal >= 0.9) zenoLevel = 1;      // 419.9+
+      if (decimal >= 0.99) zenoLevel = 2;     // 419.99+
+      if (decimal >= 0.999) zenoLevel = 3;    // 419.999+
+      if (decimal >= 0.9999) zenoLevel = 4;   // 419.9999+
+
+      // Progressive slow-mo: deeper levels = slower time
+      // Level 0: 0.90 (10% speed), Level 1: 0.92, Level 2: 0.94, Level 3: 0.96, Level 4: 0.98
+      const zenoSlowMo = 0.90 + zenoLevel * 0.02;
+      targetSlowMo = Math.max(targetSlowMo, zenoSlowMo);
+
+      // Slight extra zoom at Zeno ruler zone
+      targetZoom = Math.max(targetZoom, 1.8);
+    }
+
     // Heartbeat audio during record zone (only if bullet_time unlocked)
     if (state.recordZoneActive && !state.reduceFx && hasBulletTime) {
       // Play heartbeat every ~400ms based on frame count (faster when intense)
@@ -765,20 +811,37 @@ export function updateFrame(state: GameState, svc: GameServices) {
   // Sliding (scaled by effectiveTimeScale for slowmo support)
   if (state.sliding) {
     // Precision control: Slide extend/brake (FIX 1: check flag)
+    // Tap triggers on PRESS for responsiveness, but if held past grace period, we undo the tap effect
     let frictionMultiplier = 1.0;
     if (!state.landed && !precisionAppliedThisFrame) {
       const deltaTime = 1/60;
       if (state.precisionInput.pressedThisFrame) {
-        // Tap: extend slide
+        // Tap: extend slide (immediate on press for responsiveness)
         const result = applySlideControl(state, 'tap');
         if (result.applied) {
           precisionAppliedThisFrame = true;
+          state.pendingTapVelocity = 0.15; // Track what we added so we can undo
           audio.slideExtend?.();
         } else if (result.denied) {
           audio.actionDenied?.();
           state.staminaDeniedShake = 8;
         }
-      } else if (pressed && state.precisionInput.holdDuration > TAP_GRACE_FRAMES) {
+      } else if (state.precisionInput.releasedThisFrame && state.precisionInput.holdDurationAtRelease <= TAP_GRACE_FRAMES) {
+        // Quick release - confirm tap (clear pending, no undo needed)
+        state.pendingTapVelocity = 0;
+      } else if (pressed && state.precisionInput.holdDuration === TAP_GRACE_FRAMES + 1) {
+        // Just crossed grace period - undo the tap effect if there was one
+        if (state.pendingTapVelocity && state.pendingTapVelocity > 0) {
+          // Reverse the velocity boost from tap
+          if (state.vx > 0) {
+            state.vx = Math.max(0, state.vx - state.pendingTapVelocity);
+          } else if (state.vx < 0) {
+            state.vx = Math.min(0, state.vx + state.pendingTapVelocity);
+          }
+          state.pendingTapVelocity = 0;
+        }
+      }
+      if (pressed && state.precisionInput.holdDuration > TAP_GRACE_FRAMES) {
         // Hold: brake (grace period allows clean taps)
         const result = applySlideControl(state, 'hold', deltaTime);
         if (result.applied) {
@@ -1129,9 +1192,13 @@ export function updateFrame(state: GameState, svc: GameServices) {
             }
           }, 800);
         } else {
-          // Immediate page flip for success
-          startPageFlip(state, svc.canvas, nowMs);
-          audio.playPaperFlip?.();
+          // Delay page flip for success so player can see their score
+          setTimeout(() => {
+            if (svc.canvas) {
+              startPageFlip(state, svc.canvas, performance.now());
+              audio.playPaperFlip?.();
+            }
+          }, 800);
         }
       } else {
         // Fallback for reduceFx mode - use existing reset timing
