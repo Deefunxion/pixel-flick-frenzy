@@ -1,7 +1,8 @@
 /**
- * Landing Grade Display
+ * Landing Grade Display - Ring-Popup Style
  *
- * Shows grade for 1 second, then fades out
+ * Celebratory popup matching ring hit feedback aesthetic.
+ * Big letter + phrase, pop-in animation, performance-based colors.
  */
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -14,27 +15,30 @@ interface LandingGradeProps {
 }
 
 export function LandingGrade({ result, visible, onDismiss }: LandingGradeProps) {
-  const [fading, setFading] = useState(false);
+  const [animPhase, setAnimPhase] = useState<'pop' | 'hold' | 'fade'>('pop');
 
-  // Memoize tip so it doesn't change on every render (must be before early return)
+  // Memoize tip so it doesn't change on every render
   const showTip = result && (result.grade === 'C' || result.grade === 'D');
-  const tip = useMemo(() => showTip ? getRandomTip() : null, [showTip]);
+  const tip = useMemo(() => showTip ? getRandomTip() : null, [showTip, result]);
 
   useEffect(() => {
     if (!visible || !result) {
-      setFading(false);
+      setAnimPhase('pop');
       return;
     }
 
-    // Start fade out after 800ms
-    const fadeTimer = setTimeout(() => setFading(true), 800);
+    // Animation timeline:
+    // 0-300ms: pop-in (scale 0 -> 1.2 -> 1)
+    // 300-1200ms: hold
+    // 1200-1500ms: fade-out
 
-    // Dismiss after 1000ms total
-    const dismissTimer = setTimeout(() => {
-      onDismiss?.();
-    }, 1000);
+    setAnimPhase('pop');
+    const holdTimer = setTimeout(() => setAnimPhase('hold'), 300);
+    const fadeTimer = setTimeout(() => setAnimPhase('fade'), 1200);
+    const dismissTimer = setTimeout(() => onDismiss?.(), 1500);
 
     return () => {
+      clearTimeout(holdTimer);
       clearTimeout(fadeTimer);
       clearTimeout(dismissTimer);
     };
@@ -45,71 +49,101 @@ export function LandingGrade({ result, visible, onDismiss }: LandingGradeProps) 
   const { grade, comment } = result;
   const color = GRADE_COLORS[grade];
 
-  return (
-    <div
-      className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
-      style={{
-        top: '20%',
-        opacity: fading ? 0 : 1,
-        transition: 'opacity 200ms ease-out',
-      }}
-    >
-      {/* Confetti for S/A */}
-      {shouldShowConfetti(grade) && !fading && (
-        <Confetti />
-      )}
+  // Animation styles
+  const getAnimationStyle = (): React.CSSProperties => {
+    switch (animPhase) {
+      case 'pop':
+        return {
+          transform: 'translate(-50%, -50%) scale(1.2)',
+          opacity: 1,
+          transition: 'transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 100ms ease-out',
+        };
+      case 'hold':
+        return {
+          transform: 'translate(-50%, -50%) scale(1)',
+          opacity: 1,
+          transition: 'transform 150ms ease-out',
+        };
+      case 'fade':
+        return {
+          transform: 'translate(-50%, -50%) scale(0.8)',
+          opacity: 0,
+          transition: 'transform 300ms ease-in, opacity 300ms ease-in',
+        };
+    }
+  };
 
-      {/* Grade display - compact inline with brand colors */}
+  return (
+    <>
+      {/* Confetti for S/A */}
+      {shouldShowConfetti(grade) && animPhase !== 'fade' && <Confetti />}
+
+      {/* Grade popup - centered, ring-popup style */}
       <div
-        className="flex items-center rounded"
+        className="absolute pointer-events-none"
         style={{
-          gap: '4px',
-          padding: '2px 6px',
-          backgroundColor: 'rgba(33, 87, 158, 0.85)',
-          border: '1px solid #21579e',
+          left: '50%',
+          top: '40%',
+          ...getAnimationStyle(),
         }}
       >
-        {/* Grade letter */}
-        <span
-          style={{
-            fontSize: '14px',
-            fontWeight: 900,
-            color,
-            textShadow: `0 0 4px ${color}60`,
-          }}
-        >
-          {grade}
-        </span>
+        <div className="flex flex-col items-center">
+          {/* Big grade letter */}
+          <span
+            style={{
+              fontSize: '48px',
+              fontWeight: 900,
+              fontFamily: '"Comic Sans MS", cursive, sans-serif',
+              color,
+              textShadow: `0 0 20px ${color}80, 0 2px 4px rgba(0,0,0,0.5)`,
+              lineHeight: 1,
+            }}
+          >
+            {grade}
+          </span>
 
-        {/* Comment */}
-        <span
-          style={{
-            fontSize: '9px',
-            fontWeight: 700,
-            color,
-          }}
-        >
-          {comment}
-        </span>
-      </div>
+          {/* Phrase underneath */}
+          <span
+            style={{
+              fontSize: '18px',
+              fontWeight: 700,
+              fontFamily: '"Comic Sans MS", cursive, sans-serif',
+              color,
+              textShadow: `0 0 10px ${color}60, 0 1px 2px rgba(0,0,0,0.5)`,
+              marginTop: '4px',
+            }}
+          >
+            {comment}
+          </span>
 
-      {/* Tip for C/D grades - below */}
-      {tip && (
-        <div style={{ fontSize: '7px', marginTop: '2px', textAlign: 'center', color: '#ef8819', maxWidth: '80px', margin: '2px auto 0' }}>
-          {tip}
+          {/* Tip for C/D grades */}
+          {tip && (
+            <span
+              style={{
+                fontSize: '12px',
+                color: '#ef8819',
+                marginTop: '8px',
+                textAlign: 'center',
+                maxWidth: '150px',
+                textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+              }}
+            >
+              {tip}
+            </span>
+          )}
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
 
-// Simple confetti component
+// Confetti component (unchanged)
 function Confetti() {
   const particles = Array.from({ length: 30 }, (_, i) => ({
     id: i,
     x: Math.random() * 100,
     delay: Math.random() * 0.5,
-    color: ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'][i % 5],
+    color: ['#FFD700', '#FF6B35', '#1E3A8A', '#45B7D1', '#96CEB4'][i % 5],
     size: 4 + Math.random() * 4,
   }));
 

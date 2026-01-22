@@ -31,13 +31,13 @@ const GRADE_THRESHOLDS: Record<Grade, number> = {
   D: 0,
 };
 
-// Coach comments per grade (English only)
+// Grade phrases - Short, celebratory (matching ring popup style)
 const COMMENTS: Record<Grade, string[]> = {
-  S: ['FLAWLESS!', 'LEGENDARY!', 'MASTERFUL!', 'PERFECT!'],
-  A: ['Solid!', 'Clean run!', 'Nice work!', 'Great job!'],
-  B: ['Not bad!', 'Getting there!', 'Keep it up!', 'Good effort!'],
-  C: ['Room to improve', 'Keep trying!', 'You got this!'],
-  D: ['Ouch...', 'Shake it off!', 'Try again!'],
+  S: ['PERFECT!', 'LEGENDARY!', 'FLAWLESS!'],
+  A: ['GREAT!', 'NICE!', 'SMOOTH!'],
+  B: ['GOOD!', 'SOLID!', 'NOT BAD!'],
+  C: ['OK', 'DECENT', 'MEH...'],
+  D: ['OUCH...', 'ROUGH', 'TRY AGAIN'],
 };
 
 // Tips for C/D grades
@@ -149,13 +149,13 @@ export function getRandomTip(): string {
   return TIPS[Math.floor(Math.random() * TIPS.length)];
 }
 
-// Grade colors
+// Grade colors - Performance-based (matching ring popup aesthetic)
 export const GRADE_COLORS: Record<Grade, string> = {
-  S: '#FFD700',  // Gold
-  A: '#C0C0C0',  // Silver
-  B: '#CD7F32',  // Bronze
-  C: '#808080',  // Gray
-  D: '#4A4A4A',  // Dark gray
+  S: '#FFD700',  // Gold (legendary)
+  A: '#FF6B35',  // Orange (celebration)
+  B: '#1E3A8A',  // Ballpoint Blue (theme)
+  C: '#6B7280',  // Muted Blue-Gray
+  D: '#9CA3AF',  // Gray (de-emphasized)
 };
 
 // Grade should show confetti
