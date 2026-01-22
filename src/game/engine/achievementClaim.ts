@@ -81,3 +81,16 @@ export function getUnclaimedCount(
 ): number {
   return getUnclaimedAchievements(achievements, claimedIds).length;
 }
+
+/**
+ * Claim all unclaimed achievements with animated cascade.
+ * Returns array of { id, reward } for each claimed achievement.
+ */
+export function getClaimableAchievements(
+  achievements: Set<string>,
+  claimedIds: string[]
+): { id: string; reward: number }[] {
+  return getUnclaimedAchievements(achievements, claimedIds)
+    .map(id => ({ id, reward: getAchievementReward(id) }))
+    .filter(a => a.reward > 0);
+}
