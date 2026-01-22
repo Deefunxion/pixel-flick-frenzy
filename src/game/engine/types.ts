@@ -238,4 +238,6 @@ export interface GameState {
   achievementQueue: string[];  // Queue of achievement IDs waiting to display
   achievementDisplaying: string | null;  // Currently showing achievement ID
   achievementDisplayStartTime: number;  // When current achievement started showing
+  // Slide-out menu state
+  menuOpen: boolean;
 }

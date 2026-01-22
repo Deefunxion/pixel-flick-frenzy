@@ -667,6 +667,27 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
     renderFlipbookFrame(ctx, state, COLORS, nowMs);
   }
 
+  // Hamburger menu icon (top-left corner, inside canvas)
+  // Only render if not in flight (avoid distraction during gameplay)
+  if (!state.flying && !state.sliding) {
+    const menuX = 8;
+    const menuY = 8;
+    const menuSize = 20;
+    const lineHeight = 3;
+    const gap = 5;
+
+    ctx.save();
+    ctx.fillStyle = state.menuOpen ? theme.highlight : theme.accent3;
+    ctx.globalAlpha = 0.8;
+
+    // Three horizontal lines
+    for (let i = 0; i < 3; i++) {
+      ctx.fillRect(menuX, menuY + i * gap, menuSize, lineHeight);
+    }
+
+    ctx.restore();
+  }
+
   ctx.restore();
 
   // Render detail zoom window (after main render, as overlay)

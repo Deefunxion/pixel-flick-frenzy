@@ -254,6 +254,8 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     achievementQueue: [],
     achievementDisplaying: null,
     achievementDisplayStartTime: 0,
+    // Menu state
+    menuOpen: false,
   };
 }
 
