@@ -114,6 +114,7 @@ import { MiniGoalHUD } from './MiniGoalHUD';
 import { ToastQueue, useToastQueue } from './ToastQueue';
 import { ThrowCounter } from './ThrowCounter';
 import { PracticeModeOverlay } from './PracticeModeOverlay';
+import { SlideOutMenu } from './SlideOutMenu';
 import type { ThrowState, DailyTasks, MilestonesClaimed } from '@/game/engine/types';
 import { calculateThrowRegen, formatRegenTime, getMsUntilNextThrow } from '@/game/engine/throws';
 import { resetTutorialProgress } from '@/game/engine/tutorial';
@@ -235,6 +236,7 @@ const Game = () => {
   const [spritesLoaded, setSpritesLoaded] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [themeId, setThemeId] = useState<ThemeId>(() => {
     const stored = loadString('theme_id', DEFAULT_THEME_ID, 'omf_theme_id');
     // Validate stored value is a valid ThemeId
@@ -754,6 +756,22 @@ const Game = () => {
       if (e.button !== 0 && e.pointerType !== 'touch') return;
       e.preventDefault();
 
+      // Check if clicking hamburger menu area (top-left 35x25 of canvas)
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = W / rect.width;
+        const scaleY = H / rect.height;
+        const canvasX = (e.clientX - rect.left) * scaleX;
+        const canvasY = (e.clientY - rect.top) * scaleY;
+
+        // Hamburger hit area: top-left 35x25 pixels
+        if (canvasX < 35 && canvasY < 25) {
+          setMenuOpen(true);
+          return; // Don't start charging
+        }
+      }
+
       // Buffer input if we're in slow-mo/freeze
       if (isBuffering()) {
         bufferInput('press', { x: e.clientX, y: e.clientY });
@@ -984,8 +1002,42 @@ const Game = () => {
       <div
         className={`w-full max-w-md flex flex-col items-center ${isMobileRef.current ? 'gap-1 p-1' : 'gap-2 p-2'}`}
       >
+        {/* Slide-out Menu */}
+        <SlideOutMenu
+          isOpen={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          theme={theme}
+          themeId={themeId}
+          lastDist={lastDist}
+          best={best}
+          zenoTarget={zenoTarget}
+          zenoLevel={zenoLevel}
+          totalScore={totalScore}
+          onOpenStats={() => setShowStats(true)}
+          onOpenLeaderboard={() => setShowLeaderboard(true)}
+          onToggleSound={async () => {
+            ensureAudioContext(audioRefs.current);
+            await resumeIfSuspended(audioRefs.current);
+            setAudioContextState(getAudioState(audioRefs.current));
+            setAudioSettings((s) => ({ ...s, muted: !s.muted }));
+          }}
+          onToggleHaptics={toggleHaptics}
+          onReplayTutorial={() => {
+            resetTutorialProgress();
+            if (stateRef.current) {
+              stateRef.current.tutorialState.hasSeenCharge = false;
+              stateRef.current.tutorialState.hasSeenAir = false;
+              stateRef.current.tutorialState.hasSeenSlide = false;
+            }
+          }}
+          isMuted={audioSettings.muted}
+          hapticsEnabled={hapticsEnabled}
+          hasHaptics={hasHapticSupport()}
+          throwState={throwState}
+        />
+
         {/* Header - compact */}
-        <div className="flex items-center justify-between w-full max-w-md px-2">
+        <div className="flex items-center justify-between w-full max-w-md px-2 external-ui">
           <img src={assetPath('/assets/icons/logo.png')} alt="one more flick." className="h-8" />
           <div className="flex items-center gap-2">
             {/* Precision control tips - hand-drawn */}
@@ -1136,7 +1188,7 @@ const Game = () => {
             : 'rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 hover:opacity-90 active:translate-y-px transition-all';
 
           return (
-            <div className="w-full max-w-md flex items-center justify-center gap-3 text-xs px-2" style={{ color: theme.uiText }}>
+            <div className="w-full max-w-md flex items-center justify-center gap-3 text-xs px-2 external-ui" style={{ color: theme.uiText }}>
               {/* Left: Tutorial + Sound */}
               <div className="flex items-center gap-1">
                 <button
@@ -1265,7 +1317,7 @@ const Game = () => {
         })()}
 
         {/* Hero row: LAST, LV, TARGET - primary focus */}
-        <div className="w-full max-w-md flex justify-center items-start gap-6 text-center">
+        <div className="w-full max-w-md flex justify-center items-start gap-6 text-center external-ui">
           <div className="flex flex-col items-center min-w-[80px]">
             <img
               src={UI_ASSETS.lastLabel}
@@ -1314,7 +1366,7 @@ const Game = () => {
         </div>
 
         {/* Secondary row: SCORE, BEST */}
-        <div className="w-full max-w-md flex justify-center gap-6 text-center">
+        <div className="w-full max-w-md flex justify-center gap-6 text-center external-ui">
           <div className="flex flex-col items-center">
             <img
               src={UI_ASSETS.scoreLabel}
