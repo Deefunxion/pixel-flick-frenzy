@@ -72,14 +72,16 @@ export function SlideOutMenu({
         onClick={onClose}
       />
 
-      {/* Menu Panel - Notebook style popup */}
+      {/* Menu Panel - Notebook style popup, responsive to zoom */}
       <div
         className="fixed z-50"
         style={{
           left: '8px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          width: '180px',
+          top: '8px',
+          bottom: '8px',
+          width: 'min(180px, 40vw)',
+          maxHeight: 'calc(100vh - 16px)',
+          overflowY: 'auto',
           background: paperBg,
           border: `3px solid ${inkColor}`,
           borderRadius: '4px',
@@ -91,12 +93,14 @@ export function SlideOutMenu({
             ? 'none'
             : `repeating-linear-gradient(transparent, transparent 19px, ${lineColor} 19px, ${lineColor} 20px)`,
           backgroundPosition: '0 10px',
+          display: 'flex',
+          flexDirection: 'column',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header with close X */}
         <div
-          className="flex justify-between items-center px-3 py-2"
+          className="flex justify-between items-center px-3 py-2 flex-shrink-0"
           style={{
             borderBottom: `2px solid ${inkColor}`,
             fontFamily: '"Comic Sans MS", cursive, sans-serif',
@@ -119,8 +123,8 @@ export function SlideOutMenu({
           </button>
         </div>
 
-        {/* Quick Stats */}
-        <div className="px-3 py-2" style={{ borderBottom: `1px dashed ${lineColor}` }}>
+        {/* Quick Stats - compact, doesn't shrink */}
+        <div className="px-3 py-2 flex-shrink-0" style={{ borderBottom: `1px dashed ${lineColor}` }}>
           <div className="grid grid-cols-2 gap-1 text-center" style={{ fontSize: '11px' }}>
             <div>
               <div style={{ color: inkColor, opacity: 0.6 }}>LAST</div>
@@ -158,8 +162,8 @@ export function SlideOutMenu({
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="p-2 space-y-1">
+        {/* Action Buttons - flex-1 to fill remaining space */}
+        <div className="p-2 space-y-1 flex-1 overflow-y-auto">
           <MenuButton onClick={() => { onOpenLeaderboard(); onClose(); }} inkColor={inkColor} paperBg={paperBg}>
             Leaderboard
           </MenuButton>
