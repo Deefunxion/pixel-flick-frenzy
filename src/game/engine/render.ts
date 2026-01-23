@@ -1055,26 +1055,6 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     }
   }
 
-  // Nudge indicator (mid-air boost available)
-  if (state.flying && !state.nudgeUsed) {
-    const nudgeX = 50;
-    const nudgeY = H - 35;
-    const blink = Math.floor(nowMs / 200) % 2;
-
-    // Hand-drawn button
-    ctx.strokeStyle = blink ? COLORS.highlight : COLORS.accent1;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(nudgeX, nudgeY, 45, 20, 3);
-    ctx.stroke();
-
-    // "TAP" text
-    ctx.fillStyle = COLORS.highlight;
-    ctx.font = '12px "Comic Sans MS", cursive, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('TAP', nudgeX + 22, nudgeY + 14);
-  }
-
   // Danger border when near edge
   if ((state.flying || state.sliding) && state.px > 300) {
     const blink = Math.floor(nowMs / 200) % 2;
@@ -1433,22 +1413,6 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
       drawStyledTrajectory(ctx, previewPoints, COLORS.player, nowMs, 'noir');
       ctx.globalAlpha = 1;
     }
-  }
-
-  // Nudge indicator
-  if (state.flying && !state.nudgeUsed) {
-    const nudgeX = 50;
-    const nudgeY = H - 30;
-    const blink = Math.floor(nowMs / 300) % 2;
-
-    ctx.strokeStyle = blink ? COLORS.highlight : COLORS.accent3;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(nudgeX, nudgeY, 35, 16);
-
-    ctx.fillStyle = COLORS.highlight;
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('TAP', nudgeX + 17, nudgeY + 12);
   }
 
   // Danger border
