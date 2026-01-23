@@ -27,7 +27,8 @@ export function MiniGoalHUD({ goalText, progress, target, current, visible }: Mi
       className="absolute rounded"
       style={{
         top: '3%',
-        left: '2%',
+        left: '50%',
+        transform: 'translateX(-50%)',
         padding: '2px 4px',
         backgroundColor: 'rgba(33, 87, 158, 0.85)',
         border: '1px solid #21579e',
