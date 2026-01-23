@@ -667,26 +667,40 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
     renderFlipbookFrame(ctx, state, COLORS, nowMs);
   }
 
-  // Hamburger menu icon - ONLY in landscape mode
-  // Check if landscape (height < 500 and width > height)
-  const isLandscape = typeof window !== 'undefined' &&
-    window.innerHeight < 500 &&
-    window.innerWidth > window.innerHeight;
-
-  if (isLandscape && !state.flying && !state.sliding) {
-    const menuX = 8;
-    const menuY = 38;  // Below the mini-goal notifications
-    const menuSize = 20;
-    const lineHeight = 3;
-    const gap = 5;
+  // Hamburger menu icon - circle badge with drop shadow
+  // Always show in horizontal-only mode (no landscape check needed)
+  if (!state.flying && !state.sliding) {
+    const menuX = 18;
+    const menuY = 18;
+    const radius = 14;
 
     ctx.save();
-    ctx.fillStyle = state.menuOpen ? theme.highlight : theme.accent3;
-    ctx.globalAlpha = 0.9;
+
+    // Drop shadow
+    ctx.beginPath();
+    ctx.arc(menuX + 2, menuY + 2, radius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.fill();
+
+    // Circle background
+    ctx.beginPath();
+    ctx.arc(menuX, menuY, radius, 0, Math.PI * 2);
+    ctx.fillStyle = state.menuOpen ? theme.highlight : theme.uiBg;
+    ctx.fill();
+    ctx.strokeStyle = theme.accent3;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 
     // Three horizontal lines (hamburger)
+    ctx.fillStyle = state.menuOpen ? theme.background : theme.accent3;
+    const lineWidth = 12;
+    const lineHeight = 2;
+    const gap = 4;
+    const startX = menuX - lineWidth / 2;
+    const startY = menuY - gap - lineHeight / 2;
+
     for (let i = 0; i < 3; i++) {
-      ctx.fillRect(menuX, menuY + i * gap, menuSize, lineHeight);
+      ctx.fillRect(startX, startY + i * gap, lineWidth, lineHeight);
     }
 
     ctx.restore();
