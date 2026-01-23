@@ -82,6 +82,12 @@ export interface PrecisionInput {
   lastPressedState: boolean;   // Previous frame's pressed state
 }
 
+export interface AirControl {
+  throttleActive: boolean;
+  throttleMsUsed: number;  // Cumulative throttle time for cap
+  brakeTaps: number;       // Count for contract validation
+}
+
 export type TutorialPhase = 'none' | 'idle' | 'charge' | 'air' | 'slide';
 
 export interface TutorialState {
@@ -241,4 +247,6 @@ export interface GameState {
   achievementDisplayStartTime: number;  // When current achievement started showing
   // Slide-out menu state
   menuOpen: boolean;
+  // Bomb Jack-like air control
+  airControl: AirControl;
 }

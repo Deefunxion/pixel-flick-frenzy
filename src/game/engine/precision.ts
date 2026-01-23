@@ -128,6 +128,34 @@ export function applySlideControl(
  * Costs 5 * edgeMultiplier stamina.
  * Velocity capped at 1.5 * initialSpeed to prevent abuse.
  */
+// Air throttle constants (Bomb Jack-like flight)
+const THROTTLE_ACCEL = 0.9;           // Upward acceleration per frame
+const THROTTLE_COST_PER_SEC = 20;     // Stamina cost per second
+const MAX_THROTTLE_TIME_MS = 1500;    // 1.5s max throttle per throw
+
+/**
+ * Apply air throttle during flight phase.
+ * Hold: upward acceleration (Bomb Jack-like lift) with stamina cost.
+ * Creates "solvable arcs" for pattern-solving gameplay.
+ */
+export function applyAirThrottle(
+  state: GameState,
+  deltaTime: number = 1/60
+): PrecisionResult {
+  const edgeMultiplier = calculateEdgeMultiplier(state.px);
+  const frameCost = THROTTLE_COST_PER_SEC * edgeMultiplier * deltaTime;
+
+  if (state.stamina < frameCost) {
+    return { applied: false, denied: true };
+  }
+
+  // Apply upward acceleration (reduce vy, which is positive when falling)
+  state.vy -= THROTTLE_ACCEL * deltaTime * 60; // Normalize to frame rate
+  state.stamina -= frameCost;
+
+  return { applied: true, denied: false };
+}
+
 export function applyAirThrust(state: GameState): PrecisionResult {
   const edgeMultiplier = calculateEdgeMultiplier(state.px);
   const cost = Math.ceil(AIR_THRUST_BASE_COST * edgeMultiplier);

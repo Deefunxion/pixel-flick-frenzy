@@ -257,6 +257,12 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     achievementDisplayStartTime: 0,
     // Menu state
     menuOpen: false,
+    // Bomb Jack-like air control
+    airControl: {
+      throttleActive: false,
+      throttleMsUsed: 0,
+      brakeTaps: 0,
+    },
   };
 }
 
@@ -344,6 +350,12 @@ export function resetPhysics(state: GameState) {
   // Reset air control feedback
   state.lastControlAction = null;
   state.controlActionTime = 0;
+  // Reset Bomb Jack-like air control
+  state.airControl = {
+    throttleActive: false,
+    throttleMsUsed: 0,
+    brakeTaps: 0,
+  };
 }
 
 export function nextWind(state: GameState) {
