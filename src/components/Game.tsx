@@ -1008,7 +1008,7 @@ const Game = () => {
 
   return (
     <div
-      className="w-full min-h-[100svh] flex justify-center"
+      className="w-full h-[100svh] flex items-center justify-center"
       style={{ background: `linear-gradient(180deg, ${theme.background} 0%, ${theme.horizon} 100%)` }}
     >
       <div
@@ -1083,15 +1083,10 @@ const Game = () => {
                   ? '0 2px 8px rgba(0,0,0,0.4)'
                   : '2px 3px 8px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.05)',
                 border: themeId === 'noir'
-                  ? `1.5px solid ${theme.accent3}`  // Noir: thin, stark contrast
-                  : `2.5px solid ${theme.accent3}`, // Flipbook: thicker, warmer
+                  ? `1.5px solid ${theme.accent3}`
+                  : `2.5px solid ${theme.accent3}`,
                 borderRadius: themeId === 'noir' ? '1px' : '3px',
-                width: '100%',
-                maxWidth: isMobileRef.current ? '520px' : '480px',
-                aspectRatio: `${W} / ${H}`,
-                // Auto image rendering for smooth ink (Noir) AND smooth pencil (Flipbook)
                 imageRendering: 'auto',
-                // Ensure the input overlay receives the pointer events
                 pointerEvents: 'none',
               }}
             />
