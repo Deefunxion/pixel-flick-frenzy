@@ -761,7 +761,7 @@ const Game = () => {
       if (e.button !== 0 && e.pointerType !== 'touch') return;
       e.preventDefault();
 
-      // Check if clicking hamburger menu area (top-left 35x25 of canvas)
+      // Check if clicking hamburger menu area (circle at 18,18 with radius 20 for touch)
       const canvas = canvasRef.current;
       if (canvas) {
         const rect = canvas.getBoundingClientRect();
@@ -770,10 +770,13 @@ const Game = () => {
         const canvasX = (e.clientX - rect.left) * scaleX;
         const canvasY = (e.clientY - rect.top) * scaleY;
 
-        // Hamburger hit area: top-left, below notifications (Y: 35-60)
-        // Only in landscape mode (window.innerHeight < 500)
-        const isLandscape = window.innerHeight < 500 && window.innerWidth > window.innerHeight;
-        if (isLandscape && canvasX < 35 && canvasY > 35 && canvasY < 60) {
+        // Hamburger hit area: circle at (18, 18) with radius 20 (slightly larger for touch)
+        const hamburgerX = 18;
+        const hamburgerY = 18;
+        const hamburgerRadius = 20;
+        const dx = canvasX - hamburgerX;
+        const dy = canvasY - hamburgerY;
+        if (dx * dx + dy * dy < hamburgerRadius * hamburgerRadius) {
           setMenuOpen(true);
           return; // Don't start charging
         }
