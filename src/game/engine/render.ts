@@ -734,20 +734,16 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
     ctx.save();
     ctx.font = 'bold 9px monospace';
     ctx.textAlign = 'left';
+    ctx.fillStyle = '#FFFFFF';  // White for readability
 
-    // Free throws (green) - 🎯 icon
-    ctx.fillStyle = '#4ade80';  // green-400
-    ctx.fillText(`🎯 ${state.throwState.freeThrows}`, 8, H - 18);
-
-    // Permanent throws (orange) - ⭐ icon
-    ctx.fillStyle = '#fbbf24';  // amber-400
-    ctx.fillText(`⭐ ${state.throwState.permanentThrows}`, 50, H - 18);
+    // Free throws / Permanent throws
+    ctx.fillText(`FREE: ${state.throwState.freeThrows}  EARNED: ${state.throwState.permanentThrows}`, 8, H - 12);
 
     // Practice mode indicator
     if (state.practiceMode) {
       ctx.fillStyle = '#fb923c';  // orange-400
       ctx.font = 'bold 8px sans-serif';
-      ctx.fillText('PRACTICE', 8, H - 8);
+      ctx.fillText('PRACTICE', 8, H - 3);
     }
 
     ctx.restore();
