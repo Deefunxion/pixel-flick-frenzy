@@ -107,6 +107,7 @@ export interface GameState {
   angle: number;
   dist: number;
   best: number;
+  lastDist: number | null;  // Previous throw distance (for HUD display)
   zenoTarget: number;
   zenoLevel: number;
   trail: TrailPoint[];

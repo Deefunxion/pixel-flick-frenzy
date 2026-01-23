@@ -705,6 +705,30 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
     ctx.restore();
   }
 
+  // High Score & Last Score display (top-right)
+  ctx.save();
+  ctx.font = '8px "Comic Sans MS", cursive';
+  ctx.textAlign = 'right';
+
+  // HIGH label
+  ctx.fillStyle = theme.accent3;
+  ctx.fillText('HIGH', W - 8, 12);
+  // HIGH value
+  ctx.font = 'bold 10px monospace';
+  ctx.fillStyle = theme.highlight;
+  ctx.fillText(state.best.toFixed(2), W - 8, 23);
+
+  // LAST label
+  ctx.font = '8px "Comic Sans MS", cursive';
+  ctx.fillStyle = theme.accent3;
+  ctx.fillText('LAST', W - 8, 36);
+  // LAST value
+  ctx.font = 'bold 10px monospace';
+  ctx.fillStyle = theme.accent1;
+  ctx.fillText(state.lastDist !== null ? state.lastDist.toFixed(2) : '-', W - 8, 47);
+
+  ctx.restore();
+
   ctx.restore();
 
   // Render detail zoom window (after main render, as overlay)

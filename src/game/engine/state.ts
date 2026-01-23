@@ -118,6 +118,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     angle: OPTIMAL_ANGLE,
     dist: 0,
     best,
+    lastDist: null,
     zenoTarget,
     zenoLevel: savedZenoLevel,
     trail: [],

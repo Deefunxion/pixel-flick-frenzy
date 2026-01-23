@@ -1195,7 +1195,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
         // Check milestones
         checkMilestones(state, ui);
 
-        ui.setLastDist(state.fellOff ? null : state.dist);
+        state.lastDist = state.fellOff ? null : state.dist;
+        ui.setLastDist(state.lastDist);
       }
 
       // Trigger landing grade calculation
