@@ -98,57 +98,42 @@
   }
 }
 
-/* Game canvas - crisp nearest-neighbor scaling */
+/* Game canvas - contain-fit sizing for horizontal-only view */
 .game-canvas {
-  width: 640px;
-  height: 320px;
-  /* Cross-browser crisp pixel rendering disabled for HD update */
-  /* image-rendering: pixelated; - moved to inline style in Game.tsx (auto) */
+  /* Contain-fit: fill available space while maintaining 2:1 aspect ratio */
+  width: 100%;
+  height: 100%;
+  max-width: min(95vw, calc(95vh * 2));
+  max-height: min(95vh, calc(95vw / 2));
+  aspect-ratio: 2 / 1;
+
+  /* Center in container */
+  margin: auto;
+
+  /* Canvas properties */
   cursor: pointer;
-  touch-action: none; /* Prevent scroll/zoom on touch */
+  touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-  /* Prevent any browser smoothing */
   -webkit-font-smoothing: none;
   -moz-osx-font-smoothing: unset;
 }
 
-/* Mobile responsive - Portrait */
-@media (max-width: 680px) {
+/* Landscape mode - full viewport */
+@media (orientation: landscape) {
   .game-canvas {
-    width: 95vw;
-    height: 47.5vw; /* Maintain 2:1 aspect ratio */
-    max-width: 640px;
-    max-height: 320px;
-  }
-}
-
-/* Mobile responsive - Landscape (Canvas-Centric) */
-@media (max-height: 500px) and (orientation: landscape) {
-  .game-canvas {
-    width: auto;
-    height: 95vh;
-    aspect-ratio: 2 / 1;
-    max-width: 100vw;
+    max-width: min(98vw, calc(98vh * 2));
+    max-height: min(98vh, calc(98vw / 2));
   }
 
-  /* Hide external UI in landscape - hamburger menu takes over */
+  /* Hide external UI in landscape */
   .external-ui {
     display: none !important;
   }
 
-  /* Compact body in landscape */
   body {
     padding: 0;
     margin: 0;
-  }
-}
-
-/* Samsung Galaxy specific tweaks */
-@media (max-width: 420px) {
-  .game-canvas {
-    width: 100vw;
-    height: 50vw;
   }
 }
 
