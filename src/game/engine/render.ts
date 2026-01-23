@@ -722,12 +722,36 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
   ctx.font = '8px "Comic Sans MS", cursive';
   ctx.fillStyle = theme.accent3;
   ctx.fillText('LAST', W - 8, 36);
-  // LAST value
+  // LAST value - orange for visibility
   ctx.font = 'bold 10px monospace';
-  ctx.fillStyle = theme.accent1;
+  ctx.fillStyle = '#ed8818';  // Orange for visibility
   ctx.fillText(state.lastDist !== null ? state.lastDist.toFixed(2) : '-', W - 8, 47);
 
   ctx.restore();
+
+  // Throw counter display (bottom-left) - only when not flying/sliding
+  if (!state.flying && !state.sliding && !state.throwState.isPremium) {
+    ctx.save();
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'left';
+
+    // Free throws (green) - 🎯 icon
+    ctx.fillStyle = '#4ade80';  // green-400
+    ctx.fillText(`🎯 ${state.throwState.freeThrows}`, 8, H - 18);
+
+    // Permanent throws (orange) - ⭐ icon
+    ctx.fillStyle = '#fbbf24';  // amber-400
+    ctx.fillText(`⭐ ${state.throwState.permanentThrows}`, 50, H - 18);
+
+    // Practice mode indicator
+    if (state.practiceMode) {
+      ctx.fillStyle = '#fb923c';  // orange-400
+      ctx.font = 'bold 8px sans-serif';
+      ctx.fillText('PRACTICE', 8, H - 8);
+    }
+
+    ctx.restore();
+  }
 
   ctx.restore();
 

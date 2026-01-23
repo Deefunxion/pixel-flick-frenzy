@@ -98,13 +98,13 @@
   }
 }
 
-/* Game canvas - contain-fit sizing for horizontal-only view */
+/* Game canvas - FULL SCREEN horizontal-only view */
 .game-canvas {
-  /* Contain-fit: fill available space while maintaining 2:1 aspect ratio */
+  /* Full screen: fill entire viewport while maintaining 2:1 aspect ratio */
   width: 100%;
   height: 100%;
-  max-width: min(95vw, calc(95vh * 2));
-  max-height: min(95vh, calc(95vw / 2));
+  max-width: min(100vw, calc(100vh * 2));
+  max-height: min(100vh, calc(100vw / 2));
   aspect-ratio: 2 / 1;
 
   /* Center in container */
@@ -119,22 +119,15 @@
   -moz-osx-font-smoothing: unset;
 }
 
-/* Landscape mode - full viewport */
-@media (orientation: landscape) {
-  .game-canvas {
-    max-width: min(98vw, calc(98vh * 2));
-    max-height: min(98vh, calc(98vw / 2));
-  }
+/* Always hide external UI - everything is on canvas now */
+.external-ui {
+  display: none !important;
+}
 
-  /* Hide external UI in landscape */
-  .external-ui {
-    display: none !important;
-  }
-
-  body {
-    padding: 0;
-    margin: 0;
-  }
+body {
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
 }
 
 /* Mobile UI adjustments */

@@ -231,8 +231,8 @@ export class NoirBackgroundRenderer {
 
   private drawVoidLayers(ctx: CanvasRenderingContext2D): void {
     const groundY = H - 20;
-    // Void offset - moved 25% lower for better ground visibility
-    const VOID_Y_OFFSET = H * 0.25;
+    // Void offset - slight shift down for better ground visibility
+    const VOID_Y_OFFSET = H * 0.08;
     const voidY = groundY + VOID_Y_OFFSET;
     const voidHeight = NOIR_ASSET_DIMENSIONS.voidLayer.height * ASSET_SCALE;
 
