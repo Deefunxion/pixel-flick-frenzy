@@ -115,6 +115,8 @@ import { ToastQueue, useToastQueue } from './ToastQueue';
 import { ThrowCounter } from './ThrowCounter';
 import { PracticeModeOverlay } from './PracticeModeOverlay';
 import { SlideOutMenu } from './SlideOutMenu';
+import { RotateScreen } from './RotateScreen';
+import { useIsPortrait } from '@/hooks/useIsPortrait';
 import type { ThrowState, DailyTasks, MilestonesClaimed } from '@/game/engine/types';
 import { calculateThrowRegen, formatRegenTime, getMsUntilNextThrow } from '@/game/engine/throws';
 import { resetTutorialProgress } from '@/game/engine/tutorial';
@@ -517,6 +519,9 @@ const Game = () => {
     typeof window !== 'undefined' &&
     ('ontouchstart' in window || navigator.maxTouchPoints > 0)
   );
+
+  // Portrait detection for horizontal-only mode
+  const isPortrait = useIsPortrait();
 
   useEffect(() => {
     console.log('[Game] useEffect running');
@@ -994,6 +999,11 @@ const Game = () => {
         <p style={{ color: theme.uiText }}>Loading...</p>
       </div>
     );
+  }
+
+  // Show rotate screen for mobile portrait visitors
+  if (isPortrait && isMobileRef.current) {
+    return <RotateScreen />;
   }
 
   return (
