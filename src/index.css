@@ -191,12 +191,6 @@ input, textarea {
   .landscape\:hidden {
     display: none !important;
   }
-  .landscape\:text-xs {
-    font-size: 0.75rem !important;
-  }
-  .landscape\:gap-1 {
-    gap: 0.25rem !important;
-  }
 }
 
 /* Confetti animation for landing grades */
