@@ -119,9 +119,12 @@ export class BackgroundRenderer {
   }
 
   private updateFlag(wind: number, deltaMs: number): void {
-    // Faster flutter with stronger wind
-    const baseInterval = 150;
-    const interval = baseInterval / (1 + Math.abs(wind) * 2);
+    // Wind strength affects flag wave speed (1-5 levels)
+    // Stronger wind = faster flapping
+    const windStrength = Math.abs(wind);
+    const baseInterval = 200; // Calm wind
+    const minInterval = 50;   // Strong wind
+    const interval = Math.max(minInterval, baseInterval - windStrength * 300);
 
     this.state.flagFrameTimer += deltaMs;
     if (this.state.flagFrameTimer >= interval) {

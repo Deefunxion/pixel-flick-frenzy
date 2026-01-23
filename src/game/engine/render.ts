@@ -8,7 +8,6 @@ import {
   drawFailingStickFigure,
   drawHandLine,
   drawHandCircle,
-  drawWindStrengthMeter,
   drawBird,
   drawDashedCurve,
   drawFilmGrain,
@@ -789,80 +788,7 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
     ctx.stroke();
   }
 
-  // Wind indicator - clear arrow showing direction and strength
-  const windDir = state.wind > 0 ? 1 : -1;
-  const windStrength = Math.abs(state.wind);
-
-  // Wind indicator box in top-right
-  const windBoxX = W - 90;
-  const windBoxY = 12;
-  const windBoxW = 75;
-  const windBoxH = 32;
-
-  // Box background
-  ctx.fillStyle = COLORS.background;
-  ctx.fillRect(windBoxX, windBoxY, windBoxW, windBoxH);
-
-  // Box outline
-  ctx.strokeStyle = COLORS.accent3;
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(windBoxX, windBoxY, windBoxW, windBoxH);
-
-  // Decorative corner curls
-  drawDecorativeCurl(ctx, windBoxX - 2, windBoxY - 2, 6, COLORS.accent3, 1, nowMs, -1);
-  drawDecorativeCurl(ctx, windBoxX + windBoxW + 2, windBoxY - 2, 6, COLORS.accent3, 1, nowMs, 1);
-
-  // "WIND" label
-  ctx.fillStyle = COLORS.accent3;
-  ctx.font = '9px "Comic Sans MS", cursive, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('WIND', windBoxX + windBoxW / 2, windBoxY + 10);
-
-  // Arrow showing direction
-  const arrowCenterX = windBoxX + windBoxW / 2;
-  const arrowY = windBoxY + 22;
-  const arrowLength = 15 + windStrength * 150; // Length based on strength
-
-  ctx.strokeStyle = COLORS.accent1;
-  ctx.fillStyle = COLORS.accent1;
-  ctx.lineWidth = 2.5;
-
-  // Arrow line
-  const arrowStartX = arrowCenterX - (arrowLength / 2) * windDir;
-  const arrowEndX = arrowCenterX + (arrowLength / 2) * windDir;
-
-  ctx.beginPath();
-  ctx.moveTo(arrowStartX, arrowY);
-  ctx.lineTo(arrowEndX, arrowY);
-  ctx.stroke();
-
-  // Arrow head
-  ctx.beginPath();
-  ctx.moveTo(arrowEndX, arrowY);
-  ctx.lineTo(arrowEndX - 8 * windDir, arrowY - 5);
-  ctx.lineTo(arrowEndX - 8 * windDir, arrowY + 5);
-  ctx.closePath();
-  ctx.fill();
-
-  // Wind strength meter (bars)
-  drawWindStrengthMeter(ctx, windBoxX + 5, windBoxY + 14, windStrength, windDir, COLORS.accent3, COLORS.accent1);
-
-  // Animated wind lines in the sky showing direction
-  ctx.strokeStyle = COLORS.accent3;
-  ctx.lineWidth = 1;
-  ctx.globalAlpha = 0.4;
-  const lineCount = Math.max(2, Math.min(5, Math.ceil(windStrength * 10)));
-  for (let i = 0; i < lineCount; i++) {
-    const lineX = (100 + i * 100 + (nowMs / 25) * windDir) % (W + 100) - 50;
-    const lineY = 40 + (i % 3) * 30;  // Fixed Y positions, no wobble
-    const lineLen = 20 + windStrength * 40;
-
-    ctx.beginPath();
-    ctx.moveTo(lineX, lineY);
-    ctx.lineTo(lineX + lineLen * windDir, lineY);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
+  // Wind is now indicated by flag animation speed (see backgroundRenderer.ts)
 
   // Decorative birds
   drawBird(ctx, 150 + Math.sin(nowMs / 2000) * 30, 90, 6, COLORS.accent3, 1.5, nowMs);
@@ -1226,36 +1152,7 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
     ctx.stroke();
   }
 
-  // Wind indicator with strength meter
-  const windDir = state.wind > 0 ? 1 : -1;
-  const windStrength = Math.abs(state.wind);
-  const windBoxX = 15;
-  const windBoxY = 10;
-
-  // Direction arrow
-  ctx.strokeStyle = COLORS.accent1;
-  ctx.lineWidth = 2;
-  const arrowLen = 20;
-  const arrowY = windBoxY + 8;
-  const arrowStartX = windBoxX + (windDir > 0 ? 0 : arrowLen);
-  const arrowEndX = windBoxX + (windDir > 0 ? arrowLen : 0);
-
-  ctx.beginPath();
-  ctx.moveTo(arrowStartX, arrowY);
-  ctx.lineTo(arrowEndX, arrowY);
-  ctx.stroke();
-
-  // Arrowhead
-  ctx.fillStyle = COLORS.accent1;
-  ctx.beginPath();
-  ctx.moveTo(arrowEndX, arrowY);
-  ctx.lineTo(arrowEndX - 6 * windDir, arrowY - 4);
-  ctx.lineTo(arrowEndX - 6 * windDir, arrowY + 4);
-  ctx.closePath();
-  ctx.fill();
-
-  // Wind strength meter (bars)
-  drawWindStrengthMeter(ctx, windBoxX + 30, windBoxY, windStrength, windDir, COLORS.accent3, COLORS.accent1);
+  // Wind is now indicated by flag animation speed (see noirBackgroundRenderer.ts)
 
   // Ghost trail (best attempt) - prominent dashes for noir
   if (state.bestTrail.length > 4) {
