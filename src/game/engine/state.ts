@@ -23,6 +23,17 @@ import { calculateThrowRegen } from './throws';
 import { generateBounceSurface } from './bounce';
 import { generateRouteFromObjects } from './routes';
 import { getNextContract } from './contracts';
+import {
+  createArcadeState,
+  getLevel,
+  createDoodlesFromLevel,
+  createSpringsFromLevel,
+  createPortalFromPair,
+  resetDoodles,
+  resetSprings,
+  resetPortal,
+  resetThrowState,
+} from './arcade';
 
 function loadTutorialProgress(): Pick<TutorialState, 'hasSeenCharge' | 'hasSeenAir' | 'hasSeenSlide'> {
   if (typeof window === 'undefined') {
@@ -279,7 +290,23 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     contractConsecutiveFails: 0,
     lastContractResult: null,
     staminaUsedThisThrow: 0,
+    // Arcade mode (default to arcade for MVP)
+    arcadeMode: true,
+    arcadeState: createArcadeState(),
+    arcadeDoodles: [],
+    arcadeSprings: [],
+    arcadePortal: null,
   };
+
+  // Initialize arcade level objects
+  if (state.arcadeMode && state.arcadeState) {
+    const level = getLevel(state.arcadeState.currentLevelId);
+    if (level) {
+      state.arcadeDoodles = createDoodlesFromLevel(level.doodles);
+      state.arcadeSprings = createSpringsFromLevel(level.springs);
+      state.arcadePortal = level.portal ? createPortalFromPair(level.portal) : null;
+    }
+  }
 
   // Generate route after state is created (needs rings array)
   state.activeRoute = generateRouteFromObjects(
@@ -409,6 +436,14 @@ export function resetPhysics(state: GameState) {
   // Reset contract tracking for new throw
   state.staminaUsedThisThrow = 0;
   state.lastContractResult = null;
+
+  // Reset arcade state for new throw
+  if (state.arcadeMode && state.arcadeState) {
+    resetThrowState(state.arcadeState);
+    resetDoodles(state.arcadeDoodles);
+    resetSprings(state.arcadeSprings);
+    resetPortal(state.arcadePortal);
+  }
 }
 
 export function nextWind(state: GameState) {
@@ -471,4 +506,18 @@ export function spawnCelebration(
 
 export function clampAngle(angle: number) {
   return Math.max(MIN_ANGLE, Math.min(70, angle));
+}
+
+export function loadArcadeLevel(state: GameState, levelId: number): void {
+  if (!state.arcadeState) return;
+
+  const level = getLevel(levelId);
+  if (!level) return;
+
+  state.arcadeState.currentLevelId = levelId;
+  state.arcadeDoodles = createDoodlesFromLevel(level.doodles);
+  state.arcadeSprings = createSpringsFromLevel(level.springs);
+  state.arcadePortal = level.portal ? createPortalFromPair(level.portal) : null;
+
+  resetThrowState(state.arcadeState);
 }
