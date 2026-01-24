@@ -6,10 +6,17 @@
 import { CLIFF_EDGE, H } from '@/game/constants';
 import type { Theme } from '@/game/themes';
 import type { GameState } from '../types';
-import { spawnParticles, nextWind } from '../state';
+import { spawnParticles, nextWind, loadArcadeLevel } from '../state';
 import { startPageFlip } from '../pageFlip';
 import { evaluateContract } from '../contracts';
 import { isRouteComplete } from '../routes';
+import {
+  checkStarObjectives,
+  hasAnyStars,
+  recordStars,
+  advanceLevel,
+  getLevel,
+} from '../arcade';
 
 // Audio interface for outcomes
 export type OutcomeAudio = {
@@ -270,6 +277,43 @@ export function evaluateLandingContract(
   if (result.success || state.stats.totalThrows % 3 === 0) {
     state.activeContract = null; // Will regenerate on next throw
   }
+}
+
+/**
+ * Evaluate arcade star objectives on landing
+ * Returns true if level should advance
+ */
+export function evaluateArcadeStars(
+  state: GameState,
+  audio: OutcomeAudio
+): boolean {
+  if (!state.arcadeMode || !state.arcadeState || state.fellOff) return false;
+
+  const level = getLevel(state.arcadeState.currentLevelId);
+  if (!level) return false;
+
+  const stars = checkStarObjectives(state.arcadeState, level, state.dist);
+
+  if (hasAnyStars(stars)) {
+    // Record earned stars
+    recordStars(state.arcadeState, level.id, stars);
+
+    // Celebration feedback based on stars earned
+    const starCount = (stars.allDoodles ? 1 : 0) + (stars.inOrder ? 1 : 0) + (stars.landedInZone ? 1 : 0);
+    if (starCount >= 2) {
+      audio.zenoJingle?.();
+    }
+
+    // Advance to next level if not at max
+    if (state.arcadeState.currentLevelId < 10) {
+      advanceLevel(state.arcadeState);
+      // Load new level objects
+      loadArcadeLevel(state, state.arcadeState.currentLevelId);
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**

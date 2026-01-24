@@ -52,6 +52,7 @@ import {
   handleFallOff,
   handleSlideOffEdge,
   evaluateLandingContract,
+  evaluateArcadeStars,
   triggerPageFlip,
   finalizeThrowOutcome,
   updateNearMissPause,
@@ -386,6 +387,9 @@ export function updateFrame(state: GameState, svc: GameServices): void {
       if (state.lastContractResult?.success) {
         saveJson('throw_state', state.throwState);
       }
+
+      // Arcade mode: evaluate star objectives
+      evaluateArcadeStars(state, audio);
 
       // Show "Almost!" overlay
       if (!state.fellOff && state.dist < state.zenoTarget) {
