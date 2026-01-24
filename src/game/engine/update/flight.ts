@@ -379,9 +379,10 @@ export function processArcadeCollisions(
     }
   }
 
-  // Portal collision
-  if (state.arcadePortal && checkPortalEntry(state.px, state.py, state.arcadePortal)) {
-    applyPortalTeleport(state.arcadePortal, state, state);
+  // Portal collision (bidirectional - can enter from either side)
+  const portalSide = state.arcadePortal ? checkPortalEntry(state.px, state.py, state.arcadePortal) : null;
+  if (portalSide) {
+    applyPortalTeleport(state.arcadePortal!, portalSide, state, state);
 
     // Visual feedback: portal effect
     state.screenFlash = 0.5;
@@ -394,7 +395,7 @@ export function processArcadeCollisions(
         spread: Math.PI * 2,
         speed: 5,
         life: 30,
-        color: '#A855F7', // Purple for portal
+        color: '#d35400', // Orange for flipbook portal
         gravity: 0,
       });
     }
