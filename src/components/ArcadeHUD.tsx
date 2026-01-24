@@ -29,32 +29,32 @@ export function ArcadeHUD({
 
   return (
     <div className="absolute bottom-1 left-0 right-0 flex justify-between px-2 pointer-events-none">
-      {/* Level indicator - transparent, 65% smaller */}
+      {/* Level indicator - transparent, bold */}
       <div style={{ fontFamily: '"Comic Sans MS", cursive, sans-serif' }}>
-        <span style={{ color: STABILO_ORANGE, fontWeight: 'bold', fontSize: '5px' }}>
+        <span style={{ color: STABILO_ORANGE, fontWeight: 'bold', fontSize: '10px' }}>
           LVL {level.id}
         </span>
-        <span style={{ color: INK_BLUE, marginLeft: '2px', fontSize: '4px' }}>
+        <span style={{ color: INK_BLUE, fontWeight: 'bold', marginLeft: '3px', fontSize: '8px' }}>
           →{level.landingTarget}
         </span>
       </div>
 
-      {/* Doodle counter - transparent, 65% smaller */}
+      {/* Doodle counter - transparent, bold */}
       {totalDoodles > 0 && (
         <div style={{ fontFamily: '"Comic Sans MS", cursive, sans-serif' }}>
-          <span style={{ color: INK_BLUE, fontWeight: 'bold', fontSize: '5px' }}>
+          <span style={{ color: INK_BLUE, fontWeight: 'bold', fontSize: '10px' }}>
             {doodlesCollected}/{totalDoodles}
           </span>
           {inOrderSoFar && doodlesCollected > 0 && (
-            <span style={{ color: STABILO_ORANGE, marginLeft: '2px', fontSize: '4px' }}>
+            <span style={{ color: STABILO_ORANGE, fontWeight: 'bold', marginLeft: '3px', fontSize: '8px' }}>
               ✓
             </span>
           )}
         </div>
       )}
 
-      {/* Stars display - transparent, 65% smaller */}
-      <div className="flex gap-0.5">
+      {/* Stars display - transparent, bold */}
+      <div className="flex gap-1">
         <Star filled={earnedStars?.landedInZone || false} />
         <Star filled={earnedStars?.inOrder || false} />
       </div>
@@ -66,7 +66,8 @@ function Star({ filled }: { filled: boolean }) {
   return (
     <span
       style={{
-        fontSize: '5px',
+        fontSize: '10px',
+        fontWeight: 'bold',
         color: filled ? STABILO_ORANGE : '#c4b89b',
       }}
     >
