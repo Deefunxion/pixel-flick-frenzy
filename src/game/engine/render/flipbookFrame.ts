@@ -13,14 +13,12 @@ import {
   LINE_WEIGHTS,
 } from '../sketchy';
 import { drawPrecisionBar } from '../precisionRender';
-import { drawRings } from '../ringsRender';
-import { updateRingPosition } from '../rings';
 import { renderBounce } from '../bounceRender';
-import { renderContractHUD, renderRouteNodeHighlight } from '../contractRender';
+import { renderContractHUD } from '../contractRender';
 import { renderDoodles } from '../arcade/doodlesRender';
 import { renderSprings } from '../arcade/springsRender';
 import { renderPortal } from '../arcade/portalRender';
-import { renderRingPopups, renderRoutePopups, renderEdgeGlow } from './effects/ringJuice';
+import { renderRingPopups } from './effects/ringJuice';
 import { renderNearMissSpotlight } from './effects/nearMiss';
 import { renderOnFireMode } from './effects/onFire';
 import { renderChargeGlow, renderChargeVignette } from './effects/recordZone';
@@ -122,11 +120,6 @@ export function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameSt
   }
 
   // Rings - update positions and draw
-  for (const ring of state.rings) {
-    updateRingPosition(ring, nowMs);
-  }
-  drawRings(ctx, state.rings, COLORS, nowMs, state.ringsPassedThisThrow);
-
   // Render bounce surface
   renderBounce(ctx, state.bounce, nowMs);
 
@@ -137,15 +130,11 @@ export function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameSt
     renderDoodles(ctx, state.arcadeDoodles, nowMs);
   }
 
-  // Ring juice effects
-  renderEdgeGlow(ctx, state.edgeGlowIntensity, W, H);
+  // Ring juice effects (disabled with rings off)
   renderRingPopups(ctx, state.ringJuicePopups);
-  // Route juice effects
-  renderRoutePopups(ctx, state.routeJuicePopups);
 
   // Contract and route UI
   renderContractHUD(ctx, state.activeContract, state.activeRoute, state.lastContractResult, nowMs);
-  renderRouteNodeHighlight(ctx, state.activeRoute, nowMs);
 
   // ON FIRE mode visual effects
   if (state.onFireMode && !state.reduceFx) {

@@ -18,10 +18,7 @@ import {
 } from '@/game/storage';
 import type { DailyTasks, GameState, MilestonesClaimed, Star, ThrowState, TutorialState } from './types';
 import { ParticleSystem } from './particles';
-import { generateRings } from './rings';
 import { calculateThrowRegen } from './throws';
-import { generateBounceSurface } from './bounce';
-import { generateRouteFromObjects } from './routes';
 import { getNextContract } from './contracts';
 import {
   createArcadeState,
@@ -234,7 +231,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     sessionThrows: 0,
     landingsWithoutFall: 0,
     // Rings system
-    rings: generateRings(seed),
+    rings: [],
     ringsPassedThisThrow: 0,
     ringMultiplier: 1,
     // Ring juice
@@ -282,8 +279,8 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
       recentTapTimes: [],
       isHoldingBrake: false,
     },
-    // Bounce surface (puzzle mechanic) - generated for planning visibility
-    bounce: generateBounceSurface(seed),
+    // Bounce surface (puzzle mechanic) - temporarily disabled
+    bounce: null,
     // Routes system (combo objectives) - will be set after
     activeRoute: null,
     // Contracts system (varied objectives)
@@ -311,12 +308,8 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     }
   }
 
-  // Generate route after state is created (needs rings array)
-  state.activeRoute = generateRouteFromObjects(
-    state.rings,
-    state.bounce,
-    seed
-  );
+  // Routes disabled while rings are off
+  state.activeRoute = null;
 
   return state;
 }
@@ -381,7 +374,7 @@ export function resetPhysics(state: GameState) {
   }
   // Rings reset - generate new rings for each throw
   // Use derived seed (base seed + throw count) for unique layouts per throw
-  state.rings = generateRings(state.seed + state.stats.totalThrows);
+  state.rings = [];
   state.ringsPassedThisThrow = 0;
   state.ringMultiplier = 1;
   // Reset ring juice
@@ -416,16 +409,11 @@ export function resetPhysics(state: GameState) {
     isHoldingBrake: false,
   };
 
-  // Generate bounce surface for next throw (visible during planning)
-  const throwSeed = state.seed + state.stats.totalThrows;
-  state.bounce = generateBounceSurface(throwSeed);
+  // Bounce surfaces disabled
+  state.bounce = null;
 
-  // Generate route from rings + bounce (visible during planning)
-  state.activeRoute = generateRouteFromObjects(
-    state.rings,
-    state.bounce,
-    throwSeed
-  );
+  // Routes disabled while rings are off
+  state.activeRoute = null;
 
   // Generate contract if needed (visible during planning)
   if (!state.activeContract) {

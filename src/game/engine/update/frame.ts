@@ -30,7 +30,6 @@ import {
   processAirControls,
   processStaminaWarning,
   updateFlightPhysics,
-  processRingCollisions,
   processBounceCollision,
   processArcadeCollisions,
   updateJuicePopups,
@@ -88,7 +87,6 @@ import {
   updateTrail,
   updateParticles,
   updateParticleSystem,
-  updateRingPositions,
   resetCurrentMultiplier,
 } from './fx';
 
@@ -243,9 +241,6 @@ export function updateFrame(state: GameState, svc: GameServices): void {
     // Physics
     updateFlightPhysics(state, pressed, nowMs, effectiveTimeScale);
 
-    // Ring collisions
-    processRingCollisions(state, nowMs, audio);
-
     // Bounce collision
     processBounceCollision(state, nowMs, audio);
 
@@ -263,9 +258,6 @@ export function updateFrame(state: GameState, svc: GameServices): void {
     // Track last valid position
     trackLastValidPosition(state);
   }
-
-  // === RING POSITION UPDATES (always) ===
-  updateRingPositions(state, nowMs);
 
   // === TRAIL & PARTICLES ===
   updateTrail(state);
