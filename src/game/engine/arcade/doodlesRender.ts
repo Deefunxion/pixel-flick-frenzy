@@ -5,16 +5,27 @@ import { assetPath } from '@/lib/assetPath';
 // Sprite cache
 const spriteCache: Map<string, HTMLImageElement> = new Map();
 
+// Available doodle sprites (coin and star from pickables folder)
+const DOODLE_SPRITES = ['coin', 'star'] as const;
+
 function getDoodleSprite(sprite: string): HTMLImageElement | null {
   const cached = spriteCache.get(sprite);
   if (cached) return cached;
 
   const img = new Image();
-  img.src = assetPath(`/assets/doodles/sprites/${sprite}.png`);
+  // Use pickables folder for actual assets
+  img.src = assetPath(`/assets/pickables/${sprite}.png`);
   spriteCache.set(sprite, img);
 
   return img.complete ? img : null;
 }
+
+// Preload sprites on module load
+DOODLE_SPRITES.forEach(sprite => {
+  const img = new Image();
+  img.src = assetPath(`/assets/pickables/${sprite}.png`);
+  spriteCache.set(sprite, img);
+});
 
 export function renderDoodles(
   ctx: CanvasRenderingContext2D,
