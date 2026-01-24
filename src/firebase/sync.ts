@@ -13,6 +13,8 @@ import {
   saveString,
 } from '@/game/storage';
 
+export type ArcadeStars = { allDoodles: boolean; inOrder: boolean; landedInZone: boolean };
+
 export type LocalData = {
   totalScore: number;
   bestThrow: number;
@@ -21,10 +23,19 @@ export type LocalData = {
   stats: UserProfile['stats'];
   settings: UserProfile['settings'];
   settingsUpdatedAt?: number; // Unix timestamp for local comparison
+  arcadeProgress: {
+    starsPerLevel: Record<number, ArcadeStars>;
+    highestLevelReached: number;
+  };
 };
 
 // Load all local data
 export function getLocalData(): LocalData {
+  const arcadeState = loadJson<{ starsPerLevel?: Record<number, ArcadeStars>; currentLevelId?: number }>(
+    'arcade_state',
+    { starsPerLevel: {}, currentLevelId: 1 }
+  );
+
   return {
     totalScore: loadNumber('total_score', 0, 'omf_total_score'),
     bestThrow: loadNumber('best', 0, 'omf_best'),
@@ -44,6 +55,10 @@ export function getLocalData(): LocalData {
       audioMuted: loadJson('audio_muted', false, 'omf_audio_muted'),
     },
     settingsUpdatedAt: loadNumber('settings_updated_at', 0),
+    arcadeProgress: {
+      starsPerLevel: arcadeState.starsPerLevel || {},
+      highestLevelReached: arcadeState.currentLevelId || 1,
+    },
   };
 }
 
@@ -61,11 +76,44 @@ export function saveLocalData(data: LocalData) {
   if (data.settingsUpdatedAt) {
     saveNumber('settings_updated_at', data.settingsUpdatedAt);
   }
+  // Save arcade progress
+  if (data.arcadeProgress) {
+    saveJson('arcade_state', {
+      starsPerLevel: data.arcadeProgress.starsPerLevel,
+      currentLevelId: data.arcadeProgress.highestLevelReached,
+    });
+  }
 }
 
 // Convert Firestore Timestamp to Unix ms
 function timestampToMs(ts: Timestamp | undefined): number {
   return ts ? ts.toMillis() : 0;
+}
+
+// Merge arcade stars (keep best achievements per level)
+function mergeArcadeStars(
+  local: Record<number, ArcadeStars>,
+  cloud: Record<number, ArcadeStars> | undefined
+): Record<number, ArcadeStars> {
+  if (!cloud) return local;
+
+  const merged: Record<number, ArcadeStars> = {};
+  const allLevels = new Set([
+    ...Object.keys(local).map(Number),
+    ...Object.keys(cloud).map(Number),
+  ]);
+
+  allLevels.forEach(levelId => {
+    const l = local[levelId] || { allDoodles: false, inOrder: false, landedInZone: false };
+    const c = cloud[levelId] || { allDoodles: false, inOrder: false, landedInZone: false };
+    merged[levelId] = {
+      allDoodles: l.allDoodles || c.allDoodles,
+      inOrder: l.inOrder || c.inOrder,
+      landedInZone: l.landedInZone || c.landedInZone,
+    };
+  });
+
+  return merged;
 }
 
 // Merge local and cloud data (keep highest/best, most recent settings)
@@ -101,6 +149,18 @@ export function mergeData(
     // Settings: use most recent
     settings: useCloudSettings && cloud.settings ? cloud.settings : local.settings,
     settingsUpdatedAt: Math.max(localSettingsMs, cloudSettingsMs),
+
+    // Merge arcade progress (keep best stars per level, highest level reached)
+    arcadeProgress: {
+      starsPerLevel: mergeArcadeStars(
+        local.arcadeProgress?.starsPerLevel || {},
+        cloud.arcadeProgress?.starsPerLevel
+      ),
+      highestLevelReached: Math.max(
+        local.arcadeProgress?.highestLevelReached || 1,
+        cloud.arcadeProgress?.highestLevelReached || 1
+      ),
+    },
   };
 }
 
@@ -127,6 +187,7 @@ export async function syncAfterGoogleLink(userId: string): Promise<LocalData> {
       stats: mergedData.stats,
       settings: mergedData.settings,
       settingsUpdatedAt: serverTimestamp(),
+      arcadeProgress: mergedData.arcadeProgress,
     });
 
     return mergedData;

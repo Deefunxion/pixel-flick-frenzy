@@ -43,6 +43,11 @@ export type UserProfile = {
     audioMuted: boolean;
   };
   settingsUpdatedAt: Timestamp; // For cross-device sync recency
+  // Arcade progress
+  arcadeProgress?: {
+    starsPerLevel: Record<number, { allDoodles: boolean; inOrder: boolean; landedInZone: boolean }>;
+    highestLevelReached: number;
+  };
 };
 
 // Check if nickname is available (read-only check, actual reservation is transactional)
