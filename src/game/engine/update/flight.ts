@@ -31,6 +31,13 @@ import {
 } from '../routeJuice';
 import { checkBounceCollision, applyBounce } from '../bounce';
 import { checkRouteNodeProgress } from '../routes';
+import {
+  checkDoodleCollision,
+  collectDoodle as collectDoodleObj,
+} from '../arcade/doodles';
+import { checkSpringCollision, applySpringImpulse } from '../arcade/springs';
+import { checkPortalEntry, applyPortalTeleport } from '../arcade/portal';
+import { collectDoodle as collectDoodleState } from '../arcade/state';
 
 // Audio interface for flight
 export type FlightAudio = {
@@ -303,6 +310,98 @@ export function processBounceCollision(
       // Check route progress for bounce
       processRouteProgress(state, 'bounce', state.bounce.x, state.bounce.y, nowMs, audio);
     }
+  }
+}
+
+/**
+ * Process arcade mode collisions (doodles, springs, portal)
+ */
+export function processArcadeCollisions(
+  state: GameState,
+  nowMs: number,
+  audio: FlightAudio
+): void {
+  if (!state.arcadeMode) return;
+
+  // Doodle collection
+  for (const doodle of state.arcadeDoodles) {
+    if (checkDoodleCollision(state.px, state.py, doodle)) {
+      collectDoodleObj(doodle, nowMs);
+      if (state.arcadeState) {
+        collectDoodleState(state.arcadeState, doodle.sequence);
+      }
+
+      // Visual feedback: particles
+      if (state.particleSystem && !state.reduceFx) {
+        state.particleSystem.emit('spark', {
+          x: doodle.x,
+          y: doodle.y,
+          count: 10,
+          baseAngle: 0,
+          spread: Math.PI * 2,
+          speed: 3,
+          life: 25,
+          color: '#4ADE80', // Green for collection
+          gravity: 0.05,
+        });
+      }
+
+      // Audio: ascending tone based on sequence
+      const freq = 440 + (doodle.sequence - 1) * 100;
+      audio.tone(freq, 0.12, 'triangle', 0.08);
+    }
+  }
+
+  // Spring collision
+  for (const spring of state.arcadeSprings) {
+    if (checkSpringCollision(state.px, state.py, spring)) {
+      applySpringImpulse(spring, state);
+
+      // Visual feedback
+      state.screenShake = state.reduceFx ? 0 : 5;
+      if (state.particleSystem) {
+        state.particleSystem.emit('spark', {
+          x: spring.x,
+          y: spring.y,
+          count: 12,
+          baseAngle: -Math.PI / 2, // Upward burst
+          spread: 0.8,
+          speed: 4,
+          life: 20,
+          color: '#FF6B6B', // Red for spring
+          gravity: 0.1,
+        });
+      }
+
+      // Audio: spring boing
+      audio.tone(330, 0.1, 'sine', 0.1);
+      audio.tone(440, 0.08, 'sine', 0.08);
+    }
+  }
+
+  // Portal collision
+  if (state.arcadePortal && checkPortalEntry(state.px, state.py, state.arcadePortal)) {
+    applyPortalTeleport(state.arcadePortal, state, state);
+
+    // Visual feedback: portal effect
+    state.screenFlash = 0.5;
+    if (state.particleSystem) {
+      state.particleSystem.emit('spark', {
+        x: state.px,
+        y: state.py,
+        count: 20,
+        baseAngle: 0,
+        spread: Math.PI * 2,
+        speed: 5,
+        life: 30,
+        color: '#A855F7', // Purple for portal
+        gravity: 0,
+      });
+    }
+
+    // Audio: portal whoosh
+    audio.tone(200, 0.15, 'sine', 0.1);
+    audio.tone(400, 0.1, 'sine', 0.08);
   }
 }
 

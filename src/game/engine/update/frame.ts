@@ -32,6 +32,7 @@ import {
   updateFlightPhysics,
   processRingCollisions,
   processBounceCollision,
+  processArcadeCollisions,
   updateJuicePopups,
   checkLandingTransition,
   trackLastValidPosition,
@@ -246,6 +247,9 @@ export function updateFrame(state: GameState, svc: GameServices): void {
 
     // Bounce collision
     processBounceCollision(state, nowMs, audio);
+
+    // Arcade collisions (doodles, springs, portal)
+    processArcadeCollisions(state, nowMs, audio);
 
     // Juice popups
     updateJuicePopups(state, effectiveDeltaMs, nowMs);
