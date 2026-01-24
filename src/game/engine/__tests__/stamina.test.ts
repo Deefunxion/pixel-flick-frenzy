@@ -24,6 +24,7 @@ describe('Input State for Precision Control', () => {
       pressedThisFrame: false,
       releasedThisFrame: false,
       holdDuration: 0,
+      holdDurationAtRelease: 0,
       lastPressedState: false,
     });
   });
@@ -136,50 +137,52 @@ describe('Input Edge Detection', () => {
   });
 });
 
-describe('Air Thrust/Brake Integration', () => {
-  it('applies air thrust (vx boost) when tapped during flight', () => {
+describe('Air Throttle/Brake Integration (Bomb Jack-like controls)', () => {
+  it('applies air brake (velocity reduction) when tapped during flight', () => {
     const state = createInitialState({ reduceFx: false });
     state.flying = true;
     state.px = 300;
     state.vx = 5;
-    state.vy = -3;
-    state.initialSpeed = 8; // Cap at 12 (1.5 * 8)
+    state.vy = 2; // Falling
     state.stamina = 100;
-    state.precisionInput.lastPressedState = false;
+    // Simulate tap: was pressed, now released with short hold duration
+    state.precisionInput.lastPressedState = true;
+    state.precisionInput.holdDuration = 2; // Short hold = tap
+    state.precisionInput.holdDurationAtRelease = 2;
 
     const initialVx = state.vx;
+    const initialVy = state.vy;
 
-    // First frame with press (tap) - applies air thrust
-    updateFrame(state, createMockServices(true));
+    // Release = tap detected
+    updateFrame(state, createMockServices(false));
 
-    // Air thrust: vx += 0.5, then physics/wind applied
-    // vx after thrust: 5 + 0.5 = 5.5, then wind and movement applied
-    expect(state.vx).toBeGreaterThan(initialVx); // Should have increased
+    // Air brake tap: vx and vy reduced by 5%
+    expect(state.vx).toBeLessThan(initialVx); // Should have decreased
     expect(state.stamina).toBe(95); // Cost 5 stamina
   });
 
-  it('applies air brake hold when held during flight', () => {
+  it('applies air throttle (upward acceleration) when held during flight', () => {
     const state = createInitialState({ reduceFx: false });
     state.flying = true;
     state.px = 300;
     state.vx = 5;
-    state.vy = -3;
+    state.vy = 2; // Falling
     state.stamina = 100;
     state.precisionInput.lastPressedState = true;
-    state.precisionInput.holdDuration = 5;
+    state.precisionInput.holdDuration = 5; // Past grace period
 
-    // Subsequent frame with continued press (hold)
+    const initialVy = state.vy;
+
+    // Continued hold = throttle
     updateFrame(state, createMockServices(true));
 
-    // Velocity should be reduced by hold (3%), then physics applied
-    // Air brake: vx = 5 * 0.97 = 4.85, vy = -3 * 0.97 = -2.91
-    // Physics: gravity 0.15 * 0.55 = 0.0825 added to vy
-    // Final vy approx -2.91 + 0.0825 = -2.8275
-    expect(state.vx).toBeCloseTo(4.85, 1);
-    expect(state.vy).toBeCloseTo(-2.83, 1); // After gravity applied
+    // Air throttle: upward acceleration applied (vy reduced)
+    // After gravity and physics applied, vy should be lower than just gravity
+    expect(state.vy).toBeLessThan(initialVy + 0.1); // Throttle counters gravity
+    expect(state.airControl.throttleActive).toBe(true);
   });
 
-  it('does not apply air brake if landed', () => {
+  it('does not apply air control if landed', () => {
     const state = createInitialState({ reduceFx: false });
     state.landed = true;
     state.vx = 5;

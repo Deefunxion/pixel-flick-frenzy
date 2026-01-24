@@ -36,7 +36,7 @@ import type { DailyTasks, GameState, ThrowState } from './types';
 import { nextWind, spawnCelebration, spawnParticles } from './state';
 import { ACHIEVEMENTS } from './achievements';
 import { updateAnimator } from './animationController';
-import { applyAirBrake, applySlideControl, applyAirThrust } from './precision';
+import { applyAirBrake, applySlideControl, applyAirThrottle } from './precision';
 import { checkTutorialTrigger, startTutorial, updateTutorial } from './tutorial';
 import {
   shouldActivatePrecisionBar,
@@ -382,6 +382,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.nudgeUsed = false;
     state.launchFrame = 0; // Reset launch frame for burst effect
 
+    // Reset Bomb Jack-like air control for new throw
+    state.airControl = { throttleActive: false, throttleMsUsed: 0, brakeTaps: 0 };
+
     // Emit launch sparks
     if (state.particleSystem) {
       state.particleSystem.emitLaunchSparks(state.px, state.py, theme.accent3);
@@ -425,32 +428,34 @@ export function updateFrame(state: GameState, svc: GameServices) {
   if (state.flying) {
     state.launchFrame++; // Increment for launch burst effect
 
-    // Precision control: Air thrust/brake (FIX 1: check flag)
-    // Tap triggers on PRESS for responsiveness, but if held past grace period, we undo the tap effect
+    // Precision control: Bomb Jack-like throttle/brake (swapped from original)
+    // TAP = brake (micro-adjust), HOLD = throttle (lift)
     if (!state.landed && !precisionAppliedThisFrame) {
       const deltaTime = 1/60;
-      const vxBefore = state.vx; // Track for potential undo
-      if (state.precisionInput.pressedThisFrame) {
-        // Tap: forward velocity boost (thrust) - immediate on press for responsiveness
-        const result = applyAirThrust(state);
+
+      // TAP detection: release within grace period = brake
+      if (state.precisionInput.releasedThisFrame &&
+          state.precisionInput.holdDurationAtRelease <= TAP_GRACE_FRAMES) {
+        // Brake tap: micro-adjust velocity
+        const result = applyAirBrake(state, 'tap', deltaTime);
         if (result.applied) {
           precisionAppliedThisFrame = true;
-          state.lastControlAction = 'thrust';
+          state.lastControlAction = 'brake';
           state.controlActionTime = nowMs;
-          state.pendingTapVelocity = state.vx - vxBefore; // Track actual boost for undo
-          audio.airBrakeTap?.(); // TODO: add airThrust sound
+          state.airControl.brakeTaps++;
+          audio.airBrakeTap?.();
 
-          // Visual feedback: backward exhaust particles for thrust
+          // Visual feedback: deceleration particles
           if (state.particleSystem && !state.reduceFx) {
             state.particleSystem.emit('spark', {
               x: state.px,
               y: state.py,
-              count: 5,
-              baseAngle: Math.PI,  // Backward (exhaust)
-              spread: 0.5,
-              speed: 1.5,
-              life: 15,
-              color: '#FFA500',  // Orange
+              count: 3,
+              baseAngle: Math.PI,
+              spread: 0.3,
+              speed: 2,
+              life: 12,
+              color: '#FF6B6B',
               gravity: 0,
             });
           }
@@ -458,49 +463,47 @@ export function updateFrame(state: GameState, svc: GameServices) {
           audio.actionDenied?.();
           state.staminaDeniedShake = 8;
         }
-      } else if (state.precisionInput.releasedThisFrame && state.precisionInput.holdDurationAtRelease <= TAP_GRACE_FRAMES) {
-        // Quick release - confirm tap (clear pending, no undo needed)
-        state.pendingTapVelocity = 0;
-      } else if (pressed && state.precisionInput.holdDuration === TAP_GRACE_FRAMES + 1) {
-        // Just crossed grace period - undo the tap effect if there was one
-        if (state.pendingTapVelocity && state.pendingTapVelocity > 0) {
-          state.vx = Math.max(0, state.vx - state.pendingTapVelocity);
-          state.pendingTapVelocity = 0;
-        }
       }
+
+      // HOLD detection: past grace period = throttle
       if (pressed && state.precisionInput.holdDuration > TAP_GRACE_FRAMES) {
-        // Hold: continuous reduction (grace period allows clean taps)
-        const result = applyAirBrake(state, 'hold', deltaTime);
+        const result = applyAirThrottle(state, deltaTime);
         if (result.applied) {
           precisionAppliedThisFrame = true;
-          // Track brake action once hold duration reaches threshold
-          if (state.precisionInput.holdDuration === 12) {  // ~200ms at 60fps
-            state.lastControlAction = 'brake';
+          state.airControl.throttleActive = true;
+          state.airControl.throttleMsUsed += deltaTime * 1000;
+
+          // Track throttle action periodically
+          if (state.precisionInput.holdDuration % 12 === 0) {
+            state.lastControlAction = 'thrust';
             state.controlActionTime = nowMs;
 
-            // Visual feedback: downward/backward particles for brake
+            // Visual feedback: upward lift particles
             if (state.particleSystem && !state.reduceFx) {
               state.particleSystem.emit('spark', {
                 x: state.px,
                 y: state.py,
-                count: 3,
-                baseAngle: Math.PI,  // Backward
-                spread: 0.3,
-                speed: 2,
-                life: 12,
-                color: '#FF6B6B',
-                gravity: 0,
+                count: 4,
+                baseAngle: -Math.PI / 2, // Upward
+                spread: 0.4,
+                speed: 1.5,
+                life: 15,
+                color: '#FFA500',
+                gravity: -0.1,
               });
             }
           }
-          // Play hold sound every 6 frames to avoid spam
+
+          // Audio feedback every 6 frames
           if (state.precisionInput.holdDuration % 6 === 0) {
-            audio.airBrakeHold?.();
+            audio.airBrakeHold?.(); // Reuse for now, add throttle sound later
           }
         } else if (result.denied) {
           audio.actionDenied?.();
           state.staminaDeniedShake = 8;
         }
+      } else {
+        state.airControl.throttleActive = false;
       }
     }
 

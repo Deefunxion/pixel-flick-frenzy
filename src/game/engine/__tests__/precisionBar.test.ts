@@ -79,8 +79,9 @@ describe('precisionBar', () => {
       expect(calculatePrecisionTimeScale(415)).toBeCloseTo(0.55, 1);
     });
 
-    it('returns ~0.1 at px=420', () => {
-      expect(calculatePrecisionTimeScale(420)).toBeCloseTo(0.1, 1);
+    it('returns ~0.2 at px=420', () => {
+      // Linear: 1.0 → 0.2 as progress goes 0 → 1, so at px=420: 1 - (1 * 0.8) = 0.2
+      expect(calculatePrecisionTimeScale(420)).toBeCloseTo(0.2, 1);
     });
   });
 
