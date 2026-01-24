@@ -112,20 +112,20 @@ function renderSequenceNumber(
 ): void {
   ctx.save();
 
-  // Small circle with number
-  const numX = x + size / 2 - 6;
-  const numY = y - size / 2 + 6;
+  // Tiny circle with number (scaled down for smaller doodles)
+  const numX = x + size / 2 + 2;
+  const numY = y - size / 2 - 2;
 
   ctx.beginPath();
-  ctx.arc(numX, numY, 8, 0, Math.PI * 2);
-  ctx.fillStyle = '#FFD700';
+  ctx.arc(numX, numY, 5, 0, Math.PI * 2);
+  ctx.fillStyle = '#d35400';  // Stabilo orange
   ctx.fill();
-  ctx.strokeStyle = '#333';
+  ctx.strokeStyle = '#1e3a5f';  // Ink blue
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  ctx.fillStyle = '#333';
-  ctx.font = 'bold 10px monospace';
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 6px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(String(sequence), numX, numY);
