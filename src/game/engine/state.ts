@@ -33,6 +33,7 @@ import {
   resetSprings,
   resetPortal,
   resetThrowState,
+  setLevelDoodleCount,
 } from './arcade';
 
 function loadTutorialProgress(): Pick<TutorialState, 'hasSeenCharge' | 'hasSeenAir' | 'hasSeenSlide'> {
@@ -305,6 +306,8 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
       state.arcadeDoodles = createDoodlesFromLevel(level.doodles);
       state.arcadeSprings = createSpringsFromLevel(level.springs);
       state.arcadePortal = level.portal ? createPortalFromPair(level.portal) : null;
+      // Set doodle count for circular sequence calculation
+      setLevelDoodleCount(state.arcadeState, level.doodles.length);
     }
   }
 
@@ -519,5 +522,7 @@ export function loadArcadeLevel(state: GameState, levelId: number): void {
   state.arcadeSprings = createSpringsFromLevel(level.springs);
   state.arcadePortal = level.portal ? createPortalFromPair(level.portal) : null;
 
+  // Set doodle count for circular sequence calculation
+  setLevelDoodleCount(state.arcadeState, level.doodles.length);
   resetThrowState(state.arcadeState);
 }

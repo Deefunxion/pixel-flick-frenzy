@@ -40,19 +40,21 @@ export function ArcadeHUD({
         </div>
       )}
 
-      {/* Stars display */}
+      {/* Stars display (★ landedInZone, ★★ inOrder) */}
       <div className="bg-black/50 rounded px-2 py-1 flex gap-1">
-        <Star filled={earnedStars?.allDoodles || false} />
-        <Star filled={earnedStars?.inOrder || false} />
-        <Star filled={earnedStars?.landedInZone || false} />
+        <Star filled={earnedStars?.landedInZone || false} title="Land in zone" />
+        <Star filled={earnedStars?.inOrder || false} title="Collect in order" />
       </div>
     </div>
   );
 }
 
-function Star({ filled }: { filled: boolean }) {
+function Star({ filled, title }: { filled: boolean; title?: string }) {
   return (
-    <span className={`text-lg ${filled ? 'text-yellow-400' : 'text-gray-600'}`}>
+    <span
+      className={`text-lg ${filled ? 'text-yellow-400' : 'text-gray-600'}`}
+      title={title}
+    >
       ★
     </span>
   );

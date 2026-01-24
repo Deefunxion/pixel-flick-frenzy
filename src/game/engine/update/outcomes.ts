@@ -12,7 +12,7 @@ import { evaluateContract } from '../contracts';
 import { isRouteComplete } from '../routes';
 import {
   checkStarObjectives,
-  hasAnyStars,
+  isLevelPassed,
   recordStars,
   advanceLevel,
   getLevel,
@@ -282,6 +282,9 @@ export function evaluateLandingContract(
 /**
  * Evaluate arcade star objectives on landing
  * Returns true if level should advance
+ *
+ * PASS REQUIREMENT: All doodles must be collected
+ * STARS: ★ landedInZone, ★★ inOrder (circular Bomb Jack style)
  */
 export function evaluateArcadeStars(
   state: GameState,
@@ -294,23 +297,26 @@ export function evaluateArcadeStars(
 
   const stars = checkStarObjectives(state.arcadeState, level, state.dist);
 
-  if (hasAnyStars(stars)) {
-    // Record earned stars
-    recordStars(state.arcadeState, level.id, stars);
+  // Must collect all doodles to pass level
+  if (!isLevelPassed(stars)) {
+    return false;
+  }
 
-    // Celebration feedback based on stars earned
-    const starCount = (stars.allDoodles ? 1 : 0) + (stars.inOrder ? 1 : 0) + (stars.landedInZone ? 1 : 0);
-    if (starCount >= 2) {
-      audio.zenoJingle?.();
-    }
+  // Record earned stars (even if no bonus stars, we passed)
+  recordStars(state.arcadeState, level.id, stars);
 
-    // Advance to next level if not at max
-    if (state.arcadeState.currentLevelId < 10) {
-      advanceLevel(state.arcadeState);
-      // Load new level objects
-      loadArcadeLevel(state, state.arcadeState.currentLevelId);
-      return true;
-    }
+  // Celebration feedback based on stars earned
+  const starCount = (stars.inOrder ? 1 : 0) + (stars.landedInZone ? 1 : 0);
+  if (starCount >= 1) {
+    audio.zenoJingle?.();
+  }
+
+  // Advance to next level if not at max
+  if (state.arcadeState.currentLevelId < 10) {
+    advanceLevel(state.arcadeState);
+    // Load new level objects
+    loadArcadeLevel(state, state.arcadeState.currentLevelId);
+    return true;
   }
 
   return false;

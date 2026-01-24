@@ -10,8 +10,9 @@ export function createArcadeState(): ArcadeState {
     currentLevelId: saved.currentLevelId ?? 1,
     starsPerLevel: saved.starsPerLevel ?? {},
     doodlesCollected: [],
-    lastCollectedSequence: 0,
-    sequenceBroken: false,
+    expectedNextSequence: null,
+    streakCount: 0,
+    totalDoodlesInLevel: 0,
   };
 }
 
@@ -23,20 +24,31 @@ export function saveArcadeState(state: ArcadeState): void {
   });
 }
 
+/**
+ * Collect a doodle with circular sequence tracking (Bomb Jack style)
+ * Player can start from any doodle, and the chain follows the cycle.
+ * E.g., for 5 doodles: 3→4→5→1→2 is a perfect in-order collection.
+ */
 export function collectDoodle(state: ArcadeState, sequence: number): void {
   // Already collected
   if (state.doodlesCollected.includes(sequence)) return;
 
   state.doodlesCollected.push(sequence);
 
-  // Check if collected in order
-  if (!state.sequenceBroken) {
-    const expectedSequence = state.lastCollectedSequence + 1;
-    if (sequence !== expectedSequence) {
-      state.sequenceBroken = true;
-    } else {
-      state.lastCollectedSequence = sequence;
+  // First pickup - any doodle is valid, sets the expected next
+  if (state.expectedNextSequence === null) {
+    state.streakCount = 1;
+    // Next expected is sequence + 1, wrapping around
+    state.expectedNextSequence = (sequence % state.totalDoodlesInLevel) + 1;
+  } else {
+    // Check if this is the expected next in circular order
+    if (sequence === state.expectedNextSequence) {
+      state.streakCount++;
+      // Update expected next (circular wrap)
+      state.expectedNextSequence = (sequence % state.totalDoodlesInLevel) + 1;
     }
+    // If not expected, streak breaks but we don't update expectedNextSequence
+    // (player can still collect remaining doodles, just won't get inOrder star)
   }
 }
 
@@ -48,8 +60,14 @@ export function checkStarObjectives(
   const totalDoodles = level.doodles.length;
   const collectedCount = state.doodlesCollected.length;
 
+  // allDoodles is PASS REQUIREMENT (not a star)
   const allDoodles = totalDoodles === 0 || collectedCount === totalDoodles;
-  const inOrder = allDoodles && !state.sequenceBroken;
+
+  // inOrder (★★) - collected all in circular sequence (Bomb Jack style)
+  // streakCount must equal totalDoodles for perfect circular collection
+  const inOrder = allDoodles && state.streakCount === totalDoodles;
+
+  // landedInZone (★) - landed beyond target
   const landedInZone = landingDistance >= level.landingTarget;
 
   return {
@@ -59,19 +77,31 @@ export function checkStarObjectives(
   };
 }
 
-export function hasAnyStars(objectives: StarObjectives): boolean {
-  return objectives.allDoodles || objectives.inOrder || objectives.landedInZone;
+/**
+ * Check if level is passed.
+ * PASS REQUIREMENT: All doodles must be collected.
+ */
+export function isLevelPassed(objectives: StarObjectives): boolean {
+  return objectives.allDoodles;
 }
 
+/**
+ * Check if any stars were earned (not counting pass requirement).
+ * Stars: ★ landedInZone, ★★ inOrder
+ */
+export function hasAnyStars(objectives: StarObjectives): boolean {
+  return objectives.inOrder || objectives.landedInZone;
+}
+
+/**
+ * Count stars earned (max 2).
+ * ★ landedInZone
+ * ★★ inOrder (circular Bomb Jack style)
+ */
 export function countStars(objectives: StarObjectives): number {
   let count = 0;
   if (objectives.landedInZone) count++;
-  if (objectives.allDoodles) count++;
-  // inOrder includes allDoodles, so only count if allDoodles isn't already counted
-  if (objectives.inOrder && !objectives.allDoodles) count++;
-  // Actually: inOrder implies allDoodles, so if inOrder is true, allDoodles is true
-  // We count: ★ allDoodles, ★★ inOrder (which subsumes allDoodles), ★★★ landedInZone
-  // So max is 3 if all achieved, but ★★ replaces ★
+  if (objectives.inOrder) count++;  // ★★ for perfect circular order
   return count;
 }
 
@@ -104,8 +134,8 @@ export function setLevel(state: ArcadeState, levelId: number): void {
 
 export function resetThrowState(state: ArcadeState): void {
   state.doodlesCollected = [];
-  state.lastCollectedSequence = 0;
-  state.sequenceBroken = false;
+  state.expectedNextSequence = null;
+  state.streakCount = 0;
 }
 
 export function recordStars(
@@ -120,13 +150,23 @@ export function recordStars(
   saveArcadeState(state);
 }
 
+/**
+ * Get total stars across all levels (max 2 per level = 20 total).
+ * ★ landedInZone, ★★ inOrder
+ */
 export function getTotalStars(state: ArcadeState): number {
   let total = 0;
   for (const levelId in state.starsPerLevel) {
     const stars = state.starsPerLevel[levelId];
-    if (stars.allDoodles && !stars.inOrder) total += 1;
-    if (stars.inOrder) total += 2; // ★★ counts as 2
-    if (stars.landedInZone) total += 1;
+    if (stars.landedInZone) total++;
+    if (stars.inOrder) total++;
   }
   return total;
+}
+
+/**
+ * Set the total doodles count for a level (needed for circular wrap calculation)
+ */
+export function setLevelDoodleCount(state: ArcadeState, count: number): void {
+  state.totalDoodlesInLevel = count;
 }

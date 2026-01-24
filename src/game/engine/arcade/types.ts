@@ -29,11 +29,13 @@ export interface ArcadeLevel {
   portal: PortalPair | null;
 }
 
-// Star objectives (independent - any one = level pass)
+// Star objectives
+// NOTE: allDoodles is a PASS REQUIREMENT, not a star!
+// Stars are: ★ landedInZone, ★★ inOrder (circular Bomb Jack style)
 export interface StarObjectives {
-  allDoodles: boolean;      // ★ - collected all (any order)
-  inOrder: boolean;         // ★★ - collected in sequence (includes ★)
-  landedInZone: boolean;    // ★★★ - landed beyond target
+  allDoodles: boolean;      // PASS REQUIREMENT - collected all doodles
+  inOrder: boolean;         // ★★ - collected in circular sequence (Bomb Jack style)
+  landedInZone: boolean;    // ★ - landed beyond target
 }
 
 // Runtime state for current arcade session
@@ -41,7 +43,8 @@ export interface ArcadeState {
   currentLevelId: number;
   starsPerLevel: Record<number, StarObjectives>;  // levelId -> stars earned
   // Current throw tracking
-  doodlesCollected: number[];   // sequence numbers collected this throw
-  lastCollectedSequence: number; // for order tracking
-  sequenceBroken: boolean;       // collected out of order
+  doodlesCollected: number[];      // sequence numbers collected this throw
+  expectedNextSequence: number | null;  // null until first pickup, then expected next in cycle
+  streakCount: number;             // consecutive correct pickups in circular order
+  totalDoodlesInLevel: number;     // cached for circular wrap calculation
 }

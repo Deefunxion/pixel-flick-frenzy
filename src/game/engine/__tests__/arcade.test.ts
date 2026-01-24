@@ -98,51 +98,91 @@ describe('Arcade State', () => {
     const state = createArcadeState();
     expect(state.currentLevelId).toBe(1);
     expect(state.doodlesCollected).toEqual([]);
-    expect(state.sequenceBroken).toBe(false);
+    expect(state.expectedNextSequence).toBe(null);
+    expect(state.streakCount).toBe(0);
   });
 
-  it('should track doodle collection in order', () => {
+  it('should track circular doodle collection starting from any doodle', () => {
     const state = createArcadeState();
-    state.currentLevelId = 5; // 3 doodles, order matters
+    state.totalDoodlesInLevel = 5; // 5 doodles
 
+    // Start from doodle 3
+    collectDoodle(state, 3);
+    expect(state.doodlesCollected).toEqual([3]);
+    expect(state.streakCount).toBe(1);
+    expect(state.expectedNextSequence).toBe(4); // Next expected is 4
+
+    // Continue in order: 4
+    collectDoodle(state, 4);
+    expect(state.streakCount).toBe(2);
+    expect(state.expectedNextSequence).toBe(5);
+
+    // Continue: 5 (wraps to 1 next)
+    collectDoodle(state, 5);
+    expect(state.streakCount).toBe(3);
+    expect(state.expectedNextSequence).toBe(1); // Wrapped!
+
+    // Continue: 1
     collectDoodle(state, 1);
-    expect(state.doodlesCollected).toEqual([1]);
-    expect(state.sequenceBroken).toBe(false);
+    expect(state.streakCount).toBe(4);
+    expect(state.expectedNextSequence).toBe(2);
 
+    // Finish: 2
     collectDoodle(state, 2);
-    expect(state.doodlesCollected).toEqual([1, 2]);
-    expect(state.sequenceBroken).toBe(false);
+    expect(state.streakCount).toBe(5); // Perfect circular collection!
   });
 
-  it('should detect out-of-order collection', () => {
+  it('should break streak on out-of-order collection', () => {
     const state = createArcadeState();
-    state.currentLevelId = 5;
+    state.totalDoodlesInLevel = 5;
 
-    collectDoodle(state, 2); // Skip 1
-    expect(state.sequenceBroken).toBe(true);
+    collectDoodle(state, 1); // Start from 1
+    expect(state.streakCount).toBe(1);
+    expect(state.expectedNextSequence).toBe(2);
+
+    collectDoodle(state, 3); // Skip 2 - breaks streak
+    expect(state.streakCount).toBe(1); // Streak doesn't increase
+    expect(state.doodlesCollected).toEqual([1, 3]); // But doodle is collected
   });
 
-  it('should check star objectives correctly', () => {
+  it('should check star objectives correctly (allDoodles = pass, stars = inOrder + landedInZone)', () => {
     const state = createArcadeState();
     state.currentLevelId = 4; // 3 doodles
     const level = getLevel(4)!;
+    state.totalDoodlesInLevel = level.doodles.length;
 
-    // No stars yet
+    // No doodles collected - not passed
     let stars = checkStarObjectives(state, level, 400);
-    expect(stars.allDoodles).toBe(false);
+    expect(stars.allDoodles).toBe(false); // Not passed
     expect(stars.inOrder).toBe(false);
     expect(stars.landedInZone).toBe(false);
 
-    // Collect all doodles in order
+    // Collect all doodles in circular order (1→2→3)
     collectDoodle(state, 1);
     collectDoodle(state, 2);
     collectDoodle(state, 3);
 
     // Land beyond target (413)
     stars = checkStarObjectives(state, level, 414);
-    expect(stars.allDoodles).toBe(true);
-    expect(stars.inOrder).toBe(true);
-    expect(stars.landedInZone).toBe(true);
+    expect(stars.allDoodles).toBe(true);  // Passed!
+    expect(stars.inOrder).toBe(true);     // ★★ circular order
+    expect(stars.landedInZone).toBe(true); // ★ landed in zone
+  });
+
+  it('should not give inOrder star if sequence broken', () => {
+    const state = createArcadeState();
+    const level = getLevel(4)!; // 3 doodles
+    state.totalDoodlesInLevel = level.doodles.length;
+
+    // Collect out of order (1→3→2)
+    collectDoodle(state, 1);
+    collectDoodle(state, 3); // Skip 2
+    collectDoodle(state, 2);
+
+    const stars = checkStarObjectives(state, level, 414);
+    expect(stars.allDoodles).toBe(true);  // Passed (all collected)
+    expect(stars.inOrder).toBe(false);    // No ★★ (streak broken)
+    expect(stars.landedInZone).toBe(true); // ★ landed in zone
   });
 
   it('should advance to next level', () => {
@@ -155,12 +195,13 @@ describe('Arcade State', () => {
 
   it('should reset throw state between throws', () => {
     const state = createArcadeState();
+    state.totalDoodlesInLevel = 3;
     collectDoodle(state, 1);
-    collectDoodle(state, 3); // breaks sequence
+    collectDoodle(state, 3);
 
     resetThrowState(state);
     expect(state.doodlesCollected).toEqual([]);
-    expect(state.sequenceBroken).toBe(false);
-    expect(state.lastCollectedSequence).toBe(0);
+    expect(state.expectedNextSequence).toBe(null);
+    expect(state.streakCount).toBe(0);
   });
 });
