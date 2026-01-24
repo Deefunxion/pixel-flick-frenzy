@@ -112,20 +112,20 @@ function renderSequenceNumber(
 ): void {
   ctx.save();
 
-  // Tiny circle with number (scaled down for smaller doodles)
-  const numX = x + size / 2 + 2;
-  const numY = y - size / 2 - 2;
+  // Tiny sequence badge (65% smaller than original 8px)
+  const numX = x + size / 2 + 1;
+  const numY = y - size / 2 - 1;
 
   ctx.beginPath();
-  ctx.arc(numX, numY, 5, 0, Math.PI * 2);
+  ctx.arc(numX, numY, 3, 0, Math.PI * 2);  // 8px → 3px (65% smaller)
   ctx.fillStyle = '#d35400';  // Stabilo orange
   ctx.fill();
   ctx.strokeStyle = '#1e3a5f';  // Ink blue
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 0.5;
   ctx.stroke();
 
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 6px sans-serif';
+  ctx.font = 'bold 4px sans-serif';  // 10px → 4px
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(String(sequence), numX, numY);
