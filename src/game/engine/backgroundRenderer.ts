@@ -227,7 +227,7 @@ export class BackgroundRenderer {
   private drawVoidLayers(ctx: CanvasRenderingContext2D): void {
     const groundY = H - 20;
     // Void offset - slight shift down for better ground visibility
-    const VOID_Y_OFFSET = H * 0.08;
+    const VOID_Y_OFFSET = H * 0.025;
     const voidY = groundY + VOID_Y_OFFSET;
     const voidHeight = ASSET_DIMENSIONS.voidLayer.height * ASSET_SCALE;
 

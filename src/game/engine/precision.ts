@@ -128,46 +128,129 @@ export function applySlideControl(
  * Costs 5 * edgeMultiplier stamina.
  * Velocity capped at 1.5 * initialSpeed to prevent abuse.
  */
-// Air float constants (TRUE Bomb Jack-like flight)
-// Key insight: Initial jump = max height. Float just SLOWS descent, never adds height.
-const FLOAT_GRAVITY_MULT = 0.3;         // Gravity reduced to 30% while floating
-const FLOAT_COST_PER_SEC = 12;          // Stamina cost per second (lower than before)
-const MAX_FLOAT_TIME_MS = 2500;         // 2.5s max float per throw
+// ============================================
+// ZENO AIR CONTROL SYSTEM (Custom Bomb Jack-style)
+// ============================================
+// Three states:
+// 1. RAPID TAPPING = Float/Glide (faster tap = less fall)
+// 2. NO INPUT = Heavy gravity (falls fast)
+// 3. HOLD = Hard brake (velocity → 0 quickly)
+// ============================================
+
+// Gravity multipliers
+const HEAVY_GRAVITY_MULT = 2.0;        // No input = 2x gravity (falls fast)
+const FLOAT_MIN_GRAVITY = 0.15;        // Best float (fast tapping) = 15% gravity
+const FLOAT_MAX_GRAVITY = 0.7;         // Slow tapping = 70% gravity
+
+// Tap detection
+const TAP_WINDOW_MS = 400;             // Count taps in last 400ms
+const MIN_TAPS_FOR_FLOAT = 1;          // 1+ tap in window starts float
+const MAX_TAPS_FOR_BEST_FLOAT = 6;     // 6+ taps = best float
+
+// Hard brake (hold)
+const HARD_BRAKE_DECEL = 0.6;          // Velocity *= 0.6 each frame (rapid stop)
+const HARD_BRAKE_COST_PER_SEC = 25;    // Stamina cost for brake
+
+// Tap cost
+const TAP_STAMINA_COST = 2;            // Small cost per tap
 
 export type FloatResult = PrecisionResult & {
   gravityMultiplier: number;
 };
 
-/**
- * Apply air float during flight phase (TRUE Bomb Jack mechanic).
- *
- * IMPORTANT: This does NOT add upward velocity!
- * It returns a gravity multiplier - the caller reduces gravity effect.
- *
- * The initial jump determines max height. Floating just extends air time
- * by slowing your fall, allowing precise positioning for collectibles.
- */
-export function applyAirThrottle(
-  state: GameState,
-  deltaTime: number = 1/60
-): FloatResult {
-  const edgeMultiplier = calculateEdgeMultiplier(state.px);
-  const frameCost = FLOAT_COST_PER_SEC * edgeMultiplier * deltaTime;
+export type BrakeResult = PrecisionResult & {
+  velocityMultiplier: number;
+};
 
-  // Check float time cap - prevents infinite floating
-  if (state.airControl.throttleMsUsed >= MAX_FLOAT_TIME_MS) {
-    return { applied: false, denied: true, gravityMultiplier: 1.0 };
+/**
+ * Register a tap for the float system.
+ * Each tap extends float time and costs a small amount of stamina.
+ */
+export function registerFloatTap(
+  state: GameState,
+  nowMs: number
+): PrecisionResult {
+  const edgeMultiplier = calculateEdgeMultiplier(state.px);
+  const cost = Math.ceil(TAP_STAMINA_COST * edgeMultiplier);
+
+  if (state.stamina < cost) {
+    return { applied: false, denied: true };
   }
 
+  state.stamina -= cost;
+
+  // Add tap timestamp
+  state.airControl.recentTapTimes.push(nowMs);
+
+  // Clean old taps outside window
+  state.airControl.recentTapTimes = state.airControl.recentTapTimes.filter(
+    t => nowMs - t < TAP_WINDOW_MS
+  );
+
+  return { applied: true, denied: false };
+}
+
+/**
+ * Calculate gravity multiplier based on recent tap frequency.
+ * More taps = lower gravity (better float)
+ * No taps = heavy gravity (falls fast)
+ */
+export function calculateTapGravity(
+  state: GameState,
+  nowMs: number
+): number {
+  // Clean old taps
+  const recentTaps = state.airControl.recentTapTimes.filter(
+    t => nowMs - t < TAP_WINDOW_MS
+  );
+  state.airControl.recentTapTimes = recentTaps;
+
+  const tapCount = recentTaps.length;
+
+  // No recent taps = heavy gravity
+  if (tapCount < MIN_TAPS_FOR_FLOAT) {
+    return HEAVY_GRAVITY_MULT;
+  }
+
+  // Interpolate between max and min gravity based on tap count
+  // More taps = lower gravity
+  const tapRatio = Math.min(1, (tapCount - MIN_TAPS_FOR_FLOAT) / (MAX_TAPS_FOR_BEST_FLOAT - MIN_TAPS_FOR_FLOAT));
+  const gravity = FLOAT_MAX_GRAVITY - (tapRatio * (FLOAT_MAX_GRAVITY - FLOAT_MIN_GRAVITY));
+
+  return gravity;
+}
+
+/**
+ * Apply hard brake during flight (HOLD).
+ * Rapidly decelerates velocity toward zero.
+ */
+export function applyHardBrake(
+  state: GameState,
+  deltaTime: number = 1/60
+): BrakeResult {
+  const edgeMultiplier = calculateEdgeMultiplier(state.px);
+  const frameCost = HARD_BRAKE_COST_PER_SEC * edgeMultiplier * deltaTime;
+
   if (state.stamina < frameCost) {
-    return { applied: false, denied: true, gravityMultiplier: 1.0 };
+    return { applied: false, denied: true, velocityMultiplier: 1.0 };
   }
 
   state.stamina -= frameCost;
 
-  // DO NOT modify vy here! That was the bug.
-  // Return gravity multiplier - update.ts applies reduced gravity
-  return { applied: true, denied: false, gravityMultiplier: FLOAT_GRAVITY_MULT };
+  // Apply hard deceleration
+  state.vx *= HARD_BRAKE_DECEL;
+  state.vy *= HARD_BRAKE_DECEL;
+
+  return { applied: true, denied: false, velocityMultiplier: HARD_BRAKE_DECEL };
+}
+
+// Legacy function - kept for compatibility but use new system
+export function applyAirThrottle(
+  state: GameState,
+  _deltaTime: number = 1/60
+): FloatResult {
+  // This is now handled by calculateTapGravity + registerFloatTap
+  return { applied: false, denied: false, gravityMultiplier: 1.0 };
 }
 
 export function applyAirThrust(state: GameState): PrecisionResult {

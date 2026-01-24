@@ -137,52 +137,69 @@ describe('Input Edge Detection', () => {
   });
 });
 
-describe('Air Throttle/Brake Integration (Bomb Jack-like controls)', () => {
-  it('applies air brake (velocity reduction) when tapped during flight', () => {
+describe('Zeno Air Control Integration', () => {
+  it('registers float tap and costs 2 stamina when tapped during flight', () => {
     const state = createInitialState({ reduceFx: false });
     state.flying = true;
     state.px = 300;
+    state.py = 100; // High up
     state.vx = 5;
-    state.vy = 2; // Falling
+    state.vy = 2;
     state.stamina = 100;
     // Simulate tap: was pressed, now released with short hold duration
     state.precisionInput.lastPressedState = true;
     state.precisionInput.holdDuration = 2; // Short hold = tap
     state.precisionInput.holdDurationAtRelease = 2;
 
-    const initialVx = state.vx;
-    const initialVy = state.vy;
-
-    // Release = tap detected
+    // Release = tap detected, registers float tap
     updateFrame(state, createMockServices(false));
 
-    // Air brake tap: vx and vy reduced by 5%
-    expect(state.vx).toBeLessThan(initialVx); // Should have decreased
-    expect(state.stamina).toBe(95); // Cost 5 stamina
+    // Float tap costs 2 stamina (TAP_STAMINA_COST)
+    expect(state.stamina).toBe(98);
+    // Tap is registered in recentTapTimes
+    expect(state.airControl.recentTapTimes.length).toBeGreaterThan(0);
   });
 
-  it('applies air float (reduced gravity) when held during flight', () => {
+  it('applies hard brake (rapid deceleration) when held during flight', () => {
     const state = createInitialState({ reduceFx: false });
     state.flying = true;
     state.px = 300;
-    state.py = 100; // High up in the air (not at ground level H-20)
+    state.py = 100;
     state.vx = 5;
-    state.vy = 0.5; // Slight descent
+    state.vy = 2;
     state.stamina = 100;
     state.precisionInput.lastPressedState = true;
     state.precisionInput.holdDuration = 5; // Past grace period
 
+    const initialVx = state.vx;
     const initialVy = state.vy;
 
-    // Continued hold = float (TRUE Bomb Jack: slows descent, doesn't add height)
+    // Continued hold = hard brake
     updateFrame(state, createMockServices(true));
 
-    // Float reduces gravity to 30%, so vy increases slowly (still falling, just slower)
-    // Normal gravity would add ~0.08, float adds ~0.025
-    // vy should be > initialVy (still falling) but not by much
-    expect(state.vy).toBeGreaterThan(initialVy); // Still falling (gravity still applies)
-    expect(state.vy).toBeLessThan(initialVy + 0.05); // But much slower due to float
-    expect(state.airControl.throttleActive).toBe(true);
+    // Hard brake: velocity *= 0.6 (HARD_BRAKE_DECEL)
+    expect(state.vx).toBeLessThan(initialVx * 0.7); // Significantly reduced
+    expect(state.vy).toBeLessThan(initialVy); // vy also reduced by brake
+    expect(state.airControl.isHoldingBrake).toBe(true);
+  });
+
+  it('applies heavy gravity when no input', () => {
+    const state = createInitialState({ reduceFx: false });
+    state.flying = true;
+    state.px = 300;
+    state.py = 100;
+    state.vx = 5;
+    state.vy = 0;
+    state.stamina = 100;
+    state.precisionInput.lastPressedState = false;
+    state.airControl.recentTapTimes = []; // No recent taps
+
+    // No input = heavy gravity (HEAVY_GRAVITY_MULT = 2.0)
+    updateFrame(state, createMockServices(false));
+
+    // vy should increase significantly due to heavy gravity
+    // Normal gravity ~0.08, heavy gravity ~0.16
+    expect(state.vy).toBeGreaterThan(0.1);
   });
 
   it('does not apply air control if landed', () => {

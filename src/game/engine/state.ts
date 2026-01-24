@@ -257,11 +257,13 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     achievementDisplayStartTime: 0,
     // Menu state
     menuOpen: false,
-    // Bomb Jack-like air control
+    // Zeno Air Control (rapid tap = float, no input = fall, hold = brake)
     airControl: {
       throttleActive: false,
       throttleMsUsed: 0,
       brakeTaps: 0,
+      recentTapTimes: [],
+      isHoldingBrake: false,
     },
   };
 }
@@ -350,11 +352,13 @@ export function resetPhysics(state: GameState) {
   // Reset air control feedback
   state.lastControlAction = null;
   state.controlActionTime = 0;
-  // Reset Bomb Jack-like air control
+  // Reset Zeno air control
   state.airControl = {
     throttleActive: false,
     throttleMsUsed: 0,
     brakeTaps: 0,
+    recentTapTimes: [],
+    isHoldingBrake: false,
   };
 }
 

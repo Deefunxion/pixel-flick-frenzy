@@ -36,7 +36,13 @@ import type { DailyTasks, GameState, ThrowState } from './types';
 import { nextWind, spawnCelebration, spawnParticles } from './state';
 import { ACHIEVEMENTS } from './achievements';
 import { updateAnimator } from './animationController';
-import { applyAirBrake, applySlideControl, applyAirThrottle } from './precision';
+import {
+  applyAirBrake,
+  applySlideControl,
+  registerFloatTap,
+  calculateTapGravity,
+  applyHardBrake,
+} from './precision';
 import { checkTutorialTrigger, startTutorial, updateTutorial } from './tutorial';
 import {
   shouldActivatePrecisionBar,
@@ -382,8 +388,14 @@ export function updateFrame(state: GameState, svc: GameServices) {
     state.nudgeUsed = false;
     state.launchFrame = 0; // Reset launch frame for burst effect
 
-    // Reset Bomb Jack-like air control for new throw
-    state.airControl = { throttleActive: false, throttleMsUsed: 0, brakeTaps: 0 };
+    // Reset Zeno air control for new throw
+    state.airControl = {
+      throttleActive: false,
+      throttleMsUsed: 0,
+      brakeTaps: 0,
+      recentTapTimes: [],
+      isHoldingBrake: false,
+    };
 
     // Emit launch sparks
     if (state.particleSystem) {
@@ -428,38 +440,39 @@ export function updateFrame(state: GameState, svc: GameServices) {
   if (state.flying) {
     state.launchFrame++; // Increment for launch burst effect
 
-    // Float gravity multiplier - default 1.0 (normal gravity), reduced when floating
-    let floatGravityMult = 1.0;
+    // ============================================
+    // ZENO AIR CONTROL SYSTEM
+    // ============================================
+    // 1. RAPID TAPPING = Float (faster tap = less fall)
+    // 2. NO INPUT = Heavy gravity (falls fast)
+    // 3. HOLD = Hard brake (velocity → 0)
+    // ============================================
 
-    // Precision control: TRUE Bomb Jack mechanics
-    // TAP = brake (micro-adjust velocity), HOLD = float (slow descent, NOT add height)
-    if (!state.landed && !precisionAppliedThisFrame) {
-      const deltaTime = 1/60;
+    const deltaTime = 1/60;
 
-      // TAP detection: release within grace period = brake
+    if (!state.landed) {
+      // TAP detection: release within grace period = FLOAT TAP
       if (state.precisionInput.releasedThisFrame &&
           state.precisionInput.holdDurationAtRelease <= TAP_GRACE_FRAMES) {
-        // Brake tap: micro-adjust velocity
-        const result = applyAirBrake(state, 'tap', deltaTime);
+        const result = registerFloatTap(state, nowMs);
         if (result.applied) {
           precisionAppliedThisFrame = true;
-          state.lastControlAction = 'brake';
+          state.lastControlAction = 'float';
           state.controlActionTime = nowMs;
-          state.airControl.brakeTaps++;
           audio.airBrakeTap?.();
 
-          // Visual feedback: deceleration particles
+          // Visual feedback: upward feather particles for float tap
           if (state.particleSystem && !state.reduceFx) {
             state.particleSystem.emit('spark', {
               x: state.px,
-              y: state.py,
+              y: state.py + 5,
               count: 3,
-              baseAngle: Math.PI,
-              spread: 0.3,
-              speed: 2,
-              life: 12,
-              color: '#FF6B6B',
-              gravity: 0,
+              baseAngle: -Math.PI / 2, // Upward
+              spread: 0.8,
+              speed: 0.8,
+              life: 25,
+              color: '#87CEEB', // Light blue
+              gravity: -0.02, // Float upward slightly
             });
           }
         } else if (result.denied) {
@@ -468,40 +481,37 @@ export function updateFrame(state: GameState, svc: GameServices) {
         }
       }
 
-      // HOLD detection: past grace period = FLOAT (TRUE Bomb Jack mechanic)
-      // Float REDUCES gravity effect, does NOT add height
+      // HOLD detection: past grace period = HARD BRAKE
       if (pressed && state.precisionInput.holdDuration > TAP_GRACE_FRAMES) {
-        const result = applyAirThrottle(state, deltaTime);
+        const result = applyHardBrake(state, deltaTime);
         if (result.applied) {
           precisionAppliedThisFrame = true;
-          state.airControl.throttleActive = true;
-          state.airControl.throttleMsUsed += deltaTime * 1000;
-          // Store gravity multiplier for physics step below
-          floatGravityMult = result.gravityMultiplier;
+          state.airControl.isHoldingBrake = true;
+          state.airControl.brakeTaps++;
 
-          // Track float action periodically
-          if (state.precisionInput.holdDuration % 12 === 0) {
-            state.lastControlAction = 'float';
+          // Track brake action periodically
+          if (state.precisionInput.holdDuration % 8 === 0) {
+            state.lastControlAction = 'brake';
             state.controlActionTime = nowMs;
 
-            // Visual feedback: gentle float particles (not upward thrust!)
+            // Visual feedback: downward brake particles
             if (state.particleSystem && !state.reduceFx) {
               state.particleSystem.emit('spark', {
                 x: state.px,
-                y: state.py + 10,
-                count: 2,
-                baseAngle: Math.PI / 2, // Downward (showing slowed descent)
-                spread: 0.6,
-                speed: 0.5,
-                life: 20,
-                color: '#87CEEB', // Light blue for float
-                gravity: 0.05,
+                y: state.py,
+                count: 4,
+                baseAngle: Math.PI / 2, // Downward
+                spread: 0.4,
+                speed: 2,
+                life: 15,
+                color: '#FF6B6B', // Red for brake
+                gravity: 0.1,
               });
             }
           }
 
-          // Gentle audio feedback every 10 frames
-          if (state.precisionInput.holdDuration % 10 === 0) {
+          // Audio feedback
+          if (state.precisionInput.holdDuration % 6 === 0) {
             audio.airBrakeHold?.();
           }
         } else if (result.denied) {
@@ -509,7 +519,7 @@ export function updateFrame(state: GameState, svc: GameServices) {
           state.staminaDeniedShake = 8;
         }
       } else {
-        state.airControl.throttleActive = false;
+        state.airControl.isHoldingBrake = false;
       }
     }
 
@@ -520,8 +530,14 @@ export function updateFrame(state: GameState, svc: GameServices) {
       }
     }
 
-    // Apply gravity with float multiplier (TRUE Bomb Jack: float slows fall, doesn't add height)
-    state.vy += BASE_GRAV * effectiveTimeScale * floatGravityMult;
+    // Calculate gravity based on tap frequency (not holding brake)
+    // When holding brake, use normal gravity (brake handles deceleration)
+    const gravityMult = state.airControl.isHoldingBrake
+      ? 1.0  // Normal gravity during brake (brake already decelerating)
+      : calculateTapGravity(state, nowMs);
+
+    // Apply gravity with calculated multiplier
+    state.vy += BASE_GRAV * effectiveTimeScale * gravityMult;
 
     // Wind effect with 50% resistance when air-braking (holding)
     const isAirBraking = pressed && state.precisionInput.holdDuration > TAP_GRACE_FRAMES;

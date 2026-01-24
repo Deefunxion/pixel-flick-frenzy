@@ -84,8 +84,10 @@ export interface PrecisionInput {
 
 export interface AirControl {
   throttleActive: boolean;
-  throttleMsUsed: number;  // Cumulative throttle time for cap
-  brakeTaps: number;       // Count for contract validation
+  throttleMsUsed: number;      // Legacy - kept for compatibility
+  brakeTaps: number;           // Count for contract validation
+  recentTapTimes: number[];    // Timestamps of recent taps for float detection
+  isHoldingBrake: boolean;     // True when holding for hard brake
 }
 
 export type TutorialPhase = 'none' | 'idle' | 'charge' | 'air' | 'slide';
