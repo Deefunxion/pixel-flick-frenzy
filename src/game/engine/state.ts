@@ -413,7 +413,16 @@ export function resetPhysics(state: GameState) {
 
 export function nextWind(state: GameState) {
   state.seed++;
-  state.wind = (Math.sin(state.seed) * 0.08) - 0.02;
+
+  // Alternate wind direction for a true 50/50 east/west split
+  const direction = state.tryCount % 2 === 0 ? 1 : -1;
+
+  // Cycle wind intensity every 3 throws (low/medium/high)
+  const intensityLevels = [0.02, 0.05, 0.08];
+  const levelIndex = Math.floor(state.tryCount / 3) % intensityLevels.length;
+  const magnitude = intensityLevels[levelIndex];
+
+  state.wind = direction * magnitude;
 }
 
 export function spawnParticles(

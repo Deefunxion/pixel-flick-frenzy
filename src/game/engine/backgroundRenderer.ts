@@ -75,7 +75,7 @@ export class BackgroundRenderer {
 
     const w = ASSET_DIMENSIONS.flag.width * ASSET_SCALE;
     const h = ASSET_DIMENSIONS.flag.height * ASSET_SCALE;
-    const poleOffset = w * -0.02; // Distance from draw origin to pole base
+    const poleOffset = w * 0.018; // Distance from draw origin to pole base
 
     // Lean + flip to show wind direction and intensity
     ctx.save();
@@ -84,7 +84,10 @@ export class BackgroundRenderer {
     ctx.scale(this.state.flagDirection, 1);
 
     // Position flag so pole base stays planted when flipped left/right
-    const drawX = this.state.flagDirection === 1 ? -poleOffset : poleOffset - w;
+    const leftAdjust = w * 0.8; // shift right when flipped so the pole stays on-screen
+    const drawX = this.state.flagDirection === 1
+      ? -poleOffset
+      : poleOffset - w + leftAdjust;
     ctx.drawImage(img, drawX, -h + 5, w, h);
     ctx.restore();
   }

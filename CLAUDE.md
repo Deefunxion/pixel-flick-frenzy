@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> Note: Work only on the flipbook theme. The noir renderer is deprecated; avoid changing noir files unless explicitly asked.
+
 ## Commands
 
 ```bash

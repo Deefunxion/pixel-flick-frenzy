@@ -67,7 +67,7 @@ export class NoirBackgroundRenderer {
 
     const w = NOIR_ASSET_DIMENSIONS.flag.width * ASSET_SCALE;
     const h = NOIR_ASSET_DIMENSIONS.flag.height * ASSET_SCALE;
-    const poleOffset = w * 0.3;
+    const poleOffset = w * 0.28;
 
     ctx.save();
     ctx.translate(x, groundY);
@@ -75,7 +75,10 @@ export class NoirBackgroundRenderer {
     ctx.scale(this.state.flagDirection, 1);
 
     // Keep pole base anchored when flipping
-    const drawX = this.state.flagDirection === 1 ? -poleOffset : poleOffset - w;
+    const leftAdjust = w * 0.6;
+    const drawX = this.state.flagDirection === 1
+      ? -poleOffset
+      : poleOffset - w + leftAdjust;
     ctx.drawImage(img, drawX, -h + 4, w, h);
     ctx.restore();
   }
