@@ -822,8 +822,8 @@ const Game = () => {
       if (!s.charging) return;
 
       const dy = e.clientY - pointerStartYRef.current;
-      // Drag up -> higher angle
-      const nextAngle = angleStartRef.current + (-dy * 0.18);
+      // Drag up -> higher angle (0.4 = high sensitivity)
+      const nextAngle = angleStartRef.current + (-dy * 0.4);
       s.angle = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, nextAngle));
     };
 

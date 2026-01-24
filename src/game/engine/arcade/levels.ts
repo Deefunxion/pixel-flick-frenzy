@@ -103,8 +103,8 @@ export const ARCADE_LEVELS: ArcadeLevel[] = [
       { x: 350, y: 90, direction: 'up-left' },
     ],
     portal: {
-      entry: { x: 200, y: 80 },
-      exit: { x: 360, y: 50 },
+      entry: { x: 15, y: 40 },   // Upper-left frame edge
+      exit: { x: 465, y: 200 },  // Lower-right frame edge
     },
   },
   // Level 9: 5 doodles + 2 springs + portal (tighter)
@@ -123,8 +123,8 @@ export const ARCADE_LEVELS: ArcadeLevel[] = [
       { x: 300, y: 120, direction: 'up' },
     ],
     portal: {
-      entry: { x: 180, y: 100 },
-      exit: { x: 380, y: 60 },
+      entry: { x: 15, y: 50 },   // Upper-left frame edge
+      exit: { x: 465, y: 190 },  // Lower-right frame edge
     },
   },
   // Level 10: 6 doodles + 2 springs + portal (final exam)
@@ -144,8 +144,8 @@ export const ARCADE_LEVELS: ArcadeLevel[] = [
       { x: 260, y: 100, direction: 'up-right' },
     ],
     portal: {
-      entry: { x: 160, y: 90 },
-      exit: { x: 340, y: 55 },
+      entry: { x: 15, y: 45 },   // Upper-left frame edge
+      exit: { x: 465, y: 195 },  // Lower-right frame edge
     },
   },
 ];
