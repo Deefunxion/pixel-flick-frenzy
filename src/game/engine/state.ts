@@ -205,7 +205,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     launchTimestamp: 0,
     particleSystem: new ParticleSystem(),
     zenoAnimator: null,
-    stamina: 100,
+    stamina: 200,
     precisionInput: {
       pressedThisFrame: false,
       releasedThisFrame: false,
@@ -358,7 +358,7 @@ export function resetPhysics(state: GameState) {
   state.failJuiceStartTime = 0;
   state.launchFrame = 0;
   state.launchTimestamp = 0;
-  state.stamina = 100;
+  state.stamina = 200;
   state.precisionInput = {
     pressedThisFrame: false,
     releasedThisFrame: false,

@@ -20,7 +20,7 @@ describe('Doodle System', () => {
     const doodle = createDoodleFromPlacement(placement);
     expect(doodle.x).toBe(200);
     expect(doodle.y).toBe(100);
-    expect(doodle.hitRadius).toBe(20); // large = 20
+    expect(doodle.hitRadius).toBe(36); // large = 36
     expect(doodle.collected).toBe(false);
   });
 
@@ -34,7 +34,7 @@ describe('Doodle System', () => {
     };
 
     const doodle = createDoodleFromPlacement(placement);
-    expect(doodle.hitRadius).toBe(12); // small = 12
+    expect(doodle.hitRadius).toBe(28); // small = 28
   });
 
   it('should detect collision when within radius', () => {

@@ -165,4 +165,4 @@ export const NOIR_ASSET_DIMENSIONS = {
 } as const;
 
 /** Canvas scale factor (assets are 2x) */
-export const ASSET_SCALE = 0.5;
+export const ASSET_SCALE = 0.50; // +10% zoom-in on background layers

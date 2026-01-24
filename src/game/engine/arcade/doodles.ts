@@ -13,8 +13,8 @@ export interface Doodle {
 }
 
 const SIZE_CONFIG: Record<DoodleSize, { hitRadius: number; displaySize: number }> = {
-  small: { hitRadius: 12, displaySize: 20 },
-  large: { hitRadius: 20, displaySize: 36 },
+  small: { hitRadius: 28, displaySize: 20 },
+  large: { hitRadius: 36, displaySize: 36 },
 };
 
 export function createDoodleFromPlacement(placement: DoodlePlacement): Doodle {
