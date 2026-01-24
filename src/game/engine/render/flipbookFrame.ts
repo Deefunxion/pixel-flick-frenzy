@@ -17,6 +17,9 @@ import { drawRings } from '../ringsRender';
 import { updateRingPosition } from '../rings';
 import { renderBounce } from '../bounceRender';
 import { renderContractHUD, renderRouteNodeHighlight } from '../contractRender';
+import { renderDoodles } from '../arcade/doodlesRender';
+import { renderSprings } from '../arcade/springsRender';
+import { renderPortal } from '../arcade/portalRender';
 import { renderRingPopups, renderRoutePopups, renderEdgeGlow } from './effects/ringJuice';
 import { renderNearMissSpotlight } from './effects/nearMiss';
 import { renderOnFireMode } from './effects/onFire';
@@ -126,6 +129,13 @@ export function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameSt
 
   // Render bounce surface
   renderBounce(ctx, state.bounce, nowMs);
+
+  // Arcade mode objects (portal behind, then springs, then doodles)
+  if (state.arcadeMode) {
+    renderPortal(ctx, state.arcadePortal, nowMs);
+    renderSprings(ctx, state.arcadeSprings, nowMs);
+    renderDoodles(ctx, state.arcadeDoodles, nowMs);
+  }
 
   // Ring juice effects
   renderEdgeGlow(ctx, state.edgeGlowIntensity, W, H);
