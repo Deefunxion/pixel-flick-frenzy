@@ -234,7 +234,7 @@ export interface GameState {
   chargeGlowIntensity: number;  // 0-1, builds with charge
   chargeVignetteActive: boolean;
   // Air control feedback
-  lastControlAction: 'thrust' | 'brake' | null;
+  lastControlAction: 'thrust' | 'brake' | 'float' | null;
   controlActionTime: number;
   // Monetization - Throw system
   throwState: ThrowState;

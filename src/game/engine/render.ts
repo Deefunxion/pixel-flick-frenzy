@@ -1,5 +1,6 @@
 import type { Theme } from '@/game/themes';
-import { CLIFF_EDGE, H, MAX_ANGLE, MIN_ANGLE, OPTIMAL_ANGLE, W, BASE_GRAV, MIN_POWER, MAX_POWER } from '@/game/constants';
+import { CLIFF_EDGE, H, MAX_ANGLE, MIN_ANGLE, OPTIMAL_ANGLE, W, BASE_GRAV, MIN_POWER, MAX_POWER, FREE_THROWS_CAP } from '@/game/constants';
+import { getMsUntilNextThrow, formatRegenTime } from './throws';
 import type { GameState } from './types';
 import { backgroundRenderer } from './backgroundRenderer';
 import { noirBackgroundRenderer } from './noirBackgroundRenderer';
@@ -729,21 +730,32 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
 
   ctx.restore();
 
-  // Throw counter display (bottom-left) - only when not flying/sliding
+  // Throw counter & timer display (centered, below notifications) - only when not flying/sliding
   if (!state.flying && !state.sliding && !state.throwState.isPremium) {
     ctx.save();
-    ctx.font = 'bold 9px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#FFFFFF';  // White for readability
+    ctx.textAlign = 'center';
 
-    // Free throws / Permanent throws
-    ctx.fillText(`FREE: ${state.throwState.freeThrows}  EARNED: ${state.throwState.permanentThrows}`, 8, H - 12);
+    const centerX = W / 2;  // Centered horizontally
+    const topY = 32;  // Below the MiniGoalHUD notification
+
+    // Timer for next throw (if not at cap)
+    const msUntil = getMsUntilNextThrow(state.throwState);
+    if (msUntil > 0 && state.throwState.freeThrows < FREE_THROWS_CAP) {
+      ctx.font = 'bold 9px monospace';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText(`FREE: ${state.throwState.freeThrows}  ·  NEXT: ${formatRegenTime(msUntil)}`, centerX, topY);
+    } else {
+      // No timer needed - just show throws
+      ctx.font = 'bold 9px monospace';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText(`FREE: ${state.throwState.freeThrows}  ·  EARNED: ${state.throwState.permanentThrows}`, centerX, topY);
+    }
 
     // Practice mode indicator
     if (state.practiceMode) {
       ctx.fillStyle = '#fb923c';  // orange-400
-      ctx.font = 'bold 8px sans-serif';
-      ctx.fillText('PRACTICE', 8, H - 3);
+      ctx.font = 'bold 9px sans-serif';
+      ctx.fillText('PRACTICE MODE', centerX, topY + 12);
     }
 
     ctx.restore();

@@ -124,35 +124,25 @@
   display: none !important;
 }
 
-body {
+html, body {
   padding: 0;
   margin: 0;
   overflow: hidden;
+  width: 100%;
+  height: 100%;
 }
 
-/* Mobile UI adjustments */
-@media (max-width: 500px) {
-  body {
-    padding: 0.5rem;
-  }
-}
-
-/* Canvas container - zoom resistant */
+/* Canvas container - TRUE FULL SCREEN for browser and mobile */
 .canvas-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile (handles address bar) */
   max-width: 100vw;
   overflow: hidden;
-}
-
-/* Landscape: full viewport canvas */
-@media (max-height: 500px) and (orientation: landscape) {
-  .canvas-container {
-    height: 100vh;
-    height: 100svh; /* Safe viewport height for mobile */
-  }
+  background: hsl(240 100% 2%); /* Match background color */
 }
 
 /* Prevent pull-to-refresh on mobile */
@@ -167,6 +157,8 @@ html, body {
 
 /* Prevent text selection on all game UI (fixes iOS tap selection) */
 #root {
+  width: 100%;
+  height: 100%;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;

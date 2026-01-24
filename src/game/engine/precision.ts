@@ -128,32 +128,46 @@ export function applySlideControl(
  * Costs 5 * edgeMultiplier stamina.
  * Velocity capped at 1.5 * initialSpeed to prevent abuse.
  */
-// Air throttle constants (Bomb Jack-like flight)
-const THROTTLE_ACCEL = 0.9;           // Upward acceleration per frame
-const THROTTLE_COST_PER_SEC = 20;     // Stamina cost per second
-const MAX_THROTTLE_TIME_MS = 1500;    // 1.5s max throttle per throw
+// Air float constants (TRUE Bomb Jack-like flight)
+// Key insight: Initial jump = max height. Float just SLOWS descent, never adds height.
+const FLOAT_GRAVITY_MULT = 0.3;         // Gravity reduced to 30% while floating
+const FLOAT_COST_PER_SEC = 12;          // Stamina cost per second (lower than before)
+const MAX_FLOAT_TIME_MS = 2500;         // 2.5s max float per throw
+
+export type FloatResult = PrecisionResult & {
+  gravityMultiplier: number;
+};
 
 /**
- * Apply air throttle during flight phase.
- * Hold: upward acceleration (Bomb Jack-like lift) with stamina cost.
- * Creates "solvable arcs" for pattern-solving gameplay.
+ * Apply air float during flight phase (TRUE Bomb Jack mechanic).
+ *
+ * IMPORTANT: This does NOT add upward velocity!
+ * It returns a gravity multiplier - the caller reduces gravity effect.
+ *
+ * The initial jump determines max height. Floating just extends air time
+ * by slowing your fall, allowing precise positioning for collectibles.
  */
 export function applyAirThrottle(
   state: GameState,
   deltaTime: number = 1/60
-): PrecisionResult {
+): FloatResult {
   const edgeMultiplier = calculateEdgeMultiplier(state.px);
-  const frameCost = THROTTLE_COST_PER_SEC * edgeMultiplier * deltaTime;
+  const frameCost = FLOAT_COST_PER_SEC * edgeMultiplier * deltaTime;
 
-  if (state.stamina < frameCost) {
-    return { applied: false, denied: true };
+  // Check float time cap - prevents infinite floating
+  if (state.airControl.throttleMsUsed >= MAX_FLOAT_TIME_MS) {
+    return { applied: false, denied: true, gravityMultiplier: 1.0 };
   }
 
-  // Apply upward acceleration (reduce vy, which is positive when falling)
-  state.vy -= THROTTLE_ACCEL * deltaTime * 60; // Normalize to frame rate
+  if (state.stamina < frameCost) {
+    return { applied: false, denied: true, gravityMultiplier: 1.0 };
+  }
+
   state.stamina -= frameCost;
 
-  return { applied: true, denied: false };
+  // DO NOT modify vy here! That was the bug.
+  // Return gravity multiplier - update.ts applies reduced gravity
+  return { applied: true, denied: false, gravityMultiplier: FLOAT_GRAVITY_MULT };
 }
 
 export function applyAirThrust(state: GameState): PrecisionResult {

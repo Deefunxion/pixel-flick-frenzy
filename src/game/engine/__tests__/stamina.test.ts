@@ -161,24 +161,27 @@ describe('Air Throttle/Brake Integration (Bomb Jack-like controls)', () => {
     expect(state.stamina).toBe(95); // Cost 5 stamina
   });
 
-  it('applies air throttle (upward acceleration) when held during flight', () => {
+  it('applies air float (reduced gravity) when held during flight', () => {
     const state = createInitialState({ reduceFx: false });
     state.flying = true;
     state.px = 300;
+    state.py = 100; // High up in the air (not at ground level H-20)
     state.vx = 5;
-    state.vy = 2; // Falling
+    state.vy = 0.5; // Slight descent
     state.stamina = 100;
     state.precisionInput.lastPressedState = true;
     state.precisionInput.holdDuration = 5; // Past grace period
 
     const initialVy = state.vy;
 
-    // Continued hold = throttle
+    // Continued hold = float (TRUE Bomb Jack: slows descent, doesn't add height)
     updateFrame(state, createMockServices(true));
 
-    // Air throttle: upward acceleration applied (vy reduced)
-    // After gravity and physics applied, vy should be lower than just gravity
-    expect(state.vy).toBeLessThan(initialVy + 0.1); // Throttle counters gravity
+    // Float reduces gravity to 30%, so vy increases slowly (still falling, just slower)
+    // Normal gravity would add ~0.08, float adds ~0.025
+    // vy should be > initialVy (still falling) but not by much
+    expect(state.vy).toBeGreaterThan(initialVy); // Still falling (gravity still applies)
+    expect(state.vy).toBeLessThan(initialVy + 0.05); // But much slower due to float
     expect(state.airControl.throttleActive).toBe(true);
   });
 

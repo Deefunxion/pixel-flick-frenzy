@@ -428,8 +428,11 @@ export function updateFrame(state: GameState, svc: GameServices) {
   if (state.flying) {
     state.launchFrame++; // Increment for launch burst effect
 
-    // Precision control: Bomb Jack-like throttle/brake (swapped from original)
-    // TAP = brake (micro-adjust), HOLD = throttle (lift)
+    // Float gravity multiplier - default 1.0 (normal gravity), reduced when floating
+    let floatGravityMult = 1.0;
+
+    // Precision control: TRUE Bomb Jack mechanics
+    // TAP = brake (micro-adjust velocity), HOLD = float (slow descent, NOT add height)
     if (!state.landed && !precisionAppliedThisFrame) {
       const deltaTime = 1/60;
 
@@ -465,38 +468,41 @@ export function updateFrame(state: GameState, svc: GameServices) {
         }
       }
 
-      // HOLD detection: past grace period = throttle
+      // HOLD detection: past grace period = FLOAT (TRUE Bomb Jack mechanic)
+      // Float REDUCES gravity effect, does NOT add height
       if (pressed && state.precisionInput.holdDuration > TAP_GRACE_FRAMES) {
         const result = applyAirThrottle(state, deltaTime);
         if (result.applied) {
           precisionAppliedThisFrame = true;
           state.airControl.throttleActive = true;
           state.airControl.throttleMsUsed += deltaTime * 1000;
+          // Store gravity multiplier for physics step below
+          floatGravityMult = result.gravityMultiplier;
 
-          // Track throttle action periodically
+          // Track float action periodically
           if (state.precisionInput.holdDuration % 12 === 0) {
-            state.lastControlAction = 'thrust';
+            state.lastControlAction = 'float';
             state.controlActionTime = nowMs;
 
-            // Visual feedback: upward lift particles
+            // Visual feedback: gentle float particles (not upward thrust!)
             if (state.particleSystem && !state.reduceFx) {
               state.particleSystem.emit('spark', {
                 x: state.px,
-                y: state.py,
-                count: 4,
-                baseAngle: -Math.PI / 2, // Upward
-                spread: 0.4,
-                speed: 1.5,
-                life: 15,
-                color: '#FFA500',
-                gravity: -0.1,
+                y: state.py + 10,
+                count: 2,
+                baseAngle: Math.PI / 2, // Downward (showing slowed descent)
+                spread: 0.6,
+                speed: 0.5,
+                life: 20,
+                color: '#87CEEB', // Light blue for float
+                gravity: 0.05,
               });
             }
           }
 
-          // Audio feedback every 6 frames
-          if (state.precisionInput.holdDuration % 6 === 0) {
-            audio.airBrakeHold?.(); // Reuse for now, add throttle sound later
+          // Gentle audio feedback every 10 frames
+          if (state.precisionInput.holdDuration % 10 === 0) {
+            audio.airBrakeHold?.();
           }
         } else if (result.denied) {
           audio.actionDenied?.();
@@ -514,7 +520,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
       }
     }
 
-    state.vy += BASE_GRAV * effectiveTimeScale;
+    // Apply gravity with float multiplier (TRUE Bomb Jack: float slows fall, doesn't add height)
+    state.vy += BASE_GRAV * effectiveTimeScale * floatGravityMult;
 
     // Wind effect with 50% resistance when air-braking (holding)
     const isAirBraking = pressed && state.precisionInput.holdDuration > TAP_GRACE_FRAMES;
