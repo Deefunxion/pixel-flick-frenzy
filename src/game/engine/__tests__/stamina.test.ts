@@ -138,7 +138,7 @@ describe('Input Edge Detection', () => {
 });
 
 describe('Zeno Air Control Integration', () => {
-  it('registers float tap and costs 2 stamina when tapped during flight', () => {
+  it('registers float tap and costs 5 stamina when pressed during flight', () => {
     const state = createInitialState({ reduceFx: false });
     state.flying = true;
     state.px = 300;
@@ -146,21 +146,22 @@ describe('Zeno Air Control Integration', () => {
     state.vx = 5;
     state.vy = 2;
     state.stamina = 100;
-    // Simulate tap: was pressed, now released with short hold duration
-    state.precisionInput.lastPressedState = true;
-    state.precisionInput.holdDuration = 2; // Short hold = tap
-    state.precisionInput.holdDurationAtRelease = 2;
+    // Simulate press: was not pressed, now pressed
+    state.precisionInput.lastPressedState = false;
+    state.precisionInput.holdDuration = 0;
 
-    // Release = tap detected, registers float tap
-    updateFrame(state, createMockServices(false));
+    // Press = tap detected immediately (press-based detection)
+    updateFrame(state, createMockServices(true));
 
-    // Float tap costs 2 stamina (TAP_STAMINA_COST)
-    expect(state.stamina).toBe(98);
+    // Float tap costs 5 stamina (TAP_STAMINA_COST)
+    expect(state.stamina).toBe(95);
     // Tap is registered in recentTapTimes
     expect(state.airControl.recentTapTimes.length).toBeGreaterThan(0);
+    // Velocity boosted
+    expect(state.vx).toBeGreaterThan(5);
   });
 
-  it('applies hard brake (rapid deceleration) when held during flight', () => {
+  it('applies progressive brake when held past 0.3sec threshold', () => {
     const state = createInitialState({ reduceFx: false });
     state.flying = true;
     state.px = 300;
@@ -169,17 +170,20 @@ describe('Zeno Air Control Integration', () => {
     state.vy = 2;
     state.stamina = 100;
     state.precisionInput.lastPressedState = true;
-    state.precisionInput.holdDuration = 5; // Past grace period
+    // Hold for 30 frames (past 18-frame threshold, some ramp time)
+    state.precisionInput.holdDuration = 30;
 
     const initialVx = state.vx;
-    const initialVy = state.vy;
 
-    // Continued hold = hard brake
+    // Continued hold = progressive brake
     updateFrame(state, createMockServices(true));
 
-    // Hard brake: velocity *= 0.6 (HARD_BRAKE_DECEL)
-    expect(state.vx).toBeLessThan(initialVx * 0.7); // Significantly reduced
-    expect(state.vy).toBeLessThan(initialVy); // vy also reduced by brake
+    // Progressive brake: starts gentle (0.98), ramps to strong (0.80)
+    // At 30 frames (12 past threshold), ramp = 12/60 = 0.2
+    // Expected decel = 0.98 - 0.2*(0.98-0.80) = 0.98 - 0.036 = ~0.944
+    // So velocity should be reduced but not dramatically
+    expect(state.vx).toBeLessThan(initialVx);
+    expect(state.vx).toBeGreaterThan(initialVx * 0.9); // Gentle reduction
     expect(state.airControl.isHoldingBrake).toBe(true);
   });
 
@@ -194,12 +198,12 @@ describe('Zeno Air Control Integration', () => {
     state.precisionInput.lastPressedState = false;
     state.airControl.recentTapTimes = []; // No recent taps
 
-    // No input = heavy gravity (HEAVY_GRAVITY_MULT = 2.0)
+    // No input = heavy gravity (HEAVY_GRAVITY_MULT = 1.2)
     updateFrame(state, createMockServices(false));
 
-    // vy should increase significantly due to heavy gravity
-    // Normal gravity ~0.08, heavy gravity ~0.16
-    expect(state.vy).toBeGreaterThan(0.1);
+    // vy should increase due to gravity
+    // Normal gravity ~0.08 * 0.55 (TIME_SCALE) * 1.2 = ~0.053
+    expect(state.vy).toBeGreaterThan(0.04);
   });
 
   it('does not apply air control if landed', () => {

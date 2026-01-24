@@ -2,7 +2,11 @@ import type { ParticleSystem } from './particles';
 import type { Animator } from './animator';
 import type { Ring } from './rings';
 import type { RingJuicePopup } from './ringJuice';
+import type { RouteJuicePopup } from './routeJuice';
 import type { GradeResult } from './gradeSystem';
+import type { BounceSurface } from './bounce';
+import type { Route } from './routes';
+import type { Contract, ContractResult } from './contracts';
 
 export interface Star {
   x: number;
@@ -218,6 +222,8 @@ export interface GameState {
   ringJuicePopups: RingJuicePopup[];
   lastRingCollectTime: number;
   edgeGlowIntensity: number;  // 0-1 for screen edge glow effect
+  // Route juice state
+  routeJuicePopups: RouteJuicePopup[];
   // Landing grade system
   lastGrade: GradeResult | null;
   gradeDisplayTime: number;  // When grade was shown (for animation timing)
@@ -251,4 +257,13 @@ export interface GameState {
   menuOpen: boolean;
   // Bomb Jack-like air control
   airControl: AirControl;
+  // Bounce surface (puzzle mechanic)
+  bounce: BounceSurface | null;
+  // Routes system (combo objectives)
+  activeRoute: Route | null;
+  // Contracts system (varied objectives)
+  activeContract: Contract | null;
+  contractConsecutiveFails: number;
+  lastContractResult: ContractResult | null;
+  staminaUsedThisThrow: number;
 }

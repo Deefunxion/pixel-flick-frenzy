@@ -23,7 +23,10 @@ import {
 import { drawPrecisionBar } from './precisionRender';
 import { drawRings } from './ringsRender';
 import { updateRingPosition } from './rings';
+import { renderBounce } from './bounceRender';
+import { renderContractHUD, renderRouteNodeHighlight } from './contractRender';
 import type { RingJuicePopup } from './ringJuice';
+import type { RouteJuicePopup } from './routeJuice';
 // TODO: Import sprite-based effects when assets are ready
 // import { renderParticles } from './particles';
 
@@ -52,6 +55,43 @@ function renderRingPopups(
     ctx.strokeText(popup.text, 0, 0);
 
     // Fill
+    ctx.fillStyle = popup.color;
+    ctx.fillText(popup.text, 0, 0);
+
+    ctx.restore();
+  }
+}
+
+/**
+ * Render route juice text popups ("ROUTE 1!", "ROUTE 2!", "COMBO!")
+ * Popups rise and fade out over time - purple/blue theme
+ */
+function renderRoutePopups(
+  ctx: CanvasRenderingContext2D,
+  popups: RouteJuicePopup[]
+): void {
+  for (const popup of popups) {
+    ctx.save();
+    ctx.globalAlpha = popup.opacity;
+    ctx.translate(popup.x, popup.y);
+    ctx.scale(popup.scale, popup.scale);
+
+    // Draw text with outline for visibility - bolder font for routes
+    ctx.font = 'bold 16px "Comic Sans MS", cursive';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // White outline for contrast
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 4;
+    ctx.strokeText(popup.text, 0, 0);
+
+    // Black inner outline
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.strokeText(popup.text, 0, 0);
+
+    // Fill with popup color
     ctx.fillStyle = popup.color;
     ctx.fillText(popup.text, 0, 0);
 
@@ -867,11 +907,20 @@ function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, CO
   }
   drawRings(ctx, state.rings, COLORS, nowMs, state.ringsPassedThisThrow);
 
+  // Render bounce surface
+  renderBounce(ctx, state.bounce, nowMs);
+
   // Ring multiplier indicator removed - now shown in React ThrowScore HUD
 
   // Ring juice effects
   renderEdgeGlow(ctx, state.edgeGlowIntensity, W, H);
   renderRingPopups(ctx, state.ringJuicePopups);
+  // Route juice effects
+  renderRoutePopups(ctx, state.routeJuicePopups);
+
+  // Contract and route UI
+  renderContractHUD(ctx, state.activeContract, state.activeRoute, state.lastContractResult, nowMs);
+  renderRouteNodeHighlight(ctx, state.activeRoute, nowMs);
 
   // ON FIRE mode visual effects
   if (state.onFireMode && !state.reduceFx) {
@@ -1243,11 +1292,20 @@ function renderNoirFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS
   }
   drawRings(ctx, state.rings, COLORS, nowMs, state.ringsPassedThisThrow);
 
+  // Render bounce surface
+  renderBounce(ctx, state.bounce, nowMs);
+
   // Ring multiplier indicator removed - now shown in React ThrowScore HUD
 
   // Ring juice effects
   renderEdgeGlow(ctx, state.edgeGlowIntensity, W, H);
   renderRingPopups(ctx, state.ringJuicePopups);
+  // Route juice effects
+  renderRoutePopups(ctx, state.routeJuicePopups);
+
+  // Contract and route UI
+  renderContractHUD(ctx, state.activeContract, state.activeRoute, state.lastContractResult, nowMs);
+  renderRouteNodeHighlight(ctx, state.activeRoute, nowMs);
 
   // ON FIRE mode visual effects
   if (state.onFireMode && !state.reduceFx) {

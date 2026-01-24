@@ -67,9 +67,17 @@ export class NoirBackgroundRenderer {
 
     const w = NOIR_ASSET_DIMENSIONS.flag.width * ASSET_SCALE;
     const h = NOIR_ASSET_DIMENSIONS.flag.height * ASSET_SCALE;
+    const poleOffset = w * 0.3;
 
-    // Position flag so pole base is at ground level
-    ctx.drawImage(img, x - w * 0.3, groundY - h, w, h);
+    ctx.save();
+    ctx.translate(x, groundY);
+    ctx.rotate(this.state.flagLean);
+    ctx.scale(this.state.flagDirection, 1);
+
+    // Keep pole base anchored when flipping
+    const drawX = this.state.flagDirection === 1 ? -poleOffset : poleOffset - w;
+    ctx.drawImage(img, drawX, -h + 4, w, h);
+    ctx.restore();
   }
 
   // --- Private update methods ---
@@ -108,14 +116,30 @@ export class NoirBackgroundRenderer {
   }
 
   private updateFlag(wind: number, deltaMs: number): void {
-    const baseInterval = 180; // Slightly slower flutter for noir
-    const interval = baseInterval / (1 + Math.abs(wind) * 1.5);
+    const absWind = Math.abs(wind);
+    const normalized = Math.min(absWind / 0.12, 1);
+    const level = Math.min(5, Math.max(0, Math.round(normalized * 5)));
+    const intensity = level / 5;
 
-    this.state.flagFrameTimer += deltaMs;
+    this.state.flagLevel = level;
+    this.state.flagDirection = wind >= 0 ? 1 : -1;
+
+    const baseInterval = 220;      // Slightly faster than flipbook to keep noir responsive
+    const fastestInterval = 70;
+    const interval = baseInterval - intensity * (baseInterval - fastestInterval);
+    const flutterBoost = 0.7 + intensity * 2.0;
+
+    this.state.flagFrameTimer += deltaMs * flutterBoost;
     if (this.state.flagFrameTimer >= interval) {
       this.state.flagFrameTimer = 0;
       this.state.flagFrame = (this.state.flagFrame + 1) % 4;
     }
+
+    // Gentle lean for noir; keeps vibe subtle but directional
+    const baseLean = intensity * 0.16;
+    this.state.flagWavePhase += deltaMs * (0.002 + intensity * 0.005);
+    const sway = Math.sin(this.state.flagWavePhase) * 0.04 * (0.5 + intensity);
+    this.state.flagLean = (baseLean + sway) * this.state.flagDirection;
   }
 
   private updateWindParticles(wind: number, deltaMs: number): void {

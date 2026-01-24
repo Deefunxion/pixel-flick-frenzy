@@ -75,9 +75,18 @@ export class BackgroundRenderer {
 
     const w = ASSET_DIMENSIONS.flag.width * ASSET_SCALE;
     const h = ASSET_DIMENSIONS.flag.height * ASSET_SCALE;
+    const poleOffset = w * -0.02; // Distance from draw origin to pole base
 
-    // Position flag so pole base is at ground level
-    ctx.drawImage(img, x - w * 0.3, groundY - h, w, h);
+    // Lean + flip to show wind direction and intensity
+    ctx.save();
+    ctx.translate(x, groundY);
+    ctx.rotate(this.state.flagLean);
+    ctx.scale(this.state.flagDirection, 1);
+
+    // Position flag so pole base stays planted when flipped left/right
+    const drawX = this.state.flagDirection === 1 ? -poleOffset : poleOffset - w;
+    ctx.drawImage(img, drawX, -h + 5, w, h);
+    ctx.restore();
   }
 
   // --- Private update methods ---
@@ -119,18 +128,33 @@ export class BackgroundRenderer {
   }
 
   private updateFlag(wind: number, deltaMs: number): void {
-    // Wind strength affects flag wave speed (1-5 levels)
-    // Stronger wind = faster flapping
-    const windStrength = Math.abs(wind);
-    const baseInterval = 200; // Calm wind
-    const minInterval = 50;   // Strong wind
-    const interval = Math.max(minInterval, baseInterval - windStrength * 300);
+    // Normalize wind into 5 discrete levels (0-5) for readability on the flag
+    // Typical wind from physics hovers around ±0.1, so clamp to keep signals obvious.
+    const absWind = Math.abs(wind);
+    const normalized = Math.min(absWind / 0.12, 1); // 0 → calm, ~0.12 → max level
+    const level = Math.min(5, Math.max(0, Math.round(normalized * 5)));
+    const intensity = level / 5; // Discrete 0-1 for 5 wind levels
 
-    this.state.flagFrameTimer += deltaMs;
+    this.state.flagLevel = level;
+    this.state.flagDirection = wind >= 0 ? 1 : -1;
+
+    // Faster flutter with stronger wind; also accelerate the frame timer slightly
+    const baseInterval = 260; // Calm wind
+    const fastestInterval = 60; // Gale
+    const interval = baseInterval - intensity * (baseInterval - fastestInterval);
+    const flutterBoost = 0.8 + intensity * 2.2; // More updates per ms when windy
+
+    this.state.flagFrameTimer += deltaMs * flutterBoost;
     if (this.state.flagFrameTimer >= interval) {
       this.state.flagFrameTimer = 0;
       this.state.flagFrame = (this.state.flagFrame + 1) % 4;
     }
+
+    // Lean the pole into the wind and add a small sinusoidal sway so direction is visible
+    const baseLean = intensity * 0.18; // Up to ~10°
+    this.state.flagWavePhase += deltaMs * (0.002 + intensity * 0.006);
+    const sway = Math.sin(this.state.flagWavePhase) * 0.05 * (0.5 + intensity);
+    this.state.flagLean = (baseLean + sway) * this.state.flagDirection;
   }
 
   private updateWindParticles(wind: number, deltaMs: number): void {

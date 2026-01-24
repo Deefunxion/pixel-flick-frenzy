@@ -2,7 +2,49 @@
 
 All notable changes to One-More-Flick are documented in this file.
 
-## [Unreleased] - 2026-01-21
+## [Unreleased] - 2026-01-24
+
+### Added - Pattern Solving Layer (Bomb Jack-style Air Control)
+- **New Air Control System**: Replaced simple tap/hold with Bomb Jack-inspired mechanics
+  - **Tap = Float**: Brief gravity reduction (50% for 300ms), costs 5 stamina
+  - **Rapid taps = Extended float**: Chain taps for longer hover time
+  - **Hold = Hard brake**: Progressive velocity reduction, costs 15 stamina/sec
+  - Stamina costs scale with edge proximity (1x at 350px → 2x at 419px)
+
+- **Bounce Surfaces**: Bank-shot puzzle mechanic
+  - Spawns 60% of throws at random positions
+  - Two visual types: "eraser" (pink rectangle) and "cloud" (white puff)
+  - Physics-based reflection with restitution (0.65-0.9)
+  - Enables reaching otherwise impossible route nodes
+  - **New files**: `bounce.ts`, `bounceRender.ts`
+
+- **Routes System**: Ordered node sequences for combo objectives
+  - Physics-based generation ensures all nodes are reachable
+  - Without bounce: nodes must descend (gravity constraint)
+  - With bounce: can reach ascending nodes after bouncing
+  - Hand-drawn wobbly circle indicators matching game aesthetic
+  - Visual feedback: completed (green), current (pulsing white), upcoming (faint gray)
+  - **New files**: `routes.ts`, `routeJuice.ts`
+
+- **Contracts System**: Varied objectives with constraints and rewards
+  - Objective types: complete route, collect N rings, land in zone
+  - Constraint types: max stamina usage, no brakes, limited brake taps
+  - Rewards: 3-10 permanent throws based on difficulty
+  - Difficulty adapts after consecutive failures
+  - **New files**: `contracts.ts`, `contractRender.ts`
+
+- **Route Juice**: Visual/audio feedback for route completion
+  - Popup text: "ROUTE 1!", "ROUTE 2!", "COMBO!"
+  - Purple/blue color theme (distinct from ring green/gold)
+  - Particle bursts on node completion
+  - Ascending C major chord audio (C5 → E5 → G5)
+
+### Technical - Pattern Solving Layer
+- Extended `GameState` with: `airControl`, `bounce`, `activeRoute`, `activeContract`, `routeJuicePopups`, `staminaUsedThisThrow`
+- Extended `AirControl` interface: `throttleActive`, `brakeTaps`, `recentTapTimes`, `isHoldingBrake`
+- New functions: `applyAirThrottle()`, `applyBounce()`, `checkRouteNodeProgress()`, `evaluateContract()`
+- Routes/bounce/contracts generated at `resetPhysics()` for pre-throw visibility
+- 20 new tests for air throttle, bounce, routes, and contracts
 
 ### Added - Achievement Expansion
 - **194 achievements** (up from 14), rewarding every decimal digit of progress:

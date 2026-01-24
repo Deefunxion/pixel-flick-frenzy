@@ -133,29 +133,42 @@ export function applySlideControl(
 // ============================================
 // Three states:
 // 1. RAPID TAPPING = Float/Glide (faster tap = less fall)
-// 2. NO INPUT = Heavy gravity (falls fast)
-// 3. HOLD = Hard brake (velocity → 0 quickly)
+// 2. NO INPUT = Heavy gravity (falls faster, but not extreme)
+// 3. HOLD (0.3sec+) = Progressive brake (ramps from gentle to strong)
 // ============================================
 
-// Gravity multipliers
-const HEAVY_GRAVITY_MULT = 2.0;        // No input = 2x gravity (falls fast)
-const FLOAT_MIN_GRAVITY = 0.15;        // Best float (fast tapping) = 15% gravity
-const FLOAT_MAX_GRAVITY = 0.7;         // Slow tapping = 70% gravity
+// Gravity multipliers (softer than before)
+const HEAVY_GRAVITY_MULT = 1.2;        // No input = 1.0x gravity (noticeable but not harsh)
+const FLOAT_MIN_GRAVITY = 0.1;         // Best float (fast tapping) = 10% gravity
+const FLOAT_MAX_GRAVITY = 0.3;         // Slow tapping = 30% gravity
 
 // Tap detection
 const TAP_WINDOW_MS = 400;             // Count taps in last 400ms
 const MIN_TAPS_FOR_FLOAT = 1;          // 1+ tap in window starts float
-const MAX_TAPS_FOR_BEST_FLOAT = 6;     // 6+ taps = best float
+const MAX_TAPS_FOR_BEST_FLOAT = 2;     // 2+ taps = best float
 
-// Hard brake (hold)
-const HARD_BRAKE_DECEL = 0.6;          // Velocity *= 0.6 each frame (rapid stop)
-const HARD_BRAKE_COST_PER_SEC = 25;    // Stamina cost for brake
+// Progressive brake (hold 0.3sec+)
+// Brake strength ramps up over time for smooth deceleration
+const BRAKE_ACTIVATION_FRAMES = 18;    // 0.3sec at 60fps before brake starts
+const BRAKE_MIN_DECEL = 0.98;          // Start very gentle (2% reduction/frame)
+const BRAKE_MAX_DECEL = 0.80;          // Max brake after full ramp (20% reduction/frame)
+const BRAKE_RAMP_FRAMES = 60;          // 1 second to reach full brake strength
+const HARD_BRAKE_COST_PER_SEC = 40;    // Stamina cost for brake (slightly lower)
 
-// Tap cost
-const TAP_STAMINA_COST = 2;            // Small cost per tap
+// Tap cost and boost
+const TAP_STAMINA_COST = 5;            // Small cost per tap
+const TAP_VELOCITY_BOOST = 0.50;       // Forward velocity gain per tap (20% less than before)
+const MAX_VELOCITY = 7.0;              // Maximum forward velocity (physics cap)
+
+// Export for update.ts
+export { BRAKE_ACTIVATION_FRAMES, TAP_VELOCITY_BOOST, MAX_VELOCITY };
 
 export type FloatResult = PrecisionResult & {
   gravityMultiplier: number;
+};
+
+export type FloatTapResult = PrecisionResult & {
+  velocityBoost: number;   // Forward velocity gain from tap (vx)
 };
 
 export type BrakeResult = PrecisionResult & {
@@ -164,22 +177,26 @@ export type BrakeResult = PrecisionResult & {
 
 /**
  * Register a tap for the float system.
- * Each tap extends float time and costs a small amount of stamina.
+ * Each tap:
+ * - Extends float time (via recentTapTimes → reduced gravity)
+ * - If ASCENDING (vy < 0): NEUTRALIZES upward motion (vy = 0), NO velocity boost
+ * - If DESCENDING (vy >= 0): Gives forward velocity boost (vx)
+ * - Costs stamina
  */
 export function registerFloatTap(
   state: GameState,
   nowMs: number
-): PrecisionResult {
+): FloatTapResult {
   const edgeMultiplier = calculateEdgeMultiplier(state.px);
   const cost = Math.ceil(TAP_STAMINA_COST * edgeMultiplier);
 
   if (state.stamina < cost) {
-    return { applied: false, denied: true };
+    return { applied: false, denied: true, velocityBoost: 0 };
   }
 
   state.stamina -= cost;
 
-  // Add tap timestamp
+  // Add tap timestamp (for float gravity calculation)
   state.airControl.recentTapTimes.push(nowMs);
 
   // Clean old taps outside window
@@ -187,7 +204,31 @@ export function registerFloatTap(
     t => nowMs - t < TAP_WINDOW_MS
   );
 
-  return { applied: true, denied: false };
+  // Check if ascending (vy < 0 means moving upward)
+  const isAscending = state.vy < 0;
+
+  if (isAscending) {
+    // NEUTRALIZE upward motion - tap cancels the rise
+    state.vy = 0;
+    // NO velocity boost during ascent - prevents launch tap abuse
+    return {
+      applied: true,
+      denied: false,
+      velocityBoost: 0
+    };
+  }
+
+  // DESCENDING or LEVEL: Apply forward velocity boost
+  // Capped at MAX_VELOCITY to prevent infinite acceleration
+  const oldVx = state.vx;
+  state.vx = Math.min(state.vx + TAP_VELOCITY_BOOST, MAX_VELOCITY);
+  const actualBoost = state.vx - oldVx;
+
+  return {
+    applied: true,
+    denied: false,
+    velocityBoost: actualBoost
+  };
 }
 
 /**
@@ -221,11 +262,14 @@ export function calculateTapGravity(
 }
 
 /**
- * Apply hard brake during flight (HOLD).
- * Rapidly decelerates velocity toward zero.
+ * Apply progressive brake during flight (HOLD 0.3sec+).
+ * Brake strength ramps up over time for smooth deceleration.
+ *
+ * @param holdFramesPastThreshold - How many frames past the 0.3sec activation threshold
  */
 export function applyHardBrake(
   state: GameState,
+  holdFramesPastThreshold: number = 0,
   deltaTime: number = 1/60
 ): BrakeResult {
   const edgeMultiplier = calculateEdgeMultiplier(state.px);
@@ -237,16 +281,21 @@ export function applyHardBrake(
 
   state.stamina -= frameCost;
 
-  // Apply hard deceleration
-  state.vx *= HARD_BRAKE_DECEL;
-  state.vy *= HARD_BRAKE_DECEL;
+  // Calculate progressive deceleration based on how long past threshold
+  // Starts gentle (0.98), ramps to strong (0.80) over 1 second
+  const rampProgress = Math.min(1, holdFramesPastThreshold / BRAKE_RAMP_FRAMES);
+  const decel = BRAKE_MIN_DECEL - (rampProgress * (BRAKE_MIN_DECEL - BRAKE_MAX_DECEL));
 
-  return { applied: true, denied: false, velocityMultiplier: HARD_BRAKE_DECEL };
+  // Apply progressive deceleration
+  state.vx *= decel;
+  state.vy *= decel;
+
+  return { applied: true, denied: false, velocityMultiplier: decel };
 }
 
 // Legacy function - kept for compatibility but use new system
 export function applyAirThrottle(
-  state: GameState,
+  _state: GameState,
   _deltaTime: number = 1/60
 ): FloatResult {
   // This is now handled by calculateTapGravity + registerFloatTap

@@ -42,6 +42,7 @@ import {
   registerFloatTap,
   calculateTapGravity,
   applyHardBrake,
+  BRAKE_ACTIVATION_FRAMES,
 } from './precision';
 import { checkTutorialTrigger, startTutorial, updateTutorial } from './tutorial';
 import {
@@ -63,6 +64,11 @@ import {
   shouldScreenFlash,
   MICRO_FREEZE_MS,
 } from './ringJuice';
+import {
+  createRoutePopup,
+  updateRoutePopups,
+  getRouteNodeFrequency,
+} from './routeJuice';
 import { consumeThrow } from './throws';
 import { checkMilestones, awardZenoLevelUp } from './milestones';
 import { updateDailyProgress } from './dailyTasks';
@@ -73,6 +79,15 @@ import {
   hasBufferedInput,
   clearBuffer
 } from './inputBuffer';
+import {
+  checkBounceCollision,
+  applyBounce,
+} from './bounce';
+import {
+  checkRouteNodeProgress,
+  isRouteComplete,
+} from './routes';
+import { evaluateContract } from './contracts';
 
 export type GameAudio = {
   startCharge: (power01: number) => void;
@@ -397,6 +412,9 @@ export function updateFrame(state: GameState, svc: GameServices) {
       isHoldingBrake: false,
     };
 
+    // Reset stamina tracking for this throw
+    state.staminaUsedThisThrow = 0;
+
     // Emit launch sparks
     if (state.particleSystem) {
       state.particleSystem.emitLaunchSparks(state.px, state.py, theme.accent3);
@@ -451,28 +469,30 @@ export function updateFrame(state: GameState, svc: GameServices) {
     const deltaTime = 1/60;
 
     if (!state.landed) {
-      // TAP detection: release within grace period = FLOAT TAP
-      if (state.precisionInput.releasedThisFrame &&
-          state.precisionInput.holdDurationAtRelease <= TAP_GRACE_FRAMES) {
+      // TAP detection: triggers on PRESS (not release) for immediate response
+      // Every press = velocity boost + float effect (even after braking!)
+      if (state.precisionInput.pressedThisFrame) {
+        const staminaBefore = state.stamina;
         const result = registerFloatTap(state, nowMs);
         if (result.applied) {
+          state.staminaUsedThisThrow += staminaBefore - state.stamina;
           precisionAppliedThisFrame = true;
           state.lastControlAction = 'float';
           state.controlActionTime = nowMs;
           audio.airBrakeTap?.();
 
-          // Visual feedback: upward feather particles for float tap
+          // Visual feedback: forward thrust particles
           if (state.particleSystem && !state.reduceFx) {
             state.particleSystem.emit('spark', {
-              x: state.px,
-              y: state.py + 5,
-              count: 3,
-              baseAngle: -Math.PI / 2, // Upward
-              spread: 0.8,
-              speed: 0.8,
-              life: 25,
-              color: '#87CEEB', // Light blue
-              gravity: -0.02, // Float upward slightly
+              x: state.px - 10,
+              y: state.py,
+              count: 4,
+              baseAngle: Math.PI, // Backward (thrust effect)
+              spread: 0.5,
+              speed: 2,
+              life: 15,
+              color: '#FFD700', // Gold
+              gravity: 0.02,
             });
           }
         } else if (result.denied) {
@@ -481,10 +501,14 @@ export function updateFrame(state: GameState, svc: GameServices) {
         }
       }
 
-      // HOLD detection: past grace period = HARD BRAKE
-      if (pressed && state.precisionInput.holdDuration > TAP_GRACE_FRAMES) {
-        const result = applyHardBrake(state, deltaTime);
+      // HOLD detection: past 0.3sec threshold = PROGRESSIVE BRAKE
+      // Brake strength ramps from gentle to strong over 1 second of holding
+      if (pressed && state.precisionInput.holdDuration > BRAKE_ACTIVATION_FRAMES) {
+        const holdFramesPastThreshold = state.precisionInput.holdDuration - BRAKE_ACTIVATION_FRAMES;
+        const staminaBefore = state.stamina;
+        const result = applyHardBrake(state, holdFramesPastThreshold, deltaTime);
         if (result.applied) {
+          state.staminaUsedThisThrow += staminaBefore - state.stamina;
           precisionAppliedThisFrame = true;
           state.airControl.isHoldingBrake = true;
           state.airControl.brakeTaps++;
@@ -539,8 +563,8 @@ export function updateFrame(state: GameState, svc: GameServices) {
     // Apply gravity with calculated multiplier
     state.vy += BASE_GRAV * effectiveTimeScale * gravityMult;
 
-    // Wind effect with 50% resistance when air-braking (holding)
-    const isAirBraking = pressed && state.precisionInput.holdDuration > TAP_GRACE_FRAMES;
+    // Wind effect with 50% resistance when air-braking (past 0.3sec threshold)
+    const isAirBraking = pressed && state.precisionInput.holdDuration > BRAKE_ACTIVATION_FRAMES;
     const windResistance = isAirBraking ? 0.5 : 1.0;
     state.vx += state.wind * 0.3 * effectiveTimeScale * windResistance;
 
@@ -622,12 +646,110 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
         // Play collection sound (pass ring X for stereo pan)
         audio.ringCollect?.(ring.ringIndex, ring.x);
+
+        // Check route progress
+        if (state.activeRoute && !state.activeRoute.failed) {
+          const progress = checkRouteNodeProgress(
+            state.activeRoute,
+            state.activeRoute.currentIndex,
+            'ring',
+            ring.x,
+            ring.y
+          );
+          if (progress.advanced) {
+            const completedNodeIndex = state.activeRoute.currentIndex;
+            state.activeRoute.currentIndex = progress.newIndex;
+
+            // Route juice: popup, particles, audio
+            state.routeJuicePopups.push(
+              createRoutePopup(ring.x, ring.y, completedNodeIndex, nowMs)
+            );
+            if (state.particleSystem) {
+              state.particleSystem.emit('spark', {
+                x: ring.x,
+                y: ring.y,
+                count: 12,
+                baseAngle: 0,
+                spread: Math.PI * 2,
+                speed: 3,
+                life: 30,
+                color: '#9B59B6', // Purple for route
+                gravity: 0.05,
+              });
+            }
+            audio.tone(getRouteNodeFrequency(completedNodeIndex), 0.15, 'triangle', 0.1);
+          }
+        }
+      }
+    }
+
+    // Bounce surface collision
+    if (state.bounce && checkBounceCollision(state.px, state.py, state.bounce)) {
+      const bounced = applyBounce(state, state.bounce);
+      if (bounced) {
+        // Visual feedback
+        state.screenShake = state.reduceFx ? 0 : 3;
+        if (state.particleSystem) {
+          state.particleSystem.emit('spark', {
+            x: state.bounce.x,
+            y: state.bounce.y,
+            count: 8,
+            baseAngle: 0,
+            spread: Math.PI * 2,
+            speed: 2,
+            life: 20,
+            color: '#FFDD00',
+            gravity: 0,
+          });
+        }
+        audio.impact(0.5);
+
+        // Check route progress for bounce
+        if (state.activeRoute && !state.activeRoute.failed) {
+          const progress = checkRouteNodeProgress(
+            state.activeRoute,
+            state.activeRoute.currentIndex,
+            'bounce',
+            state.bounce.x,
+            state.bounce.y
+          );
+          if (progress.advanced) {
+            const completedNodeIndex = state.activeRoute.currentIndex;
+            state.activeRoute.currentIndex = progress.newIndex;
+
+            // Route juice: popup, particles, audio
+            state.routeJuicePopups.push(
+              createRoutePopup(state.bounce.x, state.bounce.y, completedNodeIndex, nowMs)
+            );
+            if (state.particleSystem) {
+              state.particleSystem.emit('spark', {
+                x: state.bounce.x,
+                y: state.bounce.y,
+                count: 15,
+                baseAngle: 0,
+                spread: Math.PI * 2,
+                speed: 4,
+                life: 35,
+                color: '#3498DB', // Blue for bounce route
+                gravity: 0.05,
+              });
+            }
+            audio.tone(getRouteNodeFrequency(completedNodeIndex), 0.15, 'triangle', 0.1);
+          }
+        }
       }
     }
 
     // Update ring juice popups (outside collision check, every frame)
     state.ringJuicePopups = updateRingPopups(
       state.ringJuicePopups,
+      effectiveDeltaMs,
+      nowMs
+    );
+
+    // Update route juice popups
+    state.routeJuicePopups = updateRoutePopups(
+      state.routeJuicePopups,
       effectiveDeltaMs,
       nowMs
     );
@@ -881,8 +1003,10 @@ export function updateFrame(state: GameState, svc: GameServices) {
       const deltaTime = 1/60;
       if (state.precisionInput.pressedThisFrame) {
         // Tap: extend slide (immediate on press for responsiveness)
+        const staminaBefore = state.stamina;
         const result = applySlideControl(state, 'tap');
         if (result.applied) {
+          state.staminaUsedThisThrow += staminaBefore - state.stamina;
           precisionAppliedThisFrame = true;
           state.pendingTapVelocity = 0.15; // Track what we added so we can undo
           audio.slideExtend?.();
@@ -907,8 +1031,10 @@ export function updateFrame(state: GameState, svc: GameServices) {
       }
       if (pressed && state.precisionInput.holdDuration > TAP_GRACE_FRAMES) {
         // Hold: brake (grace period allows clean taps)
+        const staminaBefore = state.stamina;
         const result = applySlideControl(state, 'hold', deltaTime);
         if (result.applied) {
+          state.staminaUsedThisThrow += staminaBefore - state.stamina;
           precisionAppliedThisFrame = true;
           if (result.frictionMultiplier) {
             frictionMultiplier = result.frictionMultiplier;
@@ -1239,6 +1365,39 @@ export function updateFrame(state: GameState, svc: GameServices) {
 
       // Mark as landed to prevent new inputs, then quick reset
       state.landed = true;
+
+      // Evaluate contract on landing
+      if (state.activeContract && !state.practiceMode && !state.fellOff) {
+        const result = evaluateContract(state.activeContract, {
+          routeComplete: state.activeRoute ? isRouteComplete(state.activeRoute) : false,
+          routeFailed: state.activeRoute?.failed ?? false,
+          staminaUsed: state.staminaUsedThisThrow,
+          brakeTaps: state.airControl.brakeTaps,
+          landingDistance: state.dist,
+          ringsCollected: state.ringsPassedThisThrow,
+        });
+
+        state.lastContractResult = result;
+
+        if (result.success) {
+          // Award throws
+          state.throwState.permanentThrows += result.reward;
+          saveJson('throw_state', state.throwState);
+          ui.setThrowState(state.throwState);
+          state.contractConsecutiveFails = 0;
+
+          // Celebration feedback
+          audio.zenoJingle?.();
+          state.screenFlash = state.reduceFx ? 0 : 0.5;
+        } else {
+          state.contractConsecutiveFails++;
+        }
+
+        // Rotate contract every 3 landings or after success
+        if (result.success || state.stats.totalThrows % 3 === 0) {
+          state.activeContract = null; // Will regenerate on next throw
+        }
+      }
 
       // Show "Almost!" overlay if didn't reach target
       if (!state.fellOff && state.dist < state.zenoTarget) {

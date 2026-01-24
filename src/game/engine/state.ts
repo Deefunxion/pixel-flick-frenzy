@@ -18,8 +18,11 @@ import {
 } from '@/game/storage';
 import type { DailyTasks, GameState, MilestonesClaimed, Star, ThrowState, TutorialState } from './types';
 import { ParticleSystem } from './particles';
-import { generateRings, resetRings } from './rings';
+import { generateRings } from './rings';
 import { calculateThrowRegen } from './throws';
+import { generateBounceSurface } from './bounce';
+import { generateRouteFromObjects } from './routes';
+import { getNextContract } from './contracts';
 
 function loadTutorialProgress(): Pick<TutorialState, 'hasSeenCharge' | 'hasSeenAir' | 'hasSeenSlide'> {
   if (typeof window === 'undefined') {
@@ -104,7 +107,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     saveJson('throw_state', throwState);
   }
 
-  return {
+  const state: GameState = {
     px: LAUNCH_PAD_X,
     py: H - 20,
     vx: 0,
@@ -226,6 +229,8 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     ringJuicePopups: [],
     lastRingCollectTime: 0,
     edgeGlowIntensity: 0,
+    // Route juice
+    routeJuicePopups: [],
     // Landing grade system
     lastGrade: null,
     gradeDisplayTime: 0,
@@ -265,7 +270,25 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
       recentTapTimes: [],
       isHoldingBrake: false,
     },
+    // Bounce surface (puzzle mechanic) - generated for planning visibility
+    bounce: generateBounceSurface(seed),
+    // Routes system (combo objectives) - will be set after
+    activeRoute: null,
+    // Contracts system (varied objectives)
+    activeContract: getNextContract(seed, 0, 0),
+    contractConsecutiveFails: 0,
+    lastContractResult: null,
+    staminaUsedThisThrow: 0,
   };
+
+  // Generate route after state is created (needs rings array)
+  state.activeRoute = generateRouteFromObjects(
+    state.rings,
+    state.bounce,
+    seed
+  );
+
+  return state;
 }
 
 export function resetPhysics(state: GameState) {
@@ -335,6 +358,8 @@ export function resetPhysics(state: GameState) {
   state.ringJuicePopups = [];
   state.lastRingCollectTime = 0;
   state.edgeGlowIntensity = 0;
+  // Reset route juice
+  state.routeJuicePopups = [];
   // Reset landing grade
   state.lastGrade = null;
   state.gradeDisplayTime = 0;
@@ -360,6 +385,30 @@ export function resetPhysics(state: GameState) {
     recentTapTimes: [],
     isHoldingBrake: false,
   };
+
+  // Generate bounce surface for next throw (visible during planning)
+  const throwSeed = state.seed + state.stats.totalThrows;
+  state.bounce = generateBounceSurface(throwSeed);
+
+  // Generate route from rings + bounce (visible during planning)
+  state.activeRoute = generateRouteFromObjects(
+    state.rings,
+    state.bounce,
+    throwSeed
+  );
+
+  // Generate contract if needed (visible during planning)
+  if (!state.activeContract) {
+    state.activeContract = getNextContract(
+      state.seed,
+      state.stats.totalThrows,
+      state.contractConsecutiveFails
+    );
+  }
+
+  // Reset contract tracking for new throw
+  state.staminaUsedThisThrow = 0;
+  state.lastContractResult = null;
 }
 
 export function nextWind(state: GameState) {

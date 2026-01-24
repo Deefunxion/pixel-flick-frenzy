@@ -67,6 +67,10 @@ export interface BackgroundState {
   // Flag animation
   flagFrame: number;          // Current frame 0-3
   flagFrameTimer: number;     // Ms since last frame change
+  flagDirection: 1 | -1;      // Wind direction applied to flag (right = 1, left = -1)
+  flagLevel: number;          // Discrete wind level 0-5 for flag intensity
+  flagLean: number;           // Radians to lean the pole/flag into the wind
+  flagWavePhase: number;      // Phase accumulator for subtle sway
 
   // Timing
   lastUpdateTime: number;
@@ -93,6 +97,10 @@ export function createBackgroundState(): BackgroundState {
     ],
     flagFrame: 0,
     flagFrameTimer: 0,
+    flagDirection: 1,
+    flagLevel: 0,
+    flagLean: 0,
+    flagWavePhase: 0,
     lastUpdateTime: 0,
   };
 }
