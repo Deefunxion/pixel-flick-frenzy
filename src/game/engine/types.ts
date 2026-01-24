@@ -7,6 +7,10 @@ import type { GradeResult } from './gradeSystem';
 import type { BounceSurface } from './bounce';
 import type { Route } from './routes';
 import type { Contract, ContractResult } from './contracts';
+import type { ArcadeState } from './arcade/types';
+import type { Doodle } from './arcade/doodles';
+import type { Spring } from './arcade/springs';
+import type { Portal } from './arcade/portal';
 
 export interface Star {
   x: number;
@@ -266,4 +270,10 @@ export interface GameState {
   contractConsecutiveFails: number;
   lastContractResult: ContractResult | null;
   staminaUsedThisThrow: number;
+  // Arcade mode
+  arcadeMode: boolean;
+  arcadeState: ArcadeState | null;
+  arcadeDoodles: Doodle[];
+  arcadeSprings: Spring[];
+  arcadePortal: Portal | null;
 }
