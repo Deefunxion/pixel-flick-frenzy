@@ -6,7 +6,6 @@ import { getLevel } from '@/game/engine/arcade/levels';
 // Flipbook colors
 const INK_BLUE = '#1e3a5f';
 const STABILO_ORANGE = '#d35400';
-const PAPER_BG = 'rgba(245, 240, 225, 0.85)';
 
 interface ArcadeHUDProps {
   arcadeState: ArcadeState;
@@ -29,53 +28,33 @@ export function ArcadeHUD({
   const earnedStars = arcadeState.starsPerLevel[level.id];
 
   return (
-    <div className="absolute bottom-2 left-0 right-0 flex justify-between px-3 pointer-events-none">
-      {/* Level indicator - notebook style */}
-      <div
-        className="rounded px-2 py-1"
-        style={{
-          background: PAPER_BG,
-          border: `2px solid ${INK_BLUE}`,
-          fontFamily: '"Comic Sans MS", cursive, sans-serif',
-        }}
-      >
-        <span style={{ color: STABILO_ORANGE, fontWeight: 'bold', fontSize: '13px' }}>
+    <div className="absolute bottom-1 left-0 right-0 flex justify-between px-2 pointer-events-none">
+      {/* Level indicator - transparent, 65% smaller */}
+      <div style={{ fontFamily: '"Comic Sans MS", cursive, sans-serif' }}>
+        <span style={{ color: STABILO_ORANGE, fontWeight: 'bold', fontSize: '5px' }}>
           LVL {level.id}
         </span>
-        <span style={{ color: INK_BLUE, marginLeft: '6px', fontSize: '11px' }}>
-          → {level.landingTarget}
+        <span style={{ color: INK_BLUE, marginLeft: '2px', fontSize: '4px' }}>
+          →{level.landingTarget}
         </span>
       </div>
 
-      {/* Doodle counter */}
+      {/* Doodle counter - transparent, 65% smaller */}
       {totalDoodles > 0 && (
-        <div
-          className="rounded px-2 py-1"
-          style={{
-            background: PAPER_BG,
-            border: `2px solid ${INK_BLUE}`,
-            fontFamily: '"Comic Sans MS", cursive, sans-serif',
-          }}
-        >
-          <span style={{ color: INK_BLUE, fontWeight: 'bold', fontSize: '13px' }}>
+        <div style={{ fontFamily: '"Comic Sans MS", cursive, sans-serif' }}>
+          <span style={{ color: INK_BLUE, fontWeight: 'bold', fontSize: '5px' }}>
             {doodlesCollected}/{totalDoodles}
           </span>
           {inOrderSoFar && doodlesCollected > 0 && (
-            <span style={{ color: STABILO_ORANGE, marginLeft: '4px', fontSize: '12px' }}>
+            <span style={{ color: STABILO_ORANGE, marginLeft: '2px', fontSize: '4px' }}>
               ✓
             </span>
           )}
         </div>
       )}
 
-      {/* Stars display */}
-      <div
-        className="rounded px-2 py-1 flex gap-1"
-        style={{
-          background: PAPER_BG,
-          border: `2px solid ${INK_BLUE}`,
-        }}
-      >
+      {/* Stars display - transparent, 65% smaller */}
+      <div className="flex gap-0.5">
         <Star filled={earnedStars?.landedInZone || false} />
         <Star filled={earnedStars?.inOrder || false} />
       </div>
@@ -87,9 +66,8 @@ function Star({ filled }: { filled: boolean }) {
   return (
     <span
       style={{
-        fontSize: '14px',
+        fontSize: '5px',
         color: filled ? STABILO_ORANGE : '#c4b89b',
-        textShadow: filled ? '0 0 4px rgba(211, 84, 0, 0.5)' : 'none',
       }}
     >
       ★
