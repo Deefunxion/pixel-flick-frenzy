@@ -459,6 +459,99 @@ export function generateMultiplierAchievements(): Record<string, GeneratedAchiev
   return achievements;
 }
 
+// Arcade Level Completion Achievements
+export function generateArcadeLevelAchievements(): Record<string, GeneratedAchievement> {
+  const achievements: Record<string, GeneratedAchievement> = {};
+
+  // Complete each level (all doodles collected = pass)
+  for (let level = 1; level <= 10; level++) {
+    const id = `arcade_level_${level}`;
+    const tier: AchievementTier = level <= 3 ? 'bronze' : level <= 6 ? 'silver' : level <= 9 ? 'gold' : 'platinum';
+    achievements[id] = {
+      name: level === 10 ? 'Arcade Master' : `Level ${level} Clear`,
+      desc: `Complete Arcade Level ${level}`,
+      tier,
+      check: (_, state) => {
+        if (!state.arcadeState) return false;
+        const stars = state.arcadeState.starsPerLevel[level];
+        return stars?.allDoodles || false;
+      },
+    };
+  }
+
+  return achievements;
+}
+
+// Arcade Star Achievements (max 20 stars = 2 per level)
+export function generateArcadeStarAchievements(): Record<string, GeneratedAchievement> {
+  const achievements: Record<string, GeneratedAchievement> = {};
+
+  const milestones = [
+    { stars: 5, name: 'Star Collector', tier: 'bronze' as const },
+    { stars: 10, name: 'Star Hunter', tier: 'silver' as const },
+    { stars: 15, name: 'Star Seeker', tier: 'gold' as const },
+    { stars: 20, name: 'Star Master', tier: 'platinum' as const },
+  ];
+
+  for (const { stars, name, tier } of milestones) {
+    const id = `arcade_stars_${stars}`;
+    achievements[id] = {
+      name,
+      desc: `Earn ${stars} stars in Arcade mode`,
+      tier,
+      check: (_, state) => {
+        if (!state.arcadeState) return false;
+        let total = 0;
+        for (const levelId in state.arcadeState.starsPerLevel) {
+          const s = state.arcadeState.starsPerLevel[levelId];
+          if (s.landedInZone) total++;
+          if (s.inOrder) total++;
+        }
+        return total >= stars;
+      },
+    };
+  }
+
+  return achievements;
+}
+
+// Perfect Level Achievements (both stars on a level)
+export function generateArcadePerfectAchievements(): Record<string, GeneratedAchievement> {
+  const achievements: Record<string, GeneratedAchievement> = {};
+
+  // Perfect any level
+  achievements['arcade_perfect_any'] = {
+    name: 'Perfect Clear',
+    desc: 'Get both stars on any Arcade level',
+    tier: 'silver',
+    check: (_, state) => {
+      if (!state.arcadeState) return false;
+      for (const levelId in state.arcadeState.starsPerLevel) {
+        const s = state.arcadeState.starsPerLevel[levelId];
+        if (s.landedInZone && s.inOrder) return true;
+      }
+      return false;
+    },
+  };
+
+  // Perfect all levels
+  achievements['arcade_perfect_all'] = {
+    name: 'Flawless',
+    desc: 'Get both stars on all 10 Arcade levels',
+    tier: 'mythic',
+    check: (_, state) => {
+      if (!state.arcadeState) return false;
+      for (let level = 1; level <= 10; level++) {
+        const s = state.arcadeState.starsPerLevel[level];
+        if (!s || !s.landedInZone || !s.inOrder) return false;
+      }
+      return true;
+    },
+  };
+
+  return achievements;
+}
+
 // Export all achievements combined
 export function generateAllAchievements(): Record<string, GeneratedAchievement> {
   return {
@@ -473,5 +566,8 @@ export function generateAllAchievements(): Record<string, GeneratedAchievement> 
     ...generateFallsAchievements(),
     ...generateLandingsAchievements(),
     ...generateMultiplierAchievements(),
+    ...generateArcadeLevelAchievements(),
+    ...generateArcadeStarAchievements(),
+    ...generateArcadePerfectAchievements(),
   };
 }
