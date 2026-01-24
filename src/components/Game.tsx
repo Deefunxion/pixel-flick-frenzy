@@ -104,6 +104,19 @@ import { ToastQueue, useToastQueue } from './ToastQueue';
 import { PracticeModeOverlay } from './PracticeModeOverlay';
 import { SlideOutMenu } from './SlideOutMenu';
 import { RotateScreen } from './RotateScreen';
+import { LevelEditor } from './LevelEditor';
+import { ArcadeHUD } from './ArcadeHUD';
+import { loadArcadeLevel } from '@/game/engine/state';
+import {
+  createDoodlesFromLevel,
+  createSpringsFromLevel,
+  createPortalFromPair,
+  getLevel,
+  checkStarObjectives,
+  isLevelPassed,
+  recordStars,
+  advanceLevel,
+} from '@/game/engine/arcade';
 import { useIsPortrait } from '@/hooks/useIsPortrait';
 import type { ThrowState, DailyTasks, MilestonesClaimed } from '@/game/engine/types';
 import { calculateThrowRegen, formatRegenTime, getMsUntilNextThrow } from '@/game/engine/throws';
@@ -174,6 +187,14 @@ const Game = () => {
   const [showStats, setShowStats] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
+  // Arcade HUD state (synced from stateRef)
+  const [arcadeHudState, setArcadeHudState] = useState<{
+    arcadeState: import('@/game/engine/arcade/types').ArcadeState | null;
+    doodlesCollected: number;
+    totalDoodles: number;
+    inOrderSoFar: boolean;
+  }>({ arcadeState: null, doodlesCollected: 0, totalDoodles: 0, inOrderSoFar: true });
   const [themeId, setThemeId] = useState<ThemeId>(() => {
     const stored = loadString('theme_id', DEFAULT_THEME_ID, 'omf_theme_id');
     // Validate stored value is a valid ThemeId
@@ -447,6 +468,25 @@ const Game = () => {
     setShowGrade(true);
     // Play grade-specific sound
     playGradeSound(audioRefs.current, audioSettingsRef.current, gradeResult.grade);
+
+    // Arcade mode: Check stars after landing
+    const state = stateRef.current;
+    if (state?.arcadeMode && state.arcadeState && !fellOff) {
+      const level = getLevel(state.arcadeState.currentLevelId);
+      if (level) {
+        const stars = checkStarObjectives(state.arcadeState, level, landingX);
+        if (isLevelPassed(stars)) {
+          recordStars(state.arcadeState, level.id, stars);
+          // Advance to next level after page flip completes
+          setTimeout(() => {
+            if (state.arcadeState && state.arcadeState.currentLevelId < 10) {
+              advanceLevel(state.arcadeState);
+              loadArcadeLevel(state, state.arcadeState.currentLevelId);
+            }
+          }, 500); // After page flip animation
+        }
+      }
+    }
   }, []);
 
   // Mobile UX: Detect if user is on mobile
@@ -650,11 +690,26 @@ const Game = () => {
       // Update mini goal HUD
       const goal = getClosestGoal(stats, s, achievements);
       setMiniGoal(goal);
+      // Sync arcade HUD state
+      if (s.arcadeMode && s.arcadeState) {
+        setArcadeHudState({
+          arcadeState: s.arcadeState,
+          doodlesCollected: s.arcadeDoodles.filter(d => d.collected).length,
+          totalDoodles: s.arcadeDoodles.length,
+          inOrderSoFar: s.arcadeState.streakCount === s.arcadeState.doodlesCollected.length,
+        });
+      }
     };
 
     const hudInterval = window.setInterval(syncHud, 120);
 
     const handleKeyDown = async (e: KeyboardEvent) => {
+      // Dev mode: Ctrl+E toggles level editor
+      if (import.meta.env.DEV && e.key === 'e' && e.ctrlKey) {
+        e.preventDefault();
+        setShowEditor(prev => !prev);
+        return;
+      }
       if (e.code === 'Space') {
         e.preventDefault();
         // Buffer input if we're in slow-mo/freeze
@@ -982,6 +1037,13 @@ const Game = () => {
           }}
           isMuted={audioSettings.muted}
           throwState={throwState}
+          arcadeState={arcadeHudState.arcadeState}
+          onSelectLevel={(levelId) => {
+            const state = stateRef.current;
+            if (state) {
+              loadArcadeLevel(state, levelId);
+            }
+          }}
         />
 
         {/* Header removed - horizontal-only full screen mode */}
@@ -1047,6 +1109,17 @@ const Game = () => {
               ringsCollected={ringsCollected}
               isFlying={hudFlying}
             />
+
+            {/* Arcade HUD */}
+            {arcadeHudState.arcadeState && (
+              <ArcadeHUD
+                arcadeState={arcadeHudState.arcadeState}
+                currentDistance={hudPx}
+                doodlesCollected={arcadeHudState.doodlesCollected}
+                totalDoodles={arcadeHudState.totalDoodles}
+                inOrderSoFar={arcadeHudState.inOrderSoFar}
+              />
+            )}
 
             {/* Landing Grade */}
             <LandingGrade
@@ -1164,6 +1237,25 @@ const Game = () => {
           onDismiss={() => setShowAudioWarning(false)}
           onRetry={handleAudioRetry}
         />
+
+        {/* Level Editor (Dev Mode Only) */}
+        {import.meta.env.DEV && showEditor && (
+          <LevelEditor
+            onClose={() => setShowEditor(false)}
+            onTestLevel={(level) => {
+              // Load custom level for testing
+              const state = stateRef.current;
+              if (state && state.arcadeState) {
+                loadArcadeLevel(state, level.id);
+                // Override with custom level data
+                state.arcadeDoodles = createDoodlesFromLevel(level.doodles);
+                state.arcadeSprings = createSpringsFromLevel(level.springs);
+                state.arcadePortal = level.portal ? createPortalFromPair(level.portal) : null;
+              }
+              setShowEditor(false);
+            }}
+          />
+        )}
       </div>
     </div>
   );

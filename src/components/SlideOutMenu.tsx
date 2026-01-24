@@ -5,9 +5,11 @@
  * Styled to match the hand-drawn notebook look.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { Theme } from '@/game/themes';
 import type { ThrowState } from '@/game/engine/types';
+import type { ArcadeState } from '@/game/engine/arcade/types';
+import { LevelSelect } from './LevelSelect';
 
 interface SlideOutMenuProps {
   isOpen: boolean;
@@ -25,9 +27,11 @@ interface SlideOutMenuProps {
   onOpenLeaderboard: () => void;
   onToggleSound: () => void;
   onReplayTutorial: () => void;
+  onSelectLevel?: (levelId: number) => void;
   // State
   isMuted: boolean;
   throwState: ThrowState;
+  arcadeState?: ArcadeState | null;
 }
 
 export function SlideOutMenu({
@@ -44,9 +48,13 @@ export function SlideOutMenu({
   onOpenLeaderboard,
   onToggleSound,
   onReplayTutorial,
+  onSelectLevel,
   isMuted,
   throwState,
+  arcadeState,
 }: SlideOutMenuProps) {
+  const [showLevelSelect, setShowLevelSelect] = useState(false);
+
   if (!isOpen) return null;
 
   const isNoir = themeId === 'noir';
@@ -164,6 +172,11 @@ export function SlideOutMenu({
 
         {/* Action Buttons - flex-1 to fill remaining space */}
         <div className="p-2 space-y-1 flex-1 overflow-y-auto">
+          {arcadeState && onSelectLevel && (
+            <MenuButton onClick={() => setShowLevelSelect(true)} inkColor={inkColor} paperBg={paperBg}>
+              Level Select
+            </MenuButton>
+          )}
           <MenuButton onClick={() => { onOpenLeaderboard(); onClose(); }} inkColor={inkColor} paperBg={paperBg}>
             Leaderboard
           </MenuButton>
@@ -178,6 +191,19 @@ export function SlideOutMenu({
           </MenuButton>
         </div>
       </div>
+
+      {/* Level Select Modal */}
+      {showLevelSelect && arcadeState && onSelectLevel && (
+        <LevelSelect
+          arcadeState={arcadeState}
+          onSelectLevel={(levelId) => {
+            onSelectLevel(levelId);
+            setShowLevelSelect(false);
+            onClose();
+          }}
+          onClose={() => setShowLevelSelect(false)}
+        />
+      )}
     </>
   );
 }

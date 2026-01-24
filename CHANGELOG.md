@@ -4,6 +4,32 @@ All notable changes to One-More-Flick are documented in this file.
 
 ## [Unreleased] - 2026-01-24
 
+### Added - Arcade Mode (10 Levels)
+- **Star-based objectives**: Two independent stars per level
+  - ★ Land beyond target distance (410-419)
+  - ★★ Collect all doodles in circular sequence (Bomb Jack style)
+  - **Pass requirement**: Collect all doodles (any order) to unlock next level
+- **Progressive difficulty**: Level 1 (410) to Level 10 (419)
+- **Doodle collectibles**: Two size classes (small/large), coin and star sprites
+  - Circular sequence tracking (can start from any doodle)
+  - Visual feedback: glow, pulse, collection particles
+- **Directional springs**: Up, up-left, up-right, down impulses for trajectory manipulation
+- **Portal teleportation**: Entry/exit pairs for instant screen traversal
+- **Level Select screen**: View all levels with star progress
+- **Visual level editor**: Dev tool (Ctrl+E) for designing levels
+  - Tool selection: doodle, spring, portal, eraser
+  - Export/import JSON for level data
+  - Test level directly from editor
+- **Cloud sync**: Arcade progress synced to localStorage (Firestore planned)
+- **New components**: `ArcadeHUD.tsx`, `LevelSelect.tsx`, `LevelEditor.tsx`
+- **New module**: `src/game/engine/arcade/`
+  - `types.ts` - Type definitions for doodles, springs, portals, stars
+  - `levels.ts` - 10 hand-crafted level definitions
+  - `state.ts` - Arcade state management and star tracking
+  - `doodles.ts`, `doodlesRender.ts` - Doodle system and rendering
+  - `springs.ts`, `springsRender.ts` - Spring system and rendering
+  - `portal.ts`, `portalRender.ts` - Portal system and rendering
+
 ### Added - Pattern Solving Layer (Bomb Jack-style Air Control)
 - **New Air Control System**: Replaced simple tap/hold with Bomb Jack-inspired mechanics
   - **Tap = Float**: Brief gravity reduction (50% for 300ms), costs 5 stamina
