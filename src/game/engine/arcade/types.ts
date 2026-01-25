@@ -26,6 +26,12 @@ export interface SpringPlacement {
   direction: SpringDirection;
   strength?: number;   // Impulse multiplier (default 1.0)
   scale?: number;      // Visual scale (default 1.0)
+  // Timing for on/off cycling (World 7+)
+  timing?: {
+    onDuration: number;   // Time active in ms
+    offDuration: number;  // Time inactive in ms
+    offset?: number;      // Initial phase offset in ms (default 0)
+  };
 }
 
 export interface PortalPair {

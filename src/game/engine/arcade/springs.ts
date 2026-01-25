@@ -1,6 +1,14 @@
 // src/game/engine/arcade/springs.ts
 import type { SpringPlacement, SpringDirection } from './types';
 
+// Timing configuration for timed springs
+export interface SpringTiming {
+  onDuration: number;   // Time active in ms
+  offDuration: number;  // Time inactive in ms
+  offset: number;       // Initial phase offset in ms
+  cycleDuration: number; // Total cycle time (on + off)
+}
+
 export interface Spring {
   x: number;
   y: number;
@@ -9,6 +17,9 @@ export interface Spring {
   force: number;
   scale: number;
   usedThisThrow: boolean;
+  // Timing state
+  timing: SpringTiming | null;  // null = always active
+  isActive: boolean;            // Current active state (for timed springs)
 }
 
 const DEFAULT_RADIUS = 18;
@@ -25,6 +36,18 @@ const DIRECTION_VECTORS: Record<SpringDirection, { x: number; y: number }> = {
 export function createSpringFromPlacement(placement: SpringPlacement): Spring {
   const scale = placement.scale ?? 1.0;
   const strength = placement.strength ?? 1.0;
+
+  // Create timing if specified
+  let timing: SpringTiming | null = null;
+  if (placement.timing) {
+    timing = {
+      onDuration: placement.timing.onDuration,
+      offDuration: placement.timing.offDuration,
+      offset: placement.timing.offset ?? 0,
+      cycleDuration: placement.timing.onDuration + placement.timing.offDuration,
+    };
+  }
+
   return {
     x: placement.x,
     y: placement.y,
@@ -33,6 +56,8 @@ export function createSpringFromPlacement(placement: SpringPlacement): Spring {
     force: DEFAULT_FORCE * strength,
     scale,
     usedThisThrow: false,
+    timing,
+    isActive: true, // Start active (timing will update this)
   };
 }
 
@@ -45,7 +70,8 @@ export function checkSpringCollision(
   playerY: number,
   spring: Spring
 ): boolean {
-  if (spring.usedThisThrow) return false;
+  // Spring must be active and not used this throw
+  if (!spring.isActive || spring.usedThisThrow) return false;
 
   const dx = playerX - spring.x;
   const dy = playerY - spring.y;
@@ -70,5 +96,38 @@ export function applySpringImpulse(
 export function resetSprings(springs: Spring[]): void {
   springs.forEach(s => {
     s.usedThisThrow = false;
+    // Reset isActive based on timing (at time 0)
+    if (s.timing) {
+      const phase = s.timing.offset % s.timing.cycleDuration;
+      s.isActive = phase < s.timing.onDuration;
+    } else {
+      s.isActive = true;
+    }
   });
+}
+
+/**
+ * Update spring timing states based on current time
+ * @param springs - Array of springs
+ * @param timeMs - Current game time in milliseconds
+ */
+export function updateSprings(springs: Spring[], timeMs: number): void {
+  for (const spring of springs) {
+    if (spring.timing) {
+      // Calculate where we are in the cycle
+      const adjustedTime = timeMs + spring.timing.offset;
+      const cyclePosition = adjustedTime % spring.timing.cycleDuration;
+
+      // Active during first part of cycle (onDuration)
+      spring.isActive = cyclePosition < spring.timing.onDuration;
+    }
+    // Springs without timing are always active (unless used this throw)
+  }
+}
+
+/**
+ * Check if a spring is currently in its active phase
+ */
+export function isSpringActive(spring: Spring): boolean {
+  return spring.isActive && !spring.usedThisThrow;
 }
