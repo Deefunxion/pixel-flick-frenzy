@@ -20,6 +20,9 @@ export interface Spring {
   // Timing state
   timing: SpringTiming | null;  // null = always active
   isActive: boolean;            // Current active state (for timed springs)
+  // Breakable state (World 17+)
+  breakable: boolean;           // true = one-use spring that breaks permanently
+  isBroken: boolean;            // true = spring has been broken (cannot be used again)
 }
 
 const DEFAULT_RADIUS = 18;
@@ -58,6 +61,8 @@ export function createSpringFromPlacement(placement: SpringPlacement): Spring {
     usedThisThrow: false,
     timing,
     isActive: true, // Start active (timing will update this)
+    breakable: placement.breakable ?? false,
+    isBroken: false,
   };
 }
 
@@ -70,8 +75,8 @@ export function checkSpringCollision(
   playerY: number,
   spring: Spring
 ): boolean {
-  // Spring must be active and not used this throw
-  if (!spring.isActive || spring.usedThisThrow) return false;
+  // Spring must be active, not used this throw, and not broken
+  if (!spring.isActive || spring.usedThisThrow || spring.isBroken) return false;
 
   const dx = playerX - spring.x;
   const dy = playerY - spring.y;
@@ -91,6 +96,11 @@ export function applySpringImpulse(
   velocity.vy += dir.y * spring.force;
 
   spring.usedThisThrow = true;
+
+  // Break the spring if it's breakable (permanent destruction)
+  if (spring.breakable) {
+    spring.isBroken = true;
+  }
 }
 
 export function resetSprings(springs: Spring[]): void {
@@ -129,5 +139,30 @@ export function updateSprings(springs: Spring[], timeMs: number): void {
  * Check if a spring is currently in its active phase
  */
 export function isSpringActive(spring: Spring): boolean {
-  return spring.isActive && !spring.usedThisThrow;
+  return spring.isActive && !spring.usedThisThrow && !spring.isBroken;
+}
+
+/**
+ * Check if a spring is broken (permanently destroyed)
+ */
+export function isSpringBroken(spring: Spring): boolean {
+  return spring.isBroken;
+}
+
+/**
+ * Reset all springs including broken state (for level restart)
+ * Unlike resetSprings(), this also repairs broken springs
+ */
+export function resetSpringsForLevel(springs: Spring[]): void {
+  springs.forEach(s => {
+    s.usedThisThrow = false;
+    s.isBroken = false;  // Repair broken springs
+    // Reset isActive based on timing (at time 0)
+    if (s.timing) {
+      const phase = s.timing.offset % s.timing.cycleDuration;
+      s.isActive = phase < s.timing.onDuration;
+    } else {
+      s.isActive = true;
+    }
+  });
 }
