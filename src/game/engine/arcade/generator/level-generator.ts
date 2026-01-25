@@ -6,6 +6,107 @@ import { StrokeTransformer } from './transform';
 import { PhysicsSimulator } from './physics-simulator';
 import { loadStrokeDatabase, getCharactersByStrokeCount, getStrokeRangeForLevel, getCharacterDatabase } from './stroke-data';
 
+// World definitions - which mechanics are available per level range
+interface WorldConfig {
+  startLevel: number;
+  endLevel: number;
+  mechanics: {
+    movingDoodles: boolean;      // World 3-4: Doodles that move
+    windZones: boolean;          // World 5-6: Directional force areas
+    timedSprings: boolean;       // World 7: On/off cycling springs
+    staticHazards: boolean;      // World 8: Spike, saw, fire obstacles
+    movingHazards: boolean;      // World 9: Moving obstacles
+    gravityWells: boolean;       // World 10-11: Attract/repel fields
+    timedPortals: boolean;       // World 12: On/off cycling portals
+    multiPortals: boolean;       // World 13-14: Multiple portal pairs
+    frictionZones: boolean;      // World 15-16: Ice and sticky surfaces
+    breakableSprings: boolean;   // World 17+: One-use springs
+  };
+}
+
+const WORLD_PROGRESSION: WorldConfig[] = [
+  { startLevel: 1, endLevel: 10, mechanics: {
+    movingDoodles: false, windZones: false, timedSprings: false,
+    staticHazards: false, movingHazards: false, gravityWells: false,
+    timedPortals: false, multiPortals: false, frictionZones: false, breakableSprings: false
+  }},
+  { startLevel: 11, endLevel: 20, mechanics: {
+    movingDoodles: false, windZones: false, timedSprings: false,
+    staticHazards: false, movingHazards: false, gravityWells: false,
+    timedPortals: false, multiPortals: false, frictionZones: false, breakableSprings: false
+  }},
+  { startLevel: 21, endLevel: 30, mechanics: {
+    movingDoodles: true, windZones: false, timedSprings: false,
+    staticHazards: false, movingHazards: false, gravityWells: false,
+    timedPortals: false, multiPortals: false, frictionZones: false, breakableSprings: false
+  }},
+  { startLevel: 31, endLevel: 40, mechanics: {
+    movingDoodles: true, windZones: false, timedSprings: false,
+    staticHazards: false, movingHazards: false, gravityWells: false,
+    timedPortals: false, multiPortals: false, frictionZones: false, breakableSprings: false
+  }},
+  { startLevel: 41, endLevel: 50, mechanics: {
+    movingDoodles: true, windZones: true, timedSprings: false,
+    staticHazards: false, movingHazards: false, gravityWells: false,
+    timedPortals: false, multiPortals: false, frictionZones: false, breakableSprings: false
+  }},
+  { startLevel: 51, endLevel: 60, mechanics: {
+    movingDoodles: true, windZones: true, timedSprings: false,
+    staticHazards: false, movingHazards: false, gravityWells: false,
+    timedPortals: false, multiPortals: false, frictionZones: false, breakableSprings: false
+  }},
+  { startLevel: 61, endLevel: 70, mechanics: {
+    movingDoodles: true, windZones: true, timedSprings: true,
+    staticHazards: false, movingHazards: false, gravityWells: false,
+    timedPortals: false, multiPortals: false, frictionZones: false, breakableSprings: false
+  }},
+  { startLevel: 71, endLevel: 80, mechanics: {
+    movingDoodles: true, windZones: true, timedSprings: true,
+    staticHazards: true, movingHazards: false, gravityWells: false,
+    timedPortals: false, multiPortals: false, frictionZones: false, breakableSprings: false
+  }},
+  { startLevel: 81, endLevel: 90, mechanics: {
+    movingDoodles: true, windZones: true, timedSprings: true,
+    staticHazards: true, movingHazards: true, gravityWells: false,
+    timedPortals: false, multiPortals: false, frictionZones: false, breakableSprings: false
+  }},
+  { startLevel: 91, endLevel: 100, mechanics: {
+    movingDoodles: true, windZones: true, timedSprings: true,
+    staticHazards: true, movingHazards: true, gravityWells: true,
+    timedPortals: false, multiPortals: false, frictionZones: false, breakableSprings: false
+  }},
+  { startLevel: 101, endLevel: 110, mechanics: {
+    movingDoodles: true, windZones: true, timedSprings: true,
+    staticHazards: true, movingHazards: true, gravityWells: true,
+    timedPortals: false, multiPortals: false, frictionZones: false, breakableSprings: false
+  }},
+  { startLevel: 111, endLevel: 120, mechanics: {
+    movingDoodles: true, windZones: true, timedSprings: true,
+    staticHazards: true, movingHazards: true, gravityWells: true,
+    timedPortals: true, multiPortals: false, frictionZones: false, breakableSprings: false
+  }},
+  { startLevel: 121, endLevel: 140, mechanics: {
+    movingDoodles: true, windZones: true, timedSprings: true,
+    staticHazards: true, movingHazards: true, gravityWells: true,
+    timedPortals: true, multiPortals: true, frictionZones: false, breakableSprings: false
+  }},
+  { startLevel: 141, endLevel: 160, mechanics: {
+    movingDoodles: true, windZones: true, timedSprings: true,
+    staticHazards: true, movingHazards: true, gravityWells: true,
+    timedPortals: true, multiPortals: true, frictionZones: true, breakableSprings: false
+  }},
+  { startLevel: 161, endLevel: 250, mechanics: {
+    movingDoodles: true, windZones: true, timedSprings: true,
+    staticHazards: true, movingHazards: true, gravityWells: true,
+    timedPortals: true, multiPortals: true, frictionZones: true, breakableSprings: true
+  }},
+];
+
+function getWorldConfig(level: number): WorldConfig {
+  return WORLD_PROGRESSION.find(w => level >= w.startLevel && level <= w.endLevel)
+    || WORLD_PROGRESSION[WORLD_PROGRESSION.length - 1];
+}
+
 // Landing target progression
 function getLandingTarget(level: number): number {
   if (level <= 100) return 410;
