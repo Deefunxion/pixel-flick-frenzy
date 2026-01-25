@@ -260,6 +260,10 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     // Air control feedback
     lastControlAction: null,
     controlActionTime: 0,
+    // Portal juice (temporary zoom/slow-mo after warp)
+    portalJuiceTimer: 0,
+    portalZoomTargetX: W / 2,
+    portalZoomTargetY: H / 2,
     // Monetization - Throw system
     throwState,
     dailyTasks,
@@ -400,6 +404,10 @@ export function resetPhysics(state: GameState) {
   // Reset air control feedback
   state.lastControlAction = null;
   state.controlActionTime = 0;
+  // Reset portal juice
+  state.portalJuiceTimer = 0;
+  state.portalZoomTargetX = W / 2;
+  state.portalZoomTargetY = H / 2;
   // Reset Zeno air control
   state.airControl = {
     throttleActive: false,

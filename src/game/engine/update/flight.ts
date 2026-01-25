@@ -386,6 +386,12 @@ export function processArcadeCollisions(
 
     // Visual feedback: portal effect
     state.screenFlash = 0.5;
+    if (!state.reduceFx) {
+      // Post-warp punch: keep slow-mo and push zoom a bit more to highlight exit
+      state.portalJuiceTimer = 36; // ~0.6s at 60fps
+      state.portalZoomTargetX = state.px;
+      state.portalZoomTargetY = state.py;
+    }
     if (state.particleSystem) {
       state.particleSystem.emit('spark', {
         x: state.px,

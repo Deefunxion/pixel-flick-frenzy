@@ -41,19 +41,38 @@ export function processSlideControls(
   }
 
   const deltaTime = 1 / 60;
+  const inZenoRulerZone = state.sliding && state.px > 419;
 
   if (state.precisionInput.pressedThisFrame && !precisionApplied) {
-    // Tap: extend slide (immediate on press for responsiveness)
-    const staminaBefore = state.stamina;
-    const result = applySlideControl(state, 'tap');
-    if (result.applied) {
-      state.staminaUsedThisThrow += staminaBefore - state.stamina;
-      precisionApplied = true;
-      state.pendingTapVelocity = 0.15; // Track what we added so we can undo
-      audio.slideExtend?.();
-    } else if (result.denied) {
-      audio.actionDenied?.();
-      state.staminaDeniedShake = 8;
+    if (inZenoRulerZone) {
+      // In Zeno ruler slow-mo, taps become an immediate hard brake
+      const staminaBefore = state.stamina;
+      const result = applySlideControl(state, 'hold', deltaTime);
+      if (result.applied) {
+        state.staminaUsedThisThrow += staminaBefore - state.stamina;
+        precisionApplied = true;
+        frictionMultiplier = result.frictionMultiplier ?? 2.5;
+        // Clamp velocity sharply for a decisive stop
+        state.vx *= 0.2;
+        audio.slideBrake?.();
+      } else if (result.denied) {
+        audio.actionDenied?.();
+        state.staminaDeniedShake = 8;
+      }
+      // Skip tap-extend behavior entirely in this zone
+    } else {
+      // Tap: extend slide (immediate on press for responsiveness)
+      const staminaBefore = state.stamina;
+      const result = applySlideControl(state, 'tap');
+      if (result.applied) {
+        state.staminaUsedThisThrow += staminaBefore - state.stamina;
+        precisionApplied = true;
+        state.pendingTapVelocity = 0.15; // Track what we added so we can undo
+        audio.slideExtend?.();
+      } else if (result.denied) {
+        audio.actionDenied?.();
+        state.staminaDeniedShake = 8;
+      }
     }
   } else if (state.precisionInput.releasedThisFrame && state.precisionInput.holdDurationAtRelease <= TAP_GRACE_FRAMES) {
     // Quick release - confirm tap (clear pending, no undo needed)

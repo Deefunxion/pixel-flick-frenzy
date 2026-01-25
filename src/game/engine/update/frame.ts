@@ -274,9 +274,56 @@ export function updateFrame(state: GameState, svc: GameServices): void {
   updateRecordZone(state);
 
   // === CINEMATIC EFFECTS ===
+  // Portal proximity slow-mo: pre-warp and post-exit bubble (~30px) at 90% slowdown
+  let portalProximityActive = false;
+  let portalProximityX = state.zoomTargetX;
+  let portalProximityY = state.zoomTargetY;
+  if (!state.reduceFx && state.arcadeMode && state.arcadePortal) {
+    const bufferPx = 30;
+    const { aX, aY, bX, bY, usedThisThrow, lastUsedSide } = state.arcadePortal;
+    const distA = Math.hypot(state.px - aX, state.py - aY);
+    const distB = Math.hypot(state.px - bX, state.py - bY);
+
+    if (!usedThisThrow && (distA <= bufferPx || distB <= bufferPx)) {
+      portalProximityActive = true;
+      if (distA <= distB) {
+        portalProximityX = aX;
+        portalProximityY = aY;
+      } else {
+        portalProximityX = bX;
+        portalProximityY = bY;
+      }
+    } else if (usedThisThrow && lastUsedSide) {
+      const exitX = lastUsedSide === 'a' ? bX : aX;
+      const exitY = lastUsedSide === 'a' ? bY : aY;
+      const distExit = Math.hypot(state.px - exitX, state.py - exitY);
+      if (distExit <= bufferPx) {
+        portalProximityActive = true;
+        portalProximityX = exitX;
+        portalProximityY = exitY;
+      }
+    }
+  }
+
   const { targetSlowMo, targetZoom } = calculateCinematicEffects(state, audio);
+  let adjSlowMo = targetSlowMo;
+  let adjZoom = targetZoom;
+  if (portalProximityActive) {
+    adjSlowMo = Math.max(adjSlowMo, 0.9);
+    state.zoomTargetX = portalProximityX;
+    state.zoomTargetY = portalProximityY;
+  }
+  if (state.portalJuiceTimer > 0 && !state.reduceFx) {
+    // Stronger cue while portal juice is active
+    adjSlowMo = Math.max(adjSlowMo, 0.9);
+    adjZoom = Math.max(adjZoom, 1.9);
+    state.zoomTargetX = state.portalZoomTargetX;
+    state.zoomTargetY = state.portalZoomTargetY;
+    state.portalJuiceTimer--;
+  }
+
   if ((state.flying || state.sliding) && state.px > 90 && state.best > 50) {
-    applyCinematicEffects(state, targetSlowMo, targetZoom, nowMs, audio);
+    applyCinematicEffects(state, adjSlowMo, adjZoom, nowMs, audio);
   } else {
     audio.stopEdgeWarning();
   }

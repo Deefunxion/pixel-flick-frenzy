@@ -245,6 +245,10 @@ export interface GameState {
   // Charge visual tension
   chargeGlowIntensity: number;  // 0-1, builds with charge
   chargeVignetteActive: boolean;
+  // Portal juice (temporary zoom/slow-mo around portal warp)
+  portalJuiceTimer: number;
+  portalZoomTargetX: number;
+  portalZoomTargetY: number;
   // Air control feedback
   lastControlAction: 'thrust' | 'brake' | 'float' | null;
   controlActionTime: number;
