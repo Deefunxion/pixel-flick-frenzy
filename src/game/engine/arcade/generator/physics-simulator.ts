@@ -1,5 +1,5 @@
 // src/game/engine/arcade/generator/physics-simulator.ts
-import { BASE_GRAV, CLIFF_EDGE, H, LAUNCH_PAD_X } from '@/game/constants';
+import { BASE_GRAV, CEILING_Y, CLIFF_EDGE, H, LAUNCH_PAD_X } from '@/game/constants';
 import type { ArcadeLevel } from '../types';
 import type { GhostInput, StrokePoint } from './types';
 import { createSpringFromPlacement, checkSpringCollision, applySpringImpulse } from '../springs';
@@ -145,8 +145,15 @@ export class PhysicsSimulator {
           vy = 0;
         }
 
-        // Check ceiling and left wall
-        if (py < 0) py = 0;
+        // Check ceiling collision - bounce/slide along ceiling
+        if (py < CEILING_Y) {
+          py = CEILING_Y;
+          if (vy < 0) {
+            // Absorb vertical velocity, keep horizontal
+            vy = 0;
+          }
+        }
+        // Check left wall
         if (px < 0) px = 0;
 
         trajectory.push({ x: Math.round(px), y: Math.round(py) });
@@ -233,8 +240,8 @@ export class PhysicsSimulator {
         inputs: this.mutateInputs(bestConfig.inputs),
       };
 
-      // Clamp angle
-      config.launchAngle = Math.max(20, Math.min(70, config.launchAngle));
+      // Clamp angle (20° to 85° - almost vertical allowed)
+      config.launchAngle = Math.max(20, Math.min(85, config.launchAngle));
 
       const result = this.simulate(level, config);
       const score = this.scoreResult(result, level);

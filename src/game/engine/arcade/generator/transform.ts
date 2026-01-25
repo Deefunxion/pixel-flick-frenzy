@@ -6,7 +6,7 @@ import type { CharacterData, StrokePoint } from './types';
 const GAME_BOUNDS = {
   minX: 50,          // Start of play area (safe distance from launch pad)
   maxX: 400,         // End of play area (safe distance from cliff edge at 420)
-  minY: 35,          // Top of play area
+  minY: 30,          // Top of play area (just below ceiling at 28)
   maxY: 190,         // Bottom (above ground at ~220)
 };
 
@@ -50,12 +50,14 @@ export class StrokeTransformer {
   }
 
   /**
-   * Extract doodle positions - SPREAD evenly across the play area
-   * Uses character Y-pattern as inspiration but redistributes X positions
-   * for playable trajectories
+   * Extract doodle positions following REALISTIC PHYSICS trajectory:
+   * - Launch phase: Y can decrease (going UP on screen)
+   * - After peak: Y must increase (going DOWN on screen due to gravity)
+   *
+   * Character pattern provides small variations, not the base trajectory.
    */
   extractDoodlePositions(character: CharacterData, targetCount: number = 0): StrokePoint[] {
-    // Step 1: Collect ALL points from the character
+    // Step 1: Collect points from character for variation inspiration
     const rawPoints: StrokePoint[] = [];
     for (const stroke of character.strokes) {
       for (const point of stroke.points) {
@@ -65,52 +67,52 @@ export class StrokeTransformer {
 
     if (rawPoints.length === 0) return [];
 
-    // Step 2: Normalize Y values to get relative heights (0-1)
+    // Step 2: Normalize Y values for variation (0 = top, 1 = bottom)
     const minY = Math.min(...rawPoints.map(p => p.y));
     const maxY = Math.max(...rawPoints.map(p => p.y));
     const yRange = maxY - minY || 1;
-
     const normalizedPoints = rawPoints.map(p => ({
       x: p.x,
-      yNorm: (p.y - minY) / yRange, // 0 = top of character, 1 = bottom
+      yNorm: (p.y - minY) / yRange,
     }));
-
-    // Step 3: Sort by X to get left-to-right order
     normalizedPoints.sort((a, b) => a.x - b.x);
 
-    // Step 4: Determine how many positions we need
+    // Step 3: Determine count
     const count = targetCount > 0 ? targetCount : Math.min(rawPoints.length, 15);
+    if (count === 0) return [];
 
-    // Step 5: Create Y pattern by sampling from normalized points
-    // If we need more positions than we have points, we'll interpolate
-    const yValues: number[] = [];
-
-    if (normalizedPoints.length >= count) {
-      // Sample evenly across the sorted points
-      for (let i = 0; i < count; i++) {
-        const idx = count > 1
-          ? Math.floor((i / (count - 1)) * (normalizedPoints.length - 1))
-          : 0;
-        yValues.push(normalizedPoints[idx].yNorm);
-      }
-    } else {
-      // We have fewer points than needed - interpolate
-      for (let i = 0; i < count; i++) {
+    // Step 4: Sample character pattern for small variations
+    const variations: number[] = [];
+    for (let i = 0; i < count; i++) {
+      if (normalizedPoints.length >= count) {
+        const idx = count > 1 ? Math.floor((i / (count - 1)) * (normalizedPoints.length - 1)) : 0;
+        variations.push((normalizedPoints[idx].yNorm - 0.5) * 20); // ±10 pixel variation
+      } else {
         const progress = count > 1 ? i / (count - 1) : 0.5;
         const floatIdx = progress * (normalizedPoints.length - 1);
         const lowIdx = Math.floor(floatIdx);
         const highIdx = Math.min(lowIdx + 1, normalizedPoints.length - 1);
         const blend = floatIdx - lowIdx;
-
         const yNorm = normalizedPoints[lowIdx].yNorm * (1 - blend) +
                       normalizedPoints[highIdx].yNorm * blend;
-        yValues.push(yNorm);
+        variations.push((yNorm - 0.5) * 20);
       }
     }
 
-    // Step 6: Redistribute X positions EVENLY across play area
+    // Step 5: Create PHYSICS-BASED parabolic trajectory
+    // Screen coords: Y=35 (top/high physically), Y=190 (bottom/low physically)
+    // Trajectory: start near ground → peak high → descend to landing
+
     const playWidth = GAME_BOUNDS.maxX - GAME_BOUNDS.minX; // 350 pixels
-    const playHeight = GAME_BOUNDS.maxY - GAME_BOUNDS.minY; // 155 pixels
+
+    // Peak position: around 25-35% through the trajectory (realistic throw)
+    const peakRatio = 0.25 + (rawPoints.length % 10) * 0.01; // Slight variation 0.25-0.35
+    const peakIndex = Math.max(2, Math.floor(count * peakRatio));
+
+    // Y boundaries for trajectory
+    const launchY = GAME_BOUNDS.maxY - 15;  // ~175 (start near ground)
+    const peakY = GAME_BOUNDS.minY + 10;    // ~45 (highest point)
+    const landingY = GAME_BOUNDS.maxY - 5;  // ~185 (end near ground)
 
     const positions: StrokePoint[] = [];
 
@@ -119,13 +121,28 @@ export class StrokeTransformer {
       const xProgress = count > 1 ? i / (count - 1) : 0.5;
       const x = GAME_BOUNDS.minX + xProgress * playWidth;
 
-      // Y: use the character's relative Y pattern, mapped to play area
-      // Add some variation based on position to create interesting arcs
-      const baseY = GAME_BOUNDS.minY + yValues[i] * playHeight;
+      let baseY: number;
 
-      // Create a gentle arc - higher in the middle
-      const arcInfluence = Math.sin(xProgress * Math.PI) * 30;
-      const y = Math.max(GAME_BOUNDS.minY, Math.min(GAME_BOUNDS.maxY, baseY - arcInfluence));
+      if (i <= peakIndex) {
+        // ASCENT PHASE: Y decreases (physically going UP)
+        // Use smooth easing for natural arc
+        const ascentProgress = peakIndex > 0 ? i / peakIndex : 1;
+        const eased = 1 - Math.pow(1 - ascentProgress, 2); // ease-out
+        baseY = launchY - (launchY - peakY) * eased;
+      } else {
+        // DESCENT PHASE: Y increases (physically going DOWN due to gravity)
+        // Use accelerating easing (gravity)
+        const descentProgress = (i - peakIndex) / (count - 1 - peakIndex);
+        const eased = Math.pow(descentProgress, 1.5); // accelerating fall
+        baseY = peakY + (landingY - peakY) * eased;
+      }
+
+      // Add small variation from character pattern
+      const variation = variations[i] || 0;
+      let y = baseY + variation;
+
+      // Clamp to bounds
+      y = Math.max(GAME_BOUNDS.minY, Math.min(GAME_BOUNDS.maxY, y));
 
       positions.push({
         x: Math.round(x),
@@ -133,7 +150,18 @@ export class StrokeTransformer {
       });
     }
 
-    // Step 6: Ensure minimum spacing (adjust Y if X positions cause overlap)
+    // Step 6: ENFORCE PHYSICS CONSTRAINTS
+    // After peak, each Y must be >= previous Y (must descend)
+    for (let i = peakIndex + 1; i < positions.length; i++) {
+      if (positions[i].y < positions[i - 1].y) {
+        // Force descent: current must be at or below previous
+        positions[i].y = positions[i - 1].y + Math.max(5, MIN_DOODLE_SPACING / 3);
+      }
+      // Clamp to bounds
+      positions[i].y = Math.min(GAME_BOUNDS.maxY, positions[i].y);
+    }
+
+    // Step 7: Ensure minimum spacing
     for (let i = 1; i < positions.length; i++) {
       const prev = positions[i - 1];
       const curr = positions[i];
@@ -142,9 +170,9 @@ export class StrokeTransformer {
       const distance = Math.sqrt(dx * dx + dy * dy);
 
       if (distance < MIN_DOODLE_SPACING) {
-        // Adjust Y to increase spacing
         const neededDy = Math.sqrt(MIN_DOODLE_SPACING * MIN_DOODLE_SPACING - dx * dx);
-        if (curr.y >= prev.y) {
+        // During descent, always push down; during ascent, push up
+        if (i > peakIndex) {
           curr.y = Math.min(GAME_BOUNDS.maxY, prev.y + neededDy);
         } else {
           curr.y = Math.max(GAME_BOUNDS.minY, prev.y - neededDy);
