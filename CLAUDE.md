@@ -146,22 +146,44 @@ Visual feedback for landing accuracy:
 
 ### Arcade Mode (`src/game/engine/arcade/`)
 
-10-level puzzle mode with collectibles, springs, and portals:
+250-level puzzle mode with collectibles and various mechanics:
 
 - **`levels-data.json`** - Level definitions (editable via Level Editor)
 - **`levels.ts`** - Imports JSON, exports `ARCADE_LEVELS` array
 - **`types.ts`** - Type definitions for all arcade elements
-- **`doodles.ts`** / **`doodlesRender.ts`** - Collectible system
-- **`springs.ts`** / **`springsRender.ts`** - Directional springs
-- **`portal.ts`** / **`portalRender.ts`** - Bidirectional teleporters
+- **`doodles.ts`** / **`doodlesRender.ts`** - Collectible system (static + moving)
+- **`springs.ts`** / **`springsRender.ts`** - Directional springs (timed + breakable)
+- **`portal.ts`** / **`portalRender.ts`** - Teleporters (timed + multi-portal)
+- **`windZones.ts`** / **`windZonesRender.ts`** - Directional force zones
+- **`hazards.ts`** / **`hazardsRender.ts`** - Damage obstacles (static + moving)
+- **`gravityWells.ts`** / **`gravityWellsRender.ts`** - Attract/repel force fields
+- **`frictionZones.ts`** / **`frictionZonesRender.ts`** - Ice (slippery) and sticky surfaces
+- **`movingDoodles.ts`** - Motion patterns for doodles (linear + circular)
 - **`state.ts`** - Arcade session state and star tracking
 
 **Asset Properties:**
 | Asset | Properties |
 |-------|-----------|
-| Doodle | x, y, size (small/large), sprite (coin/star), sequence, scale?, rotation? |
-| Spring | x, y, direction (up/up-left/up-right/down), strength?, scale? |
-| Portal | entry, exit, exitDirection? (straight/up-45/down-45), exitSpeed?, scale? |
+| Doodle | x, y, size, sprite, sequence, scale?, rotation?, motion? |
+| Spring | x, y, direction, strength?, scale?, timing?, breakable? |
+| Portal | entry, exit, exitDirection?, exitSpeed?, scale?, colorId?, timing? |
+| Wind Zone | x, y, width, height, direction, strength |
+| Hazard | x, y, radius, sprite (spike/saw/fire), motion?, scale? |
+| Gravity Well | x, y, type (attract/repel), radius, strength, scale? |
+| Friction Zone | x, y, width, type (ice/sticky), strength? |
+
+### Procedural Level Generator (`src/game/engine/arcade/generator/`)
+
+Generates 250 levels using Chinese character stroke patterns:
+
+- **`types.ts`** - Generator types (CharacterData, GenerationResult, GhostInput)
+- **`stroke-data.ts`** - Loads hanzi-strokes.json, stroke count ranges
+- **`random.ts`** - Seeded PRNG (mulberry32) for deterministic generation
+- **`transform.ts`** - SVG coordinates → game canvas transformer
+- **`physics-simulator.ts`** - Headless physics for level validation
+- **`level-generator.ts`** - Core generator engine
+
+**Data:** `public/data/hanzi-strokes.json` - 9,574 Chinese characters with stroke data
 
 ### Level Editor (Dev Tool)
 

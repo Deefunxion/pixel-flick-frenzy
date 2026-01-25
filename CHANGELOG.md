@@ -2,7 +2,49 @@
 
 All notable changes to One-More-Flick are documented in this file.
 
-## [Unreleased] - 2026-01-24
+## [Unreleased] - 2026-01-25
+
+### Added - Procedural Level Generator
+- **250 levels** using Chinese character stroke patterns from Make Me a Hanzi database
+- **9,574 characters** imported with stroke medians for doodle placement
+- **Seeded generation**: Same seed + level range = identical levels (reproducible)
+- **Physics validation**: Headless simulator validates each level is completable
+- **Generator UI**: Level Editor integration with seed input and progress bar
+- **New module**: `src/game/engine/arcade/generator/`
+  - `types.ts` - CharacterData, GenerationResult, GhostInput
+  - `stroke-data.ts` - Stroke database loader with difficulty ranges
+  - `random.ts` - Seeded PRNG (mulberry32) for deterministic generation
+  - `transform.ts` - SVG → game canvas coordinate transformer
+  - `physics-simulator.ts` - Headless physics for level validation
+  - `level-generator.ts` - Core generator engine
+
+### Added - New Arcade Mechanics (Worlds 3-17)
+- **Moving Doodles** (World 3-4): Linear oscillation and circular orbit patterns
+  - `movingDoodles.ts` - Motion state and update logic
+- **Wind Zones** (World 5-6): Directional force areas (left/right/up/down)
+  - `windZones.ts`, `windZonesRender.ts` - Force application and particle effects
+- **Timed Springs** (World 7): On/off cycling with configurable duration and offset
+- **Hazards** (World 8-9): Static and moving obstacles (spike, saw, fire sprites)
+  - `hazards.ts`, `hazardsRender.ts` - Collision detection and rendering
+- **Gravity Wells** (World 10-11): Attract and repel force fields
+  - `gravityWells.ts`, `gravityWellsRender.ts` - Inverse-linear force falloff
+- **Timed Portals** (World 12): On/off cycling for portals
+- **Multi-Portals** (World 13): Multiple portal pairs with color coding (0-5)
+- **Friction Zones** (World 15-16): Ice (slippery) and sticky surfaces
+  - `frictionZones.ts`, `frictionZonesRender.ts` - Friction modification
+- **Breakable Springs** (World 17): One-use springs that permanently break
+
+### Technical - Procedural Generator
+- 145 new tests across Phase 6 mechanics
+- Extended `ArcadeLevel` interface with: windZones, hazards, gravityWells, frictionZones, portals array
+- Extended `SpringPlacement` with: timing, breakable
+- Extended `PortalPair` with: timing, colorId
+- New motion types: `DoodleMotion`, `HazardMotion`
+- New zone types: `WindZonePlacement`, `FrictionZonePlacement`, `GravityWellPlacement`, `HazardPlacement`
+
+---
+
+## [Previous] - 2026-01-24
 
 ### Added - Arcade Mode (10 Levels)
 - **Star-based objectives**: Two independent stars per level
