@@ -117,6 +117,7 @@ import {
   recordStars,
   advanceLevel,
 } from '@/game/engine/arcade';
+import { preloadArcadeSprites } from '@/game/engine/arcade/arcadeAssets';
 import { useIsPortrait } from '@/hooks/useIsPortrait';
 import type { ThrowState, DailyTasks, MilestonesClaimed } from '@/game/engine/types';
 import { calculateThrowRegen, formatRegenTime, getMsUntilNextThrow } from '@/game/engine/throws';
@@ -541,6 +542,10 @@ const Game = () => {
           noirBackgroundRenderer.preload(),
         ]);
         console.log('[Game] Sprite sheets and backgrounds loaded');
+
+        // Preload arcade sprites (hazards, springs, portals, zones)
+        preloadArcadeSprites();
+        console.log('[Game] Arcade sprites preloaded');
 
         // Load audio files (non-blocking, will fallback to synth if fails)
         loadAudioFiles(audioRefs.current).then((loaded) => {

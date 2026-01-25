@@ -982,47 +982,74 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
             })}
 
             {/* Portal */}
-            {level.portal && (
-              <>
-                <div
-                  onMouseDown={e => handleMouseDown(e, 'portal-entry', 0)}
-                  className={`absolute rounded-full bg-purple-500 border-2 border-purple-700 flex items-center justify-center shadow-lg ${tool === 'select' ? 'cursor-move' : ''}`}
-                  style={{
-                    left: level.portal.entry.x * 2 - 16 * (level.portal.scale ?? 1),
-                    top: level.portal.entry.y * 2 - 16 * (level.portal.scale ?? 1),
-                    width: 32 * (level.portal.scale ?? 1),
-                    height: 32 * (level.portal.scale ?? 1),
-                    outline: selected?.type === 'portal' ? '3px solid #3b82f6' : undefined,
-                    outlineOffset: '2px',
-                  }}
-                >
-                  <span className="text-white text-xs font-bold">A</span>
-                </div>
-                <div
-                  onMouseDown={e => handleMouseDown(e, 'portal-exit', 0)}
-                  className={`absolute rounded-full bg-blue-500 border-2 border-blue-700 flex items-center justify-center shadow-lg ${tool === 'select' ? 'cursor-move' : ''}`}
-                  style={{
-                    left: level.portal.exit.x * 2 - 16 * (level.portal.scale ?? 1),
-                    top: level.portal.exit.y * 2 - 16 * (level.portal.scale ?? 1),
-                    width: 32 * (level.portal.scale ?? 1),
-                    height: 32 * (level.portal.scale ?? 1),
-                    outline: selected?.type === 'portal' ? '3px solid #3b82f6' : undefined,
-                    outlineOffset: '2px',
-                  }}
-                >
-                  <span className="text-white text-xs font-bold">
-                    {level.portal.exitDirection === 'up-45' ? '↗' : level.portal.exitDirection === 'down-45' ? '↘' : '→'}
-                  </span>
-                </div>
-                <svg className="absolute inset-0 pointer-events-none" style={{ width: W * 2, height: H * 2 }}>
-                  <line
-                    x1={level.portal.entry.x * 2} y1={level.portal.entry.y * 2}
-                    x2={level.portal.exit.x * 2} y2={level.portal.exit.y * 2}
-                    stroke="#8b5cf6" strokeWidth="2" strokeDasharray="4" opacity="0.5"
-                  />
-                </svg>
-              </>
-            )}
+            {level.portal && (() => {
+              const p = level.portal;
+              const portalScale = p.scale ?? 1;
+              const portalSize = 32 * portalScale;
+
+              // Entry uses blue, exit uses colorId-based color (default orange)
+              const entryColorName = 'blue';
+              const exitColorName = p.colorId !== undefined ? PORTAL_COLOR_NAMES[p.colorId % 6] : 'orange';
+              const entrySprite = loadArcadeSprite(ARCADE_SPRITE_PATHS.portals[entryColorName]);
+              const exitSprite = loadArcadeSprite(ARCADE_SPRITE_PATHS.portals[exitColorName]);
+
+              return (
+                <>
+                  {/* Entry Portal */}
+                  <div
+                    onMouseDown={e => handleMouseDown(e, 'portal-entry', 0)}
+                    className={`absolute flex items-center justify-center ${tool === 'select' ? 'cursor-move' : ''}`}
+                    style={{
+                      left: p.entry.x * 2 - portalSize / 2,
+                      top: p.entry.y * 2 - portalSize / 2,
+                      width: portalSize, height: portalSize,
+                      outline: selected?.type === 'portal' ? '3px solid #3b82f6' : undefined,
+                      outlineOffset: '2px',
+                    }}
+                  >
+                    {entrySprite ? (
+                      <img src={entrySprite.src} alt="entry portal" className="w-full h-full object-contain" />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-purple-500 border-2 border-purple-700 flex items-center justify-center shadow-lg">
+                        <span className="text-white text-xs font-bold">A</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Exit Portal */}
+                  <div
+                    onMouseDown={e => handleMouseDown(e, 'portal-exit', 0)}
+                    className={`absolute flex items-center justify-center ${tool === 'select' ? 'cursor-move' : ''}`}
+                    style={{
+                      left: p.exit.x * 2 - portalSize / 2,
+                      top: p.exit.y * 2 - portalSize / 2,
+                      width: portalSize, height: portalSize,
+                      outline: selected?.type === 'portal' ? '3px solid #3b82f6' : undefined,
+                      outlineOffset: '2px',
+                    }}
+                  >
+                    {exitSprite ? (
+                      <img src={exitSprite.src} alt="exit portal" className="w-full h-full object-contain" />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-blue-500 border-2 border-blue-700 flex items-center justify-center shadow-lg">
+                        <span className="text-white text-xs font-bold">
+                          {p.exitDirection === 'up-45' ? '↗' : p.exitDirection === 'down-45' ? '↘' : '→'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Connection line */}
+                  <svg className="absolute inset-0 pointer-events-none" style={{ width: W * 2, height: H * 2 }}>
+                    <line
+                      x1={p.entry.x * 2} y1={p.entry.y * 2}
+                      x2={p.exit.x * 2} y2={p.exit.y * 2}
+                      stroke="#8b5cf6" strokeWidth="2" strokeDasharray="4" opacity="0.5"
+                    />
+                  </svg>
+                </>
+              );
+            })()}
 
             {/* Hazards */}
             {(level.hazards || []).map((h, i) => {
@@ -1117,24 +1144,36 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
             {/* Friction Zones */}
             {(level.frictionZones || []).map((f, i) => {
               const isSelected = selected?.type === 'frictionZone' && selected.index === i;
+              const spritePath = ARCADE_SPRITE_PATHS.zones[f.type];
+              const sprite = spritePath ? loadArcadeSprite(spritePath) : null;
+
               return (
                 <div
                   key={`friction-${i}`}
                   onMouseDown={e => handleMouseDown(e, 'frictionZone', i)}
-                  className={`absolute h-4 flex items-center justify-center ${
-                    f.type === 'ice' ? 'bg-cyan-300/50 border-cyan-400' : 'bg-amber-700/50 border-amber-600'
-                  } border-2 ${tool === 'select' ? 'cursor-move' : ''}`}
+                  className={`absolute flex items-center justify-center overflow-hidden ${tool === 'select' ? 'cursor-move' : ''}`}
                   style={{
                     left: (f.x - f.width / 2) * 2,
-                    top: f.y * 2 - 8,
+                    top: f.y * 2 - 16,
                     width: f.width * 2,
+                    height: 32,
                     outline: isSelected ? '3px solid #3b82f6' : undefined,
                     outlineOffset: '2px',
                   }}
                 >
-                  <span className="text-xs">
-                    {f.type === 'ice' ? '❄️' : '🪤'}
-                  </span>
+                  {sprite ? (
+                    <div className="w-full h-full flex">
+                      {Array.from({ length: Math.ceil(f.width * 2 / 32) }).map((_, ti) => (
+                        <img key={ti} src={sprite.src} alt={f.type} className="h-full" style={{ width: 32 }} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={`w-full h-full flex items-center justify-center ${
+                      f.type === 'ice' ? 'bg-cyan-300/50 border-cyan-400' : 'bg-amber-700/50 border-amber-600'
+                    } border-2`}>
+                      <span className="text-xs">{f.type === 'ice' ? '❄️' : '🪤'}</span>
+                    </div>
+                  )}
                 </div>
               );
             })}
