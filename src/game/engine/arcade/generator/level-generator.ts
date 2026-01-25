@@ -239,14 +239,39 @@ export class LevelGenerator {
 
     // Positions are already sorted by X (left to right) from the transformer
 
-    // Create doodles
-    const doodles: DoodlePlacement[] = positions.map((pos, i) => ({
-      x: pos.x,
-      y: pos.y,
-      size: rng.next() > 0.5 ? 'large' : 'small',
-      sprite: rng.next() > 0.7 ? 'star' : 'coin',
-      sequence: i + 1,
-    }));
+    // Get world config for this level
+    const worldConfig = getWorldConfig(levelId);
+
+    // Create doodles with potential motion for levels 21+
+    const doodles: DoodlePlacement[] = positions.map((pos, i) => {
+      const doodle: DoodlePlacement = {
+        x: pos.x,
+        y: pos.y,
+        size: rng.next() > 0.5 ? 'large' : 'small',
+        sprite: rng.next() > 0.7 ? 'star' : 'coin',
+        sequence: i + 1,
+      };
+
+      // Add motion for moving doodles (levels 21+)
+      if (worldConfig.mechanics.movingDoodles && rng.next() > 0.6) {
+        if (rng.next() > 0.5) {
+          doodle.motion = {
+            type: 'linear',
+            axis: rng.pick(['x', 'y'] as const),
+            range: rng.nextInt(20, 40),
+            speed: rng.nextFloat(0.3, 0.6),
+          };
+        } else {
+          doodle.motion = {
+            type: 'circular',
+            radius: rng.nextInt(15, 30),
+            speed: rng.nextFloat(0.2, 0.4),
+          };
+        }
+      }
+
+      return doodle;
+    });
 
     // Create level
     const level: ArcadeLevel = {
@@ -260,9 +285,6 @@ export class LevelGenerator {
       gravityWells: [],
       frictionZones: [],
     };
-
-    // Get world config for this level
-    const worldConfig = getWorldConfig(levelId);
 
     // Add props if needed
     const props = shouldUseProps(levelId);
