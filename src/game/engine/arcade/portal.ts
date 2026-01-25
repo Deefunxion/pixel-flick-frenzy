@@ -1,6 +1,14 @@
 // src/game/engine/arcade/portal.ts
 import type { PortalPair, PortalExitDirection } from './types';
 
+// Timing configuration for timed portals
+export interface PortalTiming {
+  onDuration: number;   // Time active in ms
+  offDuration: number;  // Time inactive in ms
+  offset: number;       // Initial phase offset in ms
+  cycleDuration: number; // Total cycle time (on + off)
+}
+
 export interface Portal {
   // Portal A (left side)
   aX: number;
@@ -15,6 +23,9 @@ export interface Portal {
   exitDirection: PortalExitDirection;
   exitSpeed: number;
   scale: number;
+  // Timing state
+  timing: PortalTiming | null;  // null = always active
+  isActive: boolean;            // Current active state (for timed portals)
 }
 
 const DEFAULT_RADIUS = 18;
@@ -22,6 +33,18 @@ const BASE_EXIT_SPEED = 8; // Base horizontal speed on exit
 
 export function createPortalFromPair(pair: PortalPair): Portal {
   const scale = pair.scale ?? 1.0;
+
+  // Create timing if specified
+  let timing: PortalTiming | null = null;
+  if (pair.timing) {
+    timing = {
+      onDuration: pair.timing.onDuration,
+      offDuration: pair.timing.offDuration,
+      offset: pair.timing.offset ?? 0,
+      cycleDuration: pair.timing.onDuration + pair.timing.offDuration,
+    };
+  }
+
   return {
     aX: pair.entry.x,
     aY: pair.entry.y,
@@ -33,6 +56,8 @@ export function createPortalFromPair(pair: PortalPair): Portal {
     exitDirection: pair.exitDirection ?? 'straight',
     exitSpeed: pair.exitSpeed ?? 1.0,
     scale,
+    timing,
+    isActive: true,  // Start active (timing will update this)
   };
 }
 
@@ -45,7 +70,8 @@ export function checkPortalEntry(
   playerY: number,
   portal: Portal
 ): 'a' | 'b' | null {
-  if (portal.usedThisThrow) return null;
+  // Portal must be active and not used this throw
+  if (!portal.isActive || portal.usedThisThrow) return null;
 
   // Check portal A
   const dxA = playerX - portal.aX;
@@ -130,5 +156,36 @@ export function resetPortal(portal: Portal | null): void {
   if (portal) {
     portal.usedThisThrow = false;
     portal.lastUsedSide = null;
+    // Reset isActive based on timing (at time 0)
+    if (portal.timing) {
+      const phase = portal.timing.offset % portal.timing.cycleDuration;
+      portal.isActive = phase < portal.timing.onDuration;
+    } else {
+      portal.isActive = true;
+    }
   }
+}
+
+/**
+ * Update portal timing state based on current time
+ * @param portal - Portal to update
+ * @param timeMs - Current game time in milliseconds
+ */
+export function updatePortal(portal: Portal | null, timeMs: number): void {
+  if (!portal || !portal.timing) return;
+
+  // Calculate where we are in the cycle
+  const adjustedTime = timeMs + portal.timing.offset;
+  const cyclePosition = adjustedTime % portal.timing.cycleDuration;
+
+  // Active during first part of cycle (onDuration)
+  portal.isActive = cyclePosition < portal.timing.onDuration;
+}
+
+/**
+ * Check if a portal is currently in its active phase
+ */
+export function isPortalActive(portal: Portal | null): boolean {
+  if (!portal) return false;
+  return portal.isActive && !portal.usedThisThrow;
 }
