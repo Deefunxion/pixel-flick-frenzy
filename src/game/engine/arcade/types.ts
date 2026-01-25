@@ -26,6 +26,7 @@ export interface SpringPlacement {
   direction: SpringDirection;
   strength?: number;   // Impulse multiplier (default 1.0)
   scale?: number;      // Visual scale (default 1.0)
+  breakable?: boolean; // One-use spring that breaks after use (World 17+)
   // Timing for on/off cycling (World 7+)
   timing?: {
     onDuration: number;   // Time active in ms
@@ -40,6 +41,7 @@ export interface PortalPair {
   exitDirection?: PortalExitDirection;  // Direction to launch player (default 'straight')
   exitSpeed?: number;                   // Speed multiplier on exit (default 1.0)
   scale?: number;                       // Visual scale for both portals (default 1.0)
+  colorId?: number;                     // Color identifier for multi-portal levels (0-5)
   // Timing for on/off cycling (World 12+)
   timing?: {
     onDuration: number;   // Time portal is active in ms
@@ -89,15 +91,28 @@ export interface GravityWellPlacement {
   scale?: number;      // Visual scale (default 1.0)
 }
 
+// Friction zone types (World 15-16)
+export type FrictionType = 'ice' | 'sticky';
+
+export interface FrictionZonePlacement {
+  x: number;           // Center X
+  y: number;           // Center Y (typically at ground level)
+  width: number;       // Zone width
+  type: FrictionType;  // 'ice' = low friction, 'sticky' = high friction
+  strength?: number;   // Friction multiplier (default: ice=0.2, sticky=3.0)
+}
+
 export interface ArcadeLevel {
   id: number;
   landingTarget: number;  // 409 + id (level 1 = 410, level 10 = 419)
   doodles: DoodlePlacement[];
   springs: SpringPlacement[];
-  portal: PortalPair | null;
-  windZones?: WindZonePlacement[];      // Wind zones (World 5+)
-  hazards?: HazardPlacement[];          // Hazards (World 8+)
+  portal: PortalPair | null;              // Single portal (backward compatible)
+  portals?: PortalPair[];                 // Multiple portals (World 13+)
+  windZones?: WindZonePlacement[];        // Wind zones (World 5+)
+  hazards?: HazardPlacement[];            // Hazards (World 8+)
   gravityWells?: GravityWellPlacement[];  // Gravity wells (World 10+)
+  frictionZones?: FrictionZonePlacement[]; // Friction zones (World 15+)
 }
 
 // Star objectives

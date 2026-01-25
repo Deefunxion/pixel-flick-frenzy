@@ -26,12 +26,14 @@ export interface Portal {
   // Timing state
   timing: PortalTiming | null;  // null = always active
   isActive: boolean;            // Current active state (for timed portals)
+  // Multi-portal support
+  colorId: number;              // Color identifier (0-5) for visual distinction
 }
 
 const DEFAULT_RADIUS = 18;
 const BASE_EXIT_SPEED = 8; // Base horizontal speed on exit
 
-export function createPortalFromPair(pair: PortalPair): Portal {
+export function createPortalFromPair(pair: PortalPair, defaultColorId: number = 0): Portal {
   const scale = pair.scale ?? 1.0;
 
   // Create timing if specified
@@ -58,7 +60,69 @@ export function createPortalFromPair(pair: PortalPair): Portal {
     scale,
     timing,
     isActive: true,  // Start active (timing will update this)
+    colorId: pair.colorId ?? defaultColorId,
   };
+}
+
+/**
+ * Create multiple portals from level data
+ * Handles both single portal (backward compatible) and portals array
+ */
+export function createPortalsFromLevel(
+  portal: PortalPair | null,
+  portals?: PortalPair[]
+): Portal[] {
+  const result: Portal[] = [];
+
+  // Add single portal if present (backward compatibility)
+  if (portal) {
+    result.push(createPortalFromPair(portal, 0));
+  }
+
+  // Add multiple portals if present
+  if (portals && portals.length > 0) {
+    portals.forEach((pair, index) => {
+      result.push(createPortalFromPair(pair, pair.colorId ?? index));
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Check portal entry across multiple portals
+ * Returns the portal and side if entered, null otherwise
+ */
+export function checkMultiPortalEntry(
+  playerX: number,
+  playerY: number,
+  portals: Portal[]
+): { portal: Portal; side: 'a' | 'b' } | null {
+  for (const portal of portals) {
+    const side = checkPortalEntry(playerX, playerY, portal);
+    if (side) {
+      return { portal, side };
+    }
+  }
+  return null;
+}
+
+/**
+ * Update timing for multiple portals
+ */
+export function updatePortals(portals: Portal[], timeMs: number): void {
+  for (const portal of portals) {
+    updatePortal(portal, timeMs);
+  }
+}
+
+/**
+ * Reset multiple portals
+ */
+export function resetPortals(portals: Portal[]): void {
+  for (const portal of portals) {
+    resetPortal(portal);
+  }
 }
 
 /**
