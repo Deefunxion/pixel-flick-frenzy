@@ -1,0 +1,416 @@
+{
+  "nodes": [
+    {
+      "id": "goal",
+      "type": "text",
+      "x": 400,
+      "y": -200,
+      "width": 400,
+      "height": 120,
+      "color": "6",
+      "text": "# 🎯 GOAL\n\n**Procedural Level Generator**\n250 arcade levels using Chinese character strokes\nIntegrated in Level Editor"
+    },
+    {
+      "id": "phase0-header",
+      "type": "text",
+      "x": -200,
+      "y": 0,
+      "width": 300,
+      "height": 60,
+      "color": "4",
+      "text": "## Phase 0: Prerequisites"
+    },
+    {
+      "id": "task0",
+      "type": "text",
+      "x": -200,
+      "y": 80,
+      "width": 300,
+      "height": 100,
+      "color": "4",
+      "text": "### Task 0\n**Canvas Scale Upgrade**\n`960×480 render, 420×240 game`\n\n⏭️ Deferred"
+    },
+    {
+      "id": "phase1-header",
+      "type": "text",
+      "x": 200,
+      "y": 0,
+      "width": 300,
+      "height": 60,
+      "color": "1",
+      "text": "## Phase 1: Stroke Data"
+    },
+    {
+      "id": "task1",
+      "type": "text",
+      "x": 200,
+      "y": 80,
+      "width": 280,
+      "height": 120,
+      "color": "1",
+      "text": "### Task 1\n**Stroke Database**\n- `generator/types.ts`\n- `generator/stroke-data.ts`\n- `hanzi-strokes.json`\n\n✅ Completed"
+    },
+    {
+      "id": "task2",
+      "type": "text",
+      "x": 200,
+      "y": 220,
+      "width": 280,
+      "height": 120,
+      "color": "1",
+      "text": "### Task 2\n**Seeded Random**\n- `generator/random.ts`\n- Deterministic sequences\n- `pick()`, `shuffle()`\n\n✅ Completed"
+    },
+    {
+      "id": "task3",
+      "type": "text",
+      "x": 200,
+      "y": 360,
+      "width": 280,
+      "height": 120,
+      "color": "1",
+      "text": "### Task 3\n**Coordinate Transformer**\n- `generator/transform.ts`\n- SVG → Game canvas\n- Rotation support\n\n✅ Completed"
+    },
+    {
+      "id": "phase2-header",
+      "type": "text",
+      "x": 560,
+      "y": 0,
+      "width": 300,
+      "height": 60,
+      "color": "2",
+      "text": "## Phase 2: Physics Simulator"
+    },
+    {
+      "id": "task4",
+      "type": "text",
+      "x": 560,
+      "y": 80,
+      "width": 280,
+      "height": 140,
+      "color": "2",
+      "text": "### Task 4\n**Headless Physics**\n- `physics-simulator.ts`\n- Simulate without render\n- Detect collisions\n- Find optimal inputs\n\n✅ Completed"
+    },
+    {
+      "id": "phase3-header",
+      "type": "text",
+      "x": 920,
+      "y": 0,
+      "width": 300,
+      "height": 60,
+      "color": "3",
+      "text": "## Phase 3: Generator Core"
+    },
+    {
+      "id": "task5",
+      "type": "text",
+      "x": 920,
+      "y": 80,
+      "width": 280,
+      "height": 160,
+      "color": "3",
+      "text": "### Task 5\n**Level Generator Engine**\n- `level-generator.ts`\n- Character → Level\n- Doodle placement\n- Prop generation\n- Validation loop\n\n✅ Completed"
+    },
+    {
+      "id": "phase4-header",
+      "type": "text",
+      "x": 1280,
+      "y": 0,
+      "width": 300,
+      "height": 60,
+      "color": "5",
+      "text": "## Phase 4: Editor Integration"
+    },
+    {
+      "id": "task6",
+      "type": "text",
+      "x": 1280,
+      "y": 80,
+      "width": 280,
+      "height": 140,
+      "color": "5",
+      "text": "### Task 6\n**Generator UI**\n- `GeneratorModal.tsx`\n- Seed input\n- Range selection\n- Progress bar\n\n✅ Completed"
+    },
+    {
+      "id": "phase5-header",
+      "type": "text",
+      "x": 1280,
+      "y": 280,
+      "width": 300,
+      "height": 60,
+      "color": "5",
+      "text": "## Phase 5: Full Database"
+    },
+    {
+      "id": "task7",
+      "type": "text",
+      "x": 1280,
+      "y": 360,
+      "width": 280,
+      "height": 120,
+      "color": "5",
+      "text": "### Task 7\n**Import Hanzi**\n- `scripts/import-hanzi.ts`\n- 9000+ characters\n- Make Me a Hanzi\n\n⬜ Pending"
+    },
+    {
+      "id": "phase6-header",
+      "type": "text",
+      "x": 200,
+      "y": 560,
+      "width": 1200,
+      "height": 60,
+      "color": "6",
+      "text": "## Phase 6: New Mechanics (Worlds 3-25)"
+    },
+    {
+      "id": "task8",
+      "type": "text",
+      "x": 200,
+      "y": 640,
+      "width": 180,
+      "height": 100,
+      "color": "6",
+      "text": "### Task 8\n**Moving Doodles**\nWorld 3-4\nLinear + Circular\n\n⬜ Pending"
+    },
+    {
+      "id": "task9",
+      "type": "text",
+      "x": 400,
+      "y": 640,
+      "width": 180,
+      "height": 100,
+      "color": "6",
+      "text": "### Task 9\n**Wind Zones**\nWorld 5-6\nHorizontal + Vertical\n\n⬜ Pending"
+    },
+    {
+      "id": "task10",
+      "type": "text",
+      "x": 600,
+      "y": 640,
+      "width": 180,
+      "height": 100,
+      "color": "6",
+      "text": "### Task 10\n**Timed Springs**\nWorld 7\nOn/off cycles\n\n⬜ Pending"
+    },
+    {
+      "id": "task11",
+      "type": "text",
+      "x": 800,
+      "y": 640,
+      "width": 180,
+      "height": 100,
+      "color": "6",
+      "text": "### Task 11\n**Hazards**\nWorld 8-9\nStatic + Moving\n\n⬜ Pending"
+    },
+    {
+      "id": "task12",
+      "type": "text",
+      "x": 1000,
+      "y": 640,
+      "width": 180,
+      "height": 100,
+      "color": "6",
+      "text": "### Task 12\n**Gravity Wells**\nWorld 10-11\nAttract + Repel\n\n⬜ Pending"
+    },
+    {
+      "id": "task13",
+      "type": "text",
+      "x": 1200,
+      "y": 640,
+      "width": 180,
+      "height": 100,
+      "color": "6",
+      "text": "### Task 13\n**Timed Portals**\nWorld 12\nOpen/close\n\n⬜ Pending"
+    },
+    {
+      "id": "task14",
+      "type": "text",
+      "x": 400,
+      "y": 760,
+      "width": 180,
+      "height": 100,
+      "color": "6",
+      "text": "### Task 14\n**Multi-Portals**\nWorld 13\n2+ pairs\n\n⬜ Pending"
+    },
+    {
+      "id": "task15",
+      "type": "text",
+      "x": 600,
+      "y": 760,
+      "width": 180,
+      "height": 100,
+      "color": "6",
+      "text": "### Task 15\n**Friction Zones**\nWorld 15-16\nIce + Sticky\n\n⬜ Pending"
+    },
+    {
+      "id": "task16",
+      "type": "text",
+      "x": 800,
+      "y": 760,
+      "width": 180,
+      "height": 100,
+      "color": "6",
+      "text": "### Task 16\n**Breakables**\nWorld 17\nOne-use springs\n\n⬜ Pending"
+    },
+    {
+      "id": "legend",
+      "type": "text",
+      "x": -200,
+      "y": 560,
+      "width": 300,
+      "height": 220,
+      "color": "0",
+      "text": "## Legend\n\n⬜ Pending\n🔄 In Progress\n✅ Completed\n⏭️ Deferred\n❌ Blocked\n\n---\n**Colors:**\n🟡 Prerequisites\n🔴 Stroke Data\n🟠 Physics\n🟢 Generator Core\n🟣 Editor UI\n🔵 Mechanics"
+    },
+    {
+      "id": "config-summary",
+      "type": "text",
+      "x": -200,
+      "y": 220,
+      "width": 300,
+      "height": 300,
+      "color": "0",
+      "text": "## Key Decisions\n\n**Levels:** 250 (25 worlds)\n**Canvas:** 960×480 render\n**Game Units:** 420×240\n**Path Source:** Chinese chars\n**Selection:** Random by strokes\n**Seed:** User input\n\n**Validation:**\n1. Adjust props\n2. Try different char\n3. Skip & log\n\n**Ghost Replay:** Yes"
+    },
+    {
+      "id": "stroke-mapping",
+      "type": "text",
+      "x": 560,
+      "y": 280,
+      "width": 280,
+      "height": 200,
+      "color": "0",
+      "text": "## Stroke Count Map\n\n| Levels | Strokes |\n|--------|--------|\n| 1-10 | 1-3 |\n| 11-20 | 3-5 |\n| 21-40 | 5-8 |\n| 41-70 | 8-12 |\n| 71-100 | 12-16 |\n| 101-150 | 14-18 |\n| 151-200 | 16-22 |\n| 201-250 | 18-25 |"
+    },
+    {
+      "id": "landing-targets",
+      "type": "text",
+      "x": 920,
+      "y": 280,
+      "width": 280,
+      "height": 200,
+      "color": "0",
+      "text": "## Landing Targets\n\n| Levels | Target |\n|--------|--------|\n| 1-100 | >410 |\n| 100-110 | >419.1 |\n| 110-120 | >419.2 |\n| ... | ... |\n| 200-210 | >419.91 |\n| 210-220 | >419.92 |\n| 240-250 | >419.95 |"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-goal-phase1",
+      "fromNode": "goal",
+      "fromSide": "bottom",
+      "toNode": "phase1-header",
+      "toSide": "top",
+      "color": "1"
+    },
+    {
+      "id": "edge-goal-phase0",
+      "fromNode": "goal",
+      "fromSide": "bottom",
+      "toNode": "phase0-header",
+      "toSide": "top",
+      "color": "4"
+    },
+    {
+      "id": "edge-task1-task2",
+      "fromNode": "task1",
+      "fromSide": "bottom",
+      "toNode": "task2",
+      "toSide": "top",
+      "color": "1"
+    },
+    {
+      "id": "edge-task2-task3",
+      "fromNode": "task2",
+      "fromSide": "bottom",
+      "toNode": "task3",
+      "toSide": "top",
+      "color": "1"
+    },
+    {
+      "id": "edge-phase1-phase2",
+      "fromNode": "task3",
+      "fromSide": "right",
+      "toNode": "task4",
+      "toSide": "left",
+      "color": "2"
+    },
+    {
+      "id": "edge-phase2-phase3",
+      "fromNode": "task4",
+      "fromSide": "right",
+      "toNode": "task5",
+      "toSide": "left",
+      "color": "3"
+    },
+    {
+      "id": "edge-phase3-phase4",
+      "fromNode": "task5",
+      "fromSide": "right",
+      "toNode": "task6",
+      "toSide": "left",
+      "color": "5"
+    },
+    {
+      "id": "edge-task6-task7",
+      "fromNode": "task6",
+      "fromSide": "bottom",
+      "toNode": "task7",
+      "toSide": "top",
+      "color": "5"
+    },
+    {
+      "id": "edge-task5-phase6",
+      "fromNode": "task5",
+      "fromSide": "bottom",
+      "toNode": "phase6-header",
+      "toSide": "top",
+      "color": "6"
+    },
+    {
+      "id": "edge-phase6-task8",
+      "fromNode": "phase6-header",
+      "fromSide": "bottom",
+      "toNode": "task8",
+      "toSide": "top",
+      "color": "6"
+    },
+    {
+      "id": "edge-task8-task9",
+      "fromNode": "task8",
+      "fromSide": "right",
+      "toNode": "task9",
+      "toSide": "left",
+      "color": "6"
+    },
+    {
+      "id": "edge-task9-task10",
+      "fromNode": "task9",
+      "fromSide": "right",
+      "toNode": "task10",
+      "toSide": "left",
+      "color": "6"
+    },
+    {
+      "id": "edge-task10-task11",
+      "fromNode": "task10",
+      "fromSide": "right",
+      "toNode": "task11",
+      "toSide": "left",
+      "color": "6"
+    },
+    {
+      "id": "edge-task11-task12",
+      "fromNode": "task11",
+      "fromSide": "right",
+      "toNode": "task12",
+      "toSide": "left",
+      "color": "6"
+    },
+    {
+      "id": "edge-task12-task13",
+      "fromNode": "task12",
+      "fromSide": "right",
+      "toNode": "task13",
+      "toSide": "left",
+      "color": "6"
+    }
+  ]
+}
