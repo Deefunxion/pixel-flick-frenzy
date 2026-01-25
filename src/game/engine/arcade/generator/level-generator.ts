@@ -282,6 +282,11 @@ export class LevelGenerator {
       );
     }
 
+    // Add wind zones for levels 41+
+    if (worldConfig.mechanics.windZones) {
+      level.windZones = this.generateWindZones(rng.derive('wind'));
+    }
+
     // Validate with physics
     const validationResult = this.simulator.findOptimalInputs(level, positions, 50);
 
@@ -454,6 +459,31 @@ export class LevelGenerator {
     }
 
     return hazards;
+  }
+
+  private generateWindZones(
+    rng: SeededRandom
+  ): WindZonePlacement[] {
+    const zones: WindZonePlacement[] = [];
+    const zoneCount = rng.nextInt(1, 2);
+    const directions: WindDirection[] = ['left', 'right', 'up', 'down'];
+
+    for (let i = 0; i < zoneCount; i++) {
+      // Place wind zones in play area
+      const width = rng.nextInt(60, 120);
+      const height = rng.nextInt(40, 80);
+
+      zones.push({
+        x: rng.nextInt(100, 350),
+        y: rng.nextInt(40, 160),
+        width,
+        height,
+        direction: rng.pick(directions),
+        strength: rng.nextFloat(0.15, 0.35),
+      });
+    }
+
+    return zones;
   }
 
   private tryPropAdjustments(level: ArcadeLevel, rng: SeededRandom): GenerationResult {
