@@ -228,7 +228,7 @@
       "width": 180,
       "height": 100,
       "color": "6",
-      "text": "### Task 14\n**Multi-Portals**\nWorld 13\n2+ pairs\n\n⬜ Pending"
+      "text": "### Task 14\n**Multi-Portals**\nWorld 13\n2+ pairs\n\n✅ Completed"
     },
     {
       "id": "task15",
@@ -238,7 +238,7 @@
       "width": 180,
       "height": 100,
       "color": "6",
-      "text": "### Task 15\n**Friction Zones**\nWorld 15-16\nIce + Sticky\n\n⬜ Pending"
+      "text": "### Task 15\n**Friction Zones**\nWorld 15-16\nIce + Sticky\n\n✅ Completed"
     },
     {
       "id": "task16",
@@ -248,7 +248,7 @@
       "width": 180,
       "height": 100,
       "color": "6",
-      "text": "### Task 16\n**Breakables**\nWorld 17\nOne-use springs\n\n⬜ Pending"
+      "text": "### Task 16\n**Breakables**\nWorld 17\nOne-use springs\n\n✅ Completed"
     },
     {
       "id": "legend",
