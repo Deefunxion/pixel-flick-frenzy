@@ -36,12 +36,26 @@ export interface PortalPair {
   scale?: number;                       // Visual scale for both portals (default 1.0)
 }
 
+// Wind zone direction
+export type WindDirection = 'left' | 'right' | 'up' | 'down';
+
+// Wind zones apply continuous force to player (World 5+)
+export interface WindZonePlacement {
+  x: number;           // Center X
+  y: number;           // Center Y
+  width: number;       // Zone width
+  height: number;      // Zone height
+  direction: WindDirection;
+  strength: number;    // Force applied per frame (0.1 = gentle, 0.5 = strong)
+}
+
 export interface ArcadeLevel {
   id: number;
   landingTarget: number;  // 409 + id (level 1 = 410, level 10 = 419)
   doodles: DoodlePlacement[];
   springs: SpringPlacement[];
   portal: PortalPair | null;
+  windZones?: WindZonePlacement[];  // Wind zones (World 5+)
 }
 
 // Star objectives
