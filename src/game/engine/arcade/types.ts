@@ -26,6 +26,7 @@ export interface SpringPlacement {
   direction: SpringDirection;
   strength?: number;   // Impulse multiplier (default 1.0)
   scale?: number;      // Visual scale (default 1.0)
+  rotation?: number;   // Rotation in degrees (default 0)
   breakable?: boolean; // One-use spring that breaks after use (World 17+)
   // Timing for on/off cycling (World 7+)
   timing?: {
@@ -77,6 +78,7 @@ export interface HazardPlacement {
   sprite: string;      // 'spike', 'saw', 'fire'
   motion?: HazardMotion;  // Motion pattern (default static)
   scale?: number;      // Visual scale (default 1.0)
+  rotation?: number;   // Rotation in degrees (default 0)
 }
 
 // Gravity wells attract or repel the player (World 10-11)

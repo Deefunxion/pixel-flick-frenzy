@@ -79,6 +79,7 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
   const [newSpringDirection, setNewSpringDirection] = useState<SpringDirection>('up');
   const [newSpringStrength, setNewSpringStrength] = useState(1.0);
   const [newSpringScale, setNewSpringScale] = useState(1.0);
+  const [newSpringRotation, setNewSpringRotation] = useState(0);
   const [newPortalExitDir, setNewPortalExitDir] = useState<PortalExitDirection>('straight');
   const [newPortalExitSpeed, setNewPortalExitSpeed] = useState(1.0);
   const [newPortalScale, setNewPortalScale] = useState(1.0);
@@ -87,6 +88,7 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
   const [newHazardSprite, setNewHazardSprite] = useState<'spike' | 'saw' | 'fire'>('spike');
   const [newHazardScale, setNewHazardScale] = useState(1.0);
   const [newHazardRadius, setNewHazardRadius] = useState(12);
+  const [newHazardRotation, setNewHazardRotation] = useState(0);
 
   // Wind zone tool state
   const [newWindDirection, setNewWindDirection] = useState<WindDirection>('right');
@@ -249,6 +251,26 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
       }));
     } else if (selected.type === 'portal') {
       updateLevel(prev => ({ ...prev, portal: null }));
+    } else if (selected.type === 'hazard') {
+      updateLevel(prev => ({
+        ...prev,
+        hazards: (prev.hazards || []).filter((_, i) => i !== selected.index),
+      }));
+    } else if (selected.type === 'windZone') {
+      updateLevel(prev => ({
+        ...prev,
+        windZones: (prev.windZones || []).filter((_, i) => i !== selected.index),
+      }));
+    } else if (selected.type === 'gravityWell') {
+      updateLevel(prev => ({
+        ...prev,
+        gravityWells: (prev.gravityWells || []).filter((_, i) => i !== selected.index),
+      }));
+    } else if (selected.type === 'frictionZone') {
+      updateLevel(prev => ({
+        ...prev,
+        frictionZones: (prev.frictionZones || []).filter((_, i) => i !== selected.index),
+      }));
     }
     setSelected(null);
   }, [selected, updateLevel]);
@@ -283,6 +305,39 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
         }
       }
 
+      const hazardIdx = (level.hazards || []).findIndex(h =>
+        Math.sqrt(Math.pow(h.x - x, 2) + Math.pow(h.y - y, 2)) < h.radius + 5
+      );
+      if (hazardIdx >= 0) {
+        setSelected({ type: 'hazard', index: hazardIdx });
+        return;
+      }
+
+      const windIdx = (level.windZones || []).findIndex(w =>
+        x >= w.x - w.width / 2 && x <= w.x + w.width / 2 &&
+        y >= w.y - w.height / 2 && y <= w.y + w.height / 2
+      );
+      if (windIdx >= 0) {
+        setSelected({ type: 'windZone', index: windIdx });
+        return;
+      }
+
+      const gravityIdx = (level.gravityWells || []).findIndex(g =>
+        Math.sqrt(Math.pow(g.x - x, 2) + Math.pow(g.y - y, 2)) < g.radius
+      );
+      if (gravityIdx >= 0) {
+        setSelected({ type: 'gravityWell', index: gravityIdx });
+        return;
+      }
+
+      const frictionIdx = (level.frictionZones || []).findIndex(f =>
+        x >= f.x - f.width / 2 && x <= f.x + f.width / 2 && Math.abs(f.y - y) < 10
+      );
+      if (frictionIdx >= 0) {
+        setSelected({ type: 'frictionZone', index: frictionIdx });
+        return;
+      }
+
       setSelected(null);
     } else if (tool === 'doodle') {
       const newDoodle: DoodlePlacement = {
@@ -303,6 +358,7 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
         direction: newSpringDirection,
         strength: newSpringStrength !== 1.0 ? newSpringStrength : undefined,
         scale: newSpringScale !== 1.0 ? newSpringScale : undefined,
+        rotation: newSpringRotation !== 0 ? newSpringRotation : undefined,
       };
       updateLevel(prev => ({
         ...prev,
@@ -334,6 +390,7 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
         radius: newHazardRadius,
         sprite: newHazardSprite,
         scale: newHazardScale !== 1.0 ? newHazardScale : undefined,
+        rotation: newHazardRotation !== 0 ? newHazardRotation : undefined,
       };
       updateLevel(prev => ({
         ...prev,
@@ -405,9 +462,9 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
       }
     }
   }, [tool, newDoodleSize, newDoodleSprite, newDoodleScale, newDoodleRotation,
-      newSpringDirection, newSpringStrength, newSpringScale,
+      newSpringDirection, newSpringStrength, newSpringScale, newSpringRotation,
       newPortalExitDir, newPortalExitSpeed, newPortalScale,
-      newHazardSprite, newHazardScale, newHazardRadius,
+      newHazardSprite, newHazardScale, newHazardRadius, newHazardRotation,
       newWindDirection, newWindStrength, newWindWidth, newWindHeight,
       newGravityType, newGravityRadius, newGravityStrength, newGravityScale,
       newFrictionType, newFrictionWidth,
@@ -846,6 +903,7 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
                     left: s.x * 2 - size / 2,
                     top: s.y * 2 - size / 2,
                     width: size, height: size,
+                    transform: s.rotation ? `rotate(${s.rotation}deg)` : undefined,
                     outline: isSelected ? '3px solid #3b82f6' : undefined,
                     outlineOffset: '2px',
                   }}
@@ -856,7 +914,8 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
                     </span>
                   </div>
                   {s.strength && s.strength !== 1.0 && (
-                    <span className="absolute -bottom-1 text-xs bg-yellow-500 text-black px-1 rounded">
+                    <span className="absolute -bottom-1 text-xs bg-yellow-500 text-black px-1 rounded"
+                      style={{ transform: s.rotation ? `rotate(${-s.rotation}deg)` : undefined }}>
                       ×{s.strength.toFixed(1)}
                     </span>
                   )}
@@ -921,6 +980,7 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
                     left: h.x * 2 - size / 2,
                     top: h.y * 2 - size / 2,
                     width: size, height: size,
+                    transform: h.rotation ? `rotate(${h.rotation}deg)` : undefined,
                     outline: isSelected ? '3px solid #3b82f6' : undefined,
                     outlineOffset: '2px',
                   }}
@@ -1025,7 +1085,15 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
 
         {/* Info bar */}
         <div className="bg-gray-800 p-2 text-gray-400 text-xs flex justify-between">
-          <div>Doodles: {level.doodles.length} | Springs: {level.springs.length} | Portal: {level.portal ? 'Yes' : 'No'}</div>
+          <div>
+            Doodles: {level.doodles.length} |
+            Springs: {level.springs.length} |
+            Portal: {level.portal ? 'Yes' : 'No'} |
+            Hazards: {(level.hazards || []).length} |
+            Wind: {(level.windZones || []).length} |
+            Gravity: {(level.gravityWells || []).length} |
+            Friction: {(level.frictionZones || []).length}
+          </div>
           <div>Ctrl+Z: Undo | Ctrl+Y: Redo | Del: Delete selected</div>
         </div>
       </div>
@@ -1095,6 +1163,12 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
                   onChange={e => setNewSpringScale(Number(e.target.value))}
                   className="w-full mt-1" />
               </div>
+              <div>
+                <label className="text-gray-400 text-xs">Rotation: {newSpringRotation}°</label>
+                <input type="range" min="0" max="360" step="15" value={newSpringRotation}
+                  onChange={e => setNewSpringRotation(Number(e.target.value))}
+                  className="w-full mt-1" />
+              </div>
             </div>
           )}
 
@@ -1148,6 +1222,12 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
                 <label className="text-gray-400 text-xs">Scale: {newHazardScale.toFixed(1)}x</label>
                 <input type="range" min="0.5" max="2" step="0.1" value={newHazardScale}
                   onChange={e => setNewHazardScale(Number(e.target.value))}
+                  className="w-full mt-1" />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs">Rotation: {newHazardRotation}°</label>
+                <input type="range" min="0" max="360" step="15" value={newHazardRotation}
+                  onChange={e => setNewHazardRotation(Number(e.target.value))}
                   className="w-full mt-1" />
               </div>
             </div>
@@ -1313,6 +1393,12 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
                       <label className="text-gray-400 text-xs">Scale: {(s.scale ?? 1).toFixed(1)}x</label>
                       <input type="range" min="0.5" max="2" step="0.1" value={s.scale ?? 1}
                         onChange={e => updateSelectedProperty('scale', Number(e.target.value))}
+                        className="w-full mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Rotation: {s.rotation ?? 0}°</label>
+                      <input type="range" min="0" max="360" step="15" value={s.rotation ?? 0}
+                        onChange={e => updateSelectedProperty('rotation', Number(e.target.value))}
                         className="w-full mt-1" />
                     </div>
                     <div>
