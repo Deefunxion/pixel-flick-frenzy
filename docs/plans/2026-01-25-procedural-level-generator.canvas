@@ -148,7 +148,7 @@
       "width": 280,
       "height": 120,
       "color": "5",
-      "text": "### Task 7\n**Import Hanzi**\n- `scripts/import-hanzi.ts`\n- 9000+ characters\n- Make Me a Hanzi\n\n⬜ Pending"
+      "text": "### Task 7\n**Import Hanzi**\n- `scripts/import-hanzi.ts`\n- 9574 characters\n- Make Me a Hanzi\n\n✅ Completed"
     },
     {
       "id": "phase6-header",
@@ -168,7 +168,7 @@
       "width": 180,
       "height": 100,
       "color": "6",
-      "text": "### Task 8\n**Moving Doodles**\nWorld 3-4\nLinear + Circular\n\n⬜ Pending"
+      "text": "### Task 8\n**Moving Doodles**\nWorld 3-4\nLinear + Circular\n\n✅ Completed"
     },
     {
       "id": "task9",
@@ -178,7 +178,7 @@
       "width": 180,
       "height": 100,
       "color": "6",
-      "text": "### Task 9\n**Wind Zones**\nWorld 5-6\nHorizontal + Vertical\n\n⬜ Pending"
+      "text": "### Task 9\n**Wind Zones**\nWorld 5-6\nHorizontal + Vertical\n\n✅ Completed"
     },
     {
       "id": "task10",
@@ -188,7 +188,7 @@
       "width": 180,
       "height": 100,
       "color": "6",
-      "text": "### Task 10\n**Timed Springs**\nWorld 7\nOn/off cycles\n\n⬜ Pending"
+      "text": "### Task 10\n**Timed Springs**\nWorld 7\nOn/off cycles\n\n✅ Completed"
     },
     {
       "id": "task11",
