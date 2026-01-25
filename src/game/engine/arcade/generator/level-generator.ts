@@ -333,7 +333,13 @@ export class LevelGenerator {
     }
 
     // Validate with physics
-    const validationResult = this.simulator.findOptimalInputs(level, positions, 50);
+    // Reduce attempts for levels with complex mechanics (they're harder to validate)
+    const hasComplexMechanics =
+      (level.hazards?.length ?? 0) > 0 ||
+      (level.windZones?.length ?? 0) > 0 ||
+      (level.gravityWells?.length ?? 0) > 0;
+    const validationAttempts = hasComplexMechanics ? 20 : 50;
+    const validationResult = this.simulator.findOptimalInputs(level, positions, validationAttempts);
 
     if (validationResult) {
       return {

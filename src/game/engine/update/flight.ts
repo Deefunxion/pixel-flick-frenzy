@@ -204,9 +204,10 @@ export function updateFlightPhysics(
   if (state.arcadeMode) {
     // Wind zones apply directional force
     if (state.arcadeWindZones?.length > 0) {
-      const windForce = applyWindForces(state.px, state.py, state.vx, state.vy, state.arcadeWindZones);
-      state.vx += windForce.dvx * effectiveTimeScale;
-      state.vy += windForce.dvy * effectiveTimeScale;
+      const velocity = { vx: state.vx, vy: state.vy };
+      applyWindForces(state.px, state.py, velocity, state.arcadeWindZones);
+      state.vx = velocity.vx;
+      state.vy = velocity.vy;
     }
 
     // Gravity wells attract or repel

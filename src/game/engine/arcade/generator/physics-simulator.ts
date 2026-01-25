@@ -4,6 +4,9 @@ import type { ArcadeLevel } from '../types';
 import type { GhostInput, StrokePoint } from './types';
 import { createSpringFromPlacement, checkSpringCollision, applySpringImpulse } from '../springs';
 import { createPortalFromPair, checkPortalEntry, applyPortalTeleport } from '../portal';
+import { createHazardsFromLevel, checkHazardCollision } from '../hazards';
+import { createWindZonesFromLevel, applyWindForces } from '../windZones';
+import { createGravityWellsFromLevel, applyGravityWellForces } from '../gravityWells';
 
 export interface SimulationConfig {
   launchAngle: number; // degrees
@@ -63,6 +66,9 @@ export class PhysicsSimulator {
     const springs = level.springs.map(createSpringFromPlacement);
     const portal = level.portal ? createPortalFromPair(level.portal) : null;
     const doodleStates = level.doodles.map(d => ({ ...d, collected: false }));
+    const hazards = createHazardsFromLevel(level.hazards || []);
+    const windZones = createWindZonesFromLevel(level.windZones);
+    const gravityWells = createGravityWellsFromLevel(level.gravityWells || []);
 
     // Input state - Bomb Jack style tracking
     let inputIndex = 0;
@@ -152,9 +158,34 @@ export class PhysicsSimulator {
           vy *= 0.97;
         }
 
+        // Apply wind zone forces
+        if (windZones.length > 0) {
+          const velocity = { vx, vy };
+          applyWindForces(px, py, velocity, windZones);
+          vx = velocity.vx;
+          vy = velocity.vy;
+        }
+
+        // Apply gravity well forces
+        if (gravityWells.length > 0) {
+          const velocity = { x: vx, y: vy };
+          applyGravityWellForces(px, py, velocity, gravityWells);
+          vx = velocity.x;
+          vy = velocity.y;
+        }
+
         // Update position
         px += vx;
         py += vy;
+
+        // Check hazard collision (instant fail)
+        if (hazards.length > 0) {
+          const hitHazard = checkHazardCollision(px, py, hazards);
+          if (hitHazard) {
+            fellOff = true; // Treat hazard hit as failure
+            break;
+          }
+        }
 
         // Check doodle collection
         for (const doodle of doodleStates) {

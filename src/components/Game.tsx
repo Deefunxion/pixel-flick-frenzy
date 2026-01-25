@@ -111,6 +111,10 @@ import {
   createDoodlesFromLevel,
   createSpringsFromLevel,
   createPortalFromPair,
+  createHazardsFromLevel,
+  createWindZonesFromLevel,
+  createGravityWellsFromLevel,
+  createFrictionZonesFromLevel,
   getLevel,
   checkStarObjectives,
   isLevelPassed,
@@ -1264,6 +1268,10 @@ const Game = () => {
                 state.arcadeDoodles = createDoodlesFromLevel(level.doodles);
                 state.arcadeSprings = createSpringsFromLevel(level.springs);
                 state.arcadePortal = level.portal ? createPortalFromPair(level.portal) : null;
+                state.arcadeHazards = createHazardsFromLevel(level.hazards || []);
+                state.arcadeWindZones = createWindZonesFromLevel(level.windZones);
+                state.arcadeGravityWells = createGravityWellsFromLevel(level.gravityWells || []);
+                state.arcadeFrictionZones = createFrictionZonesFromLevel(level.frictionZones || []);
               }
               setShowEditor(false);
             }}

@@ -38,7 +38,8 @@ export function createFrictionZoneFromPlacement(placement: FrictionZonePlacement
 /**
  * Create friction zones from level placements
  */
-export function createFrictionZonesFromLevel(placements: FrictionZonePlacement[]): FrictionZone[] {
+export function createFrictionZonesFromLevel(placements: FrictionZonePlacement[] | undefined): FrictionZone[] {
+  if (!placements) return [];
   return placements.map(createFrictionZoneFromPlacement);
 }
 
