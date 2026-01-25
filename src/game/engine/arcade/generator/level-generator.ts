@@ -297,7 +297,15 @@ export class LevelGenerator {
       );
     }
     if (props.portals) {
-      level.portal = this.generatePortal(rng);
+      const portalResult = this.generatePortals(
+        rng.derive('portals'),
+        worldConfig.mechanics.timedPortals,
+        worldConfig.mechanics.multiPortals
+      );
+      level.portal = portalResult.portal;
+      if (portalResult.portals) {
+        level.portals = portalResult.portals;
+      }
     }
 
     // Add hazards for levels 71+
@@ -440,21 +448,52 @@ export class LevelGenerator {
     return springs;
   }
 
-  private generatePortal(rng: SeededRandom): PortalPair | null {
-    if (rng.next() > 0.6) return null; // 40% chance of portal
+  private generatePortals(
+    rng: SeededRandom,
+    allowTimed: boolean = false,
+    allowMulti: boolean = false
+  ): { portal: PortalPair | null; portals?: PortalPair[] } {
+    // No portal 30% of the time
+    if (rng.next() > 0.7) return { portal: null };
 
-    // Entry near end of level, exit near start
-    const entryX = rng.nextInt(300, 390);
-    const entryY = rng.nextInt(80, 160);
-    const exitX = rng.nextInt(50, 120);
-    const exitY = rng.nextInt(30, 80);
+    const portalCount = allowMulti ? rng.nextInt(1, 3) : 1;
+    const colors = [0, 1, 2, 3, 4, 5]; // blue, green, orange, pink, purple, yellow
 
-    return {
-      entry: { x: entryX, y: entryY },
-      exit: { x: exitX, y: exitY },
-      exitDirection: rng.pick(['straight', 'up-45'] as const),
-      exitSpeed: rng.nextFloat(0.6, 1.2),
-    };
+    const portals: PortalPair[] = [];
+
+    for (let i = 0; i < portalCount; i++) {
+      const entryX = rng.nextInt(200 + i * 50, 390);
+      const entryY = rng.nextInt(60, 160);
+      const exitX = rng.nextInt(50, 150);
+      const exitY = rng.nextInt(30, 100);
+
+      const portal: PortalPair = {
+        entry: { x: entryX, y: entryY },
+        exit: { x: exitX, y: exitY },
+        exitDirection: rng.pick(['straight', 'up-45', 'down-45'] as const),
+        exitSpeed: rng.nextFloat(0.6, 1.2),
+        colorId: allowMulti ? colors[i] : undefined,
+      };
+
+      // Add timing for levels 111+
+      if (allowTimed && rng.next() > 0.5) {
+        portal.timing = {
+          onDuration: rng.nextInt(1500, 3000),
+          offDuration: rng.nextInt(1000, 2000),
+          offset: rng.nextInt(0, 1500),
+        };
+      }
+
+      portals.push(portal);
+    }
+
+    // Backward compatible: single portal in 'portal' field
+    // Multiple portals in 'portals' array
+    if (portals.length === 1) {
+      return { portal: portals[0] };
+    } else {
+      return { portal: portals[0], portals };
+    }
   }
 
   private generateHazards(
