@@ -17,9 +17,9 @@ interface LevelSelectProps {
 
 export function LevelSelect({ arcadeState, onSelectLevel, onClose }: LevelSelectProps) {
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-2">
       <div
-        className="rounded-lg p-4 max-w-md w-full mx-4"
+        className="rounded-lg p-3 w-full flex flex-col"
         style={{
           background: PAPER_BG,
           border: `3px solid ${INK_BLUE}`,
@@ -27,17 +27,19 @@ export function LevelSelect({ arcadeState, onSelectLevel, onClose }: LevelSelect
           // Ruled paper lines
           backgroundImage: `repeating-linear-gradient(transparent, transparent 19px, ${LINE_COLOR} 19px, ${LINE_COLOR} 20px)`,
           backgroundPosition: '0 10px',
+          maxWidth: 'min(400px, 95vw)',
+          maxHeight: 'min(500px, 85vh)',
         }}
       >
-        {/* Header */}
+        {/* Header - fixed */}
         <div
-          className="flex justify-between items-center mb-4 pb-2"
+          className="flex justify-between items-center pb-2 shrink-0"
           style={{ borderBottom: `2px solid ${INK_BLUE}` }}
         >
           <h2
             style={{
               fontFamily: '"Comic Sans MS", cursive, sans-serif',
-              fontSize: '18px',
+              fontSize: '16px',
               fontWeight: 'bold',
               color: INK_BLUE,
             }}
@@ -46,7 +48,7 @@ export function LevelSelect({ arcadeState, onSelectLevel, onClose }: LevelSelect
           </h2>
           <button
             onClick={onClose}
-            className="hover:opacity-70"
+            className="hover:opacity-70 px-2"
             style={{
               color: INK_BLUE,
               fontSize: '20px',
@@ -58,8 +60,14 @@ export function LevelSelect({ arcadeState, onSelectLevel, onClose }: LevelSelect
           </button>
         </div>
 
-        {/* Level grid */}
-        <div className="grid grid-cols-5 gap-2">
+        {/* Level grid - scrollable */}
+        <div
+          className="grid gap-1.5 py-2 overflow-y-auto flex-1"
+          style={{
+            gridTemplateColumns: 'repeat(auto-fill, minmax(50px, 1fr))',
+            minHeight: 0, // Important for flex scroll
+          }}
+        >
           {ARCADE_LEVELS.map(level => {
             const stars = arcadeState.starsPerLevel[level.id];
             const passed = stars?.allDoodles || false;
@@ -74,26 +82,28 @@ export function LevelSelect({ arcadeState, onSelectLevel, onClose }: LevelSelect
                 style={{
                   background: isCurrent ? 'rgba(211, 84, 0, 0.15)' : PAPER_BG,
                   border: `2px solid ${isCurrent ? STABILO_ORANGE : INK_BLUE}`,
-                  boxShadow: isCurrent ? `0 0 8px ${STABILO_ORANGE}40` : 'none',
+                  boxShadow: isCurrent ? `0 0 6px ${STABILO_ORANGE}40` : 'none',
+                  minWidth: '40px',
+                  minHeight: '40px',
                 }}
               >
                 <span
                   style={{
                     fontFamily: '"Comic Sans MS", cursive, sans-serif',
-                    fontSize: '16px',
+                    fontSize: '14px',
                     fontWeight: 'bold',
                     color: isCurrent ? STABILO_ORANGE : INK_BLUE,
                   }}
                 >
                   {level.id}
                 </span>
-                <div className="flex text-xs">
+                <div className="flex">
                   {[0, 1].map(i => (
                     <span
                       key={i}
                       style={{
                         color: i < starCount ? STABILO_ORANGE : '#c4b89b',
-                        fontSize: '10px',
+                        fontSize: '8px',
                       }}
                     >
                       ★
@@ -101,20 +111,20 @@ export function LevelSelect({ arcadeState, onSelectLevel, onClose }: LevelSelect
                   ))}
                 </div>
                 {passed && (
-                  <span style={{ color: STABILO_ORANGE, fontSize: '10px' }}>✓</span>
+                  <span style={{ color: STABILO_ORANGE, fontSize: '8px' }}>✓</span>
                 )}
               </button>
             );
           })}
         </div>
 
-        {/* Footer */}
+        {/* Footer - fixed */}
         <div
-          className="mt-4 text-center pt-2"
+          className="text-center pt-2 shrink-0"
           style={{
             borderTop: `1px dashed ${INK_BLUE}`,
             fontFamily: '"Comic Sans MS", cursive, sans-serif',
-            fontSize: '12px',
+            fontSize: '11px',
             color: INK_BLUE,
           }}
         >
@@ -122,7 +132,7 @@ export function LevelSelect({ arcadeState, onSelectLevel, onClose }: LevelSelect
           <span style={{ color: STABILO_ORANGE, fontWeight: 'bold' }}>
             {getTotalDisplayStars(arcadeState)}
           </span>
-          {' '}/ 20
+          {' '}/ {ARCADE_LEVELS.length * 2}
         </div>
       </div>
     </div>

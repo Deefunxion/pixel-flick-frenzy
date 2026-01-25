@@ -16,6 +16,7 @@ import {
   recordStars,
   advanceLevel,
   getLevel,
+  getTotalLevels,
 } from '../arcade';
 
 // Audio interface for outcomes
@@ -312,7 +313,8 @@ export function evaluateArcadeStars(
   }
 
   // Advance to next level if not at max
-  if (state.arcadeState.currentLevelId < 10) {
+  const totalLevels = getTotalLevels();
+  if (state.arcadeState.currentLevelId < totalLevels) {
     advanceLevel(state.arcadeState);
     // Load new level objects
     loadArcadeLevel(state, state.arcadeState.currentLevelId);

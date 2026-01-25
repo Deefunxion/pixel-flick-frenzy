@@ -139,13 +139,16 @@ export function applySlideControl(
 
 // Gravity multipliers (responsive - needs constant flapping!)
 const HEAVY_GRAVITY_MULT = 1.2;        // No input = heavier than normal (falls fast)
-const FLOAT_MIN_GRAVITY = 0.20;        // Best float (rapid tapping) = 20% gravity
-const FLOAT_MAX_GRAVITY = 0.40;        // Single tap = 40% gravity (still falls)
+const FLOAT_MIN_GRAVITY = 0.15;        // Best float (rapid tapping) = 15% gravity
+const FLOAT_MAX_GRAVITY = 0.60;        // Single tap = 60% gravity (still falls)
+const RAPID_FLAP_GRAVITY = 0.03;       // Rapid flap (7+ taps/sec) = 3% gravity (almost horizontal)
 
 // Tap detection (short window = must tap constantly)
 const TAP_WINDOW_MS = 250;             // 250ms = ~4 taps/sec to stay up
+const TAP_HISTORY_MS = 1000;           // 1 second window to measure taps/sec
 const MIN_TAPS_FOR_FLOAT = 1;          // 1+ tap in window starts float
 const MAX_TAPS_FOR_BEST_FLOAT = 3;     // Need 3+ taps for best float
+const RAPID_FLAP_TAPS_PER_SEC = 7;     // 7+ taps/sec = rapid flap mode (almost horizontal)
 
 // Progressive brake (hold 0.3sec+)
 // Brake strength ramps up over time for smooth deceleration
@@ -158,7 +161,7 @@ const HARD_BRAKE_COST_PER_SEC = 40;    // Stamina cost for brake (slightly lower
 // Tap cost and boost
 const TAP_STAMINA_COST = 3;            // Lower cost for rapid tapping
 const TAP_VELOCITY_BOOST = 0.8;        // Small boost per tap (4 taps ≈ cruising speed 3)
-const FLOAT_MAX_VELOCITY = 3.5;        // Max velocity from tapping (NOT launch speed)
+const FLOAT_MAX_VELOCITY = 4.5;        // Max velocity from tapping (NOT launch speed)
 const MAX_VELOCITY = 7.0;              // Maximum forward velocity (launch only)
 
 // Export for update.ts
@@ -273,18 +276,26 @@ export function registerFloatTap(
 
 /**
  * Calculate gravity multiplier based on recent tap frequency.
- * More taps = lower gravity (better float)
- * No taps = heavy gravity (falls fast)
+ *
+ * BOMB JACK STYLE TIERS:
+ * - No taps = Heavy gravity (1.2x) - falls fast
+ * - 4-6 taps/sec = Float gravity (15-35%) - slow fall
+ * - 7+ taps/sec = Rapid flap (3%) - almost horizontal flight
  */
 export function calculateTapGravity(
   state: GameState,
   nowMs: number
 ): number {
-  // Clean old taps
+  // Keep taps within short window for basic float detection
   const recentTaps = state.airControl.recentTapTimes.filter(
     t => nowMs - t < TAP_WINDOW_MS
   );
-  state.airControl.recentTapTimes = recentTaps;
+
+  // Keep longer history for taps/sec calculation
+  const tapHistory = state.airControl.recentTapTimes.filter(
+    t => nowMs - t < TAP_HISTORY_MS
+  );
+  state.airControl.recentTapTimes = tapHistory;
 
   const tapCount = recentTaps.length;
 
@@ -293,8 +304,25 @@ export function calculateTapGravity(
     return HEAVY_GRAVITY_MULT;
   }
 
-  // Interpolate between max and min gravity based on tap count
-  // More taps = lower gravity
+  // Calculate actual taps per second from history
+  // Need at least 2 taps to measure frequency
+  if (tapHistory.length >= 2) {
+    const oldestTap = Math.min(...tapHistory);
+    const newestTap = Math.max(...tapHistory);
+    const timeSpanSec = (newestTap - oldestTap) / 1000;
+
+    // Avoid division by zero and require minimum time span
+    if (timeSpanSec > 0.1) {
+      const tapsPerSec = (tapHistory.length - 1) / timeSpanSec;
+
+      // RAPID FLAP MODE: 7+ taps/sec = almost horizontal flight
+      if (tapsPerSec >= RAPID_FLAP_TAPS_PER_SEC) {
+        return RAPID_FLAP_GRAVITY;
+      }
+    }
+  }
+
+  // Normal float: interpolate between max and min gravity based on tap count
   const tapRatio = Math.min(1, (tapCount - MIN_TAPS_FOR_FLOAT) / (MAX_TAPS_FOR_BEST_FLOAT - MIN_TAPS_FOR_FLOAT));
   const gravity = FLOAT_MAX_GRAVITY - (tapRatio * (FLOAT_MAX_GRAVITY - FLOAT_MIN_GRAVITY));
 

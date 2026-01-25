@@ -1659,32 +1659,34 @@
         "sequence": 13
       },
       {
-        "x": 375,
-        "y": 190,
+        "x": 368,
+        "y": 196,
         "size": "large",
         "sprite": "coin",
         "sequence": 14
       },
       {
-        "x": 400,
-        "y": 190,
+        "x": 385,
+        "y": 206,
         "size": "small",
         "sprite": "coin",
-        "sequence": 15
+        "sequence": 15,
+        "scale": 0.7
       }
     ],
     "springs": [
       {
-        "x": 70,
-        "y": 142,
+        "x": 226,
+        "y": 147,
         "direction": "up",
-        "strength": 1.491903953650035
+        "strength": 0.7
       },
       {
-        "x": 308,
-        "y": 187.44997998398398,
-        "direction": "up-right",
-        "strength": 1.268831667979248
+        "x": 405,
+        "y": 214,
+        "direction": "up-left",
+        "strength": 0.5,
+        "scale": 1.2
       }
     ],
     "portal": null
@@ -1801,10 +1803,10 @@
     ],
     "springs": [
       {
-        "x": 28,
-        "y": 200,
+        "x": 239,
+        "y": 146,
         "direction": "up",
-        "strength": 1.413861166802235
+        "strength": 0.9
       }
     ],
     "portal": null
@@ -1884,15 +1886,15 @@
         "sequence": 10
       },
       {
-        "x": 300,
-        "y": 154.67496997597596,
+        "x": 302,
+        "y": 145,
         "size": "large",
         "sprite": "coin",
         "sequence": 11
       },
       {
-        "x": 325,
-        "y": 119,
+        "x": 370,
+        "y": 101,
         "size": "small",
         "sprite": "coin",
         "sequence": 12
@@ -1921,32 +1923,33 @@
     ],
     "springs": [
       {
-        "x": 252,
-        "y": 90,
-        "direction": "up",
-        "strength": 1.0801544656045734
+        "x": 421,
+        "y": 203,
+        "direction": "up-left",
+        "strength": 2.5,
+        "scale": 1.6
       },
       {
-        "x": 34,
-        "y": 200,
+        "x": 204,
+        "y": 116,
         "direction": "up",
         "strength": 0.8129625600064174
       },
       {
-        "x": 313,
-        "y": 141,
-        "direction": "up-left",
-        "strength": 1.3184022295754403
+        "x": 290,
+        "y": 169,
+        "direction": "up-right",
+        "strength": 1.6
       }
     ],
     "portal": {
       "entry": {
-        "x": 317,
-        "y": 151
+        "x": 393,
+        "y": 93
       },
       "exit": {
-        "x": 82,
-        "y": 47
+        "x": 49,
+        "y": 17
       },
       "exitDirection": "up-45",
       "exitSpeed": 0.8558444241061807

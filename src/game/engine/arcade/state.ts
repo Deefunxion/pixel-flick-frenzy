@@ -1,6 +1,7 @@
 // src/game/engine/arcade/state.ts
 import type { ArcadeState, ArcadeLevel, StarObjectives } from './types';
 import { loadJson, saveJson } from '@/game/storage';
+import { getTotalLevels } from './levels';
 
 const STORAGE_KEY = 'arcade_state';
 
@@ -118,14 +119,16 @@ export function mergeStars(
 }
 
 export function advanceLevel(state: ArcadeState): void {
-  if (state.currentLevelId < 10) {
+  const totalLevels = getTotalLevels();
+  if (state.currentLevelId < totalLevels) {
     state.currentLevelId++;
     saveArcadeState(state);
   }
 }
 
 export function setLevel(state: ArcadeState, levelId: number): void {
-  if (levelId >= 1 && levelId <= 10) {
+  const totalLevels = getTotalLevels();
+  if (levelId >= 1 && levelId <= totalLevels) {
     state.currentLevelId = levelId;
     resetThrowState(state);
     saveArcadeState(state);
