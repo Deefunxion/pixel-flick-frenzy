@@ -292,6 +292,11 @@ export class LevelGenerator {
       level.gravityWells = this.generateGravityWells(positions, rng.derive('gravity'));
     }
 
+    // Add friction zones for levels 141+
+    if (worldConfig.mechanics.frictionZones) {
+      level.frictionZones = this.generateFrictionZones(rng.derive('friction'));
+    }
+
     // Validate with physics
     const validationResult = this.simulator.findOptimalInputs(level, positions, 50);
 
@@ -526,6 +531,25 @@ export class LevelGenerator {
     }
 
     return wells;
+  }
+
+  private generateFrictionZones(rng: SeededRandom): FrictionZonePlacement[] {
+    const zones: FrictionZonePlacement[] = [];
+    const zoneCount = rng.nextInt(1, 2);
+    const types: FrictionType[] = ['ice', 'sticky'];
+
+    for (let i = 0; i < zoneCount; i++) {
+      // Friction zones are at ground level (y near bottom)
+      zones.push({
+        x: rng.nextInt(100, 380),
+        y: 220, // Ground level
+        width: rng.nextInt(40, 80),
+        type: rng.pick(types),
+        strength: undefined, // Use defaults (ice=0.2, sticky=3.0)
+      });
+    }
+
+    return zones;
   }
 
   private tryPropAdjustments(level: ArcadeLevel, rng: SeededRandom): GenerationResult {
