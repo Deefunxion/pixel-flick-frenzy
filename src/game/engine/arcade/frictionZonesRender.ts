@@ -1,5 +1,6 @@
 // src/game/engine/arcade/frictionZonesRender.ts
 import type { FrictionZone } from './frictionZones';
+import { ZONE_SPRITES, getSprite, getAnimationFrame } from './arcadeAssets';
 
 export function renderFrictionZones(
   ctx: CanvasRenderingContext2D,
@@ -22,6 +23,34 @@ function renderFrictionZone(
 
   ctx.save();
 
+  // Try to render with sprites
+  const zoneType = type as 'ice' | 'sticky';
+  const config = ZONE_SPRITES[zoneType];
+  if (config) {
+    const frameIndex = getAnimationFrame(config, timeMs);
+    const framePath = config.frames[frameIndex];
+    const sprite = getSprite(framePath);
+
+    if (sprite) {
+      // Tile sprite across zone width
+      const tileSize = 32;
+      const startX = x - halfWidth;
+      const startY = y - halfHeight;
+
+      for (let tx = 0; tx < width; tx += tileSize) {
+        const tileWidth = Math.min(tileSize, width - tx);
+        ctx.drawImage(
+          sprite,
+          0, 0, sprite.naturalWidth * (tileWidth / tileSize), sprite.naturalHeight,
+          startX + tx, startY, tileWidth, height
+        );
+      }
+      ctx.restore();
+      return;
+    }
+  }
+
+  // Fallback to procedural rendering
   if (type === 'ice') {
     renderIceZone(ctx, x, y, halfWidth, halfHeight, timeMs);
   } else {

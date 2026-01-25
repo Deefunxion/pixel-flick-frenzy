@@ -1,28 +1,6 @@
 // src/game/engine/arcade/hazardsRender.ts
 import type { Hazard } from './hazards';
-import { assetPath } from '@/lib/assetPath';
-
-// Hazard sprites
-const hazardSprites: Record<string, HTMLImageElement | null> = {};
-
-function getHazardSprite(sprite: string): HTMLImageElement | null {
-  if (hazardSprites[sprite] !== undefined) return hazardSprites[sprite];
-
-  const img = new Image();
-  img.src = assetPath(`/assets/pickables/${sprite}.png`);
-  hazardSprites[sprite] = img;
-
-  return img.complete ? img : null;
-}
-
-// Preload common hazard sprites
-(() => {
-  ['spike', 'saw', 'fire'].forEach(sprite => {
-    const img = new Image();
-    img.src = assetPath(`/assets/pickables/${sprite}.png`);
-    hazardSprites[sprite] = img;
-  });
-})();
+import { HAZARD_SPRITES, getSprite, getAnimationFrame } from './arcadeAssets';
 
 export function renderHazards(
   ctx: CanvasRenderingContext2D,
@@ -51,19 +29,28 @@ function renderHazard(
     ctx.rotate(timeMs * rotationSpeed);
   }
 
-  // Try to render sprite
-  const spriteImg = getHazardSprite(sprite);
-  if (spriteImg && spriteImg.complete && spriteImg.naturalWidth > 0) {
-    const spriteSize = radius * 2.5;
-    ctx.drawImage(
-      spriteImg,
-      -spriteSize / 2,
-      -spriteSize / 2,
-      spriteSize,
-      spriteSize
-    );
+  // Get current animation frame from arcadeAssets
+  const config = HAZARD_SPRITES[sprite as keyof typeof HAZARD_SPRITES];
+  if (config) {
+    const frameIndex = getAnimationFrame(config, timeMs);
+    const framePath = config.frames[frameIndex];
+    const img = getSprite(framePath);
+
+    if (img) {
+      const spriteSize = radius * 2 * (scale ?? 1);
+      ctx.drawImage(
+        img,
+        -spriteSize / 2,
+        -spriteSize / 2,
+        spriteSize,
+        spriteSize
+      );
+    } else {
+      // Fallback: hand-drawn hazard based on type
+      renderFallbackHazard(ctx, sprite, radius, timeMs);
+    }
   } else {
-    // Fallback: hand-drawn hazard based on type
+    // Unknown sprite type, use fallback
     renderFallbackHazard(ctx, sprite, radius, timeMs);
   }
 

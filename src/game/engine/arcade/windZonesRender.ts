@@ -1,5 +1,6 @@
 // src/game/engine/arcade/windZonesRender.ts
 import type { WindZone } from './windZones';
+import { ZONE_SPRITES, getSprite, getAnimationFrame } from './arcadeAssets';
 
 // Wind particle for visual effect
 interface WindParticle {
@@ -116,13 +117,40 @@ function isInZoneBounds(x: number, y: number, zone: WindZone): boolean {
 export function renderWindZones(
   ctx: CanvasRenderingContext2D,
   zones: WindZone[],
-  playerInZone: boolean = false
+  playerInZone: boolean = false,
+  timeMs: number = 0
 ): void {
   for (const zone of zones) {
     // Draw zone background (semi-transparent)
     ctx.save();
 
-    // Zone fill
+    // Try to render wind sprite as overlay
+    const config = ZONE_SPRITES.wind;
+    if (config) {
+      const frameIndex = getAnimationFrame(config, timeMs);
+      const framePath = config.frames[frameIndex];
+      const sprite = getSprite(framePath);
+
+      if (sprite) {
+        ctx.globalAlpha = 0.25;
+        // Tile sprite across zone
+        const tileSize = 32;
+        for (let tx = 0; tx < zone.width; tx += tileSize) {
+          for (let ty = 0; ty < zone.height; ty += tileSize) {
+            const tileWidth = Math.min(tileSize, zone.width - tx);
+            const tileHeight = Math.min(tileSize, zone.height - ty);
+            ctx.drawImage(
+              sprite,
+              0, 0, sprite.naturalWidth * (tileWidth / tileSize), sprite.naturalHeight * (tileHeight / tileSize),
+              zone.left + tx, zone.top + ty, tileWidth, tileHeight
+            );
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // Zone fill (on top of sprite for semi-transparent tint)
     ctx.fillStyle = 'rgba(135, 206, 235, 0.15)'; // Sky blue, very transparent
     ctx.fillRect(zone.left, zone.top, zone.width, zone.height);
 

@@ -1,7 +1,7 @@
 // src/game/engine/arcade/springsRender.ts
 import type { Spring } from './springs';
 import type { SpringDirection } from './types';
-import { assetPath } from '@/lib/assetPath';
+import { SPRING_SPRITES, getSprite, getAnimationFrame } from './arcadeAssets';
 
 // Direction arrow angles (in radians)
 const DIRECTION_ANGLES: Record<SpringDirection, number> = {
@@ -10,26 +10,6 @@ const DIRECTION_ANGLES: Record<SpringDirection, number> = {
   'up-right': -Math.PI * 0.25,
   down: Math.PI / 2,
 };
-
-// Spring sprite
-let springSprite: HTMLImageElement | null = null;
-
-function getSpringSprite(): HTMLImageElement | null {
-  if (springSprite) return springSprite;
-
-  const img = new Image();
-  img.src = assetPath('/assets/pickables/spring.png');
-  springSprite = img;
-
-  return img.complete ? img : null;
-}
-
-// Preload spring sprite on module load
-(() => {
-  const img = new Image();
-  img.src = assetPath('/assets/pickables/spring.png');
-  springSprite = img;
-})();
 
 export function renderSprings(
   ctx: CanvasRenderingContext2D,
@@ -66,9 +46,12 @@ function renderSpring(
   const arrowColor = isInactive ? '#666' : (isUsed ? '#999' : '#FFD700');
   const baseColor = isInactive ? '#444' : (isUsed ? '#666' : '#333');
 
-  // Try to render sprite
-  const sprite = getSpringSprite();
-  if (sprite && sprite.complete && sprite.naturalWidth > 0) {
+  // Try to render animated sprite
+  const frameIndex = getAnimationFrame(SPRING_SPRITES, timeMs);
+  const framePath = SPRING_SPRITES.frames[frameIndex];
+  const sprite = getSprite(framePath);
+
+  if (sprite) {
     // Apply squish/bounce to sprite
     ctx.scale(1, squish + bounce);
 
