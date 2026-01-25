@@ -287,6 +287,11 @@ export class LevelGenerator {
       level.windZones = this.generateWindZones(rng.derive('wind'));
     }
 
+    // Add gravity wells for levels 91+
+    if (worldConfig.mechanics.gravityWells) {
+      level.gravityWells = this.generateGravityWells(positions, rng.derive('gravity'));
+    }
+
     // Validate with physics
     const validationResult = this.simulator.findOptimalInputs(level, positions, 50);
 
@@ -484,6 +489,43 @@ export class LevelGenerator {
     }
 
     return zones;
+  }
+
+  private generateGravityWells(
+    doodlePositions: { x: number; y: number }[],
+    rng: SeededRandom
+  ): GravityWellPlacement[] {
+    const wells: GravityWellPlacement[] = [];
+    const wellCount = rng.nextInt(1, 2);
+    const types: GravityWellType[] = ['attract', 'repel'];
+
+    for (let i = 0; i < wellCount; i++) {
+      // Place gravity wells near doodles to create interesting paths
+      let x: number, y: number;
+      if (doodlePositions.length > 0) {
+        const nearDoodle = rng.pick(doodlePositions);
+        x = nearDoodle.x + rng.nextInt(-50, 50);
+        y = nearDoodle.y + rng.nextInt(-30, 30);
+      } else {
+        x = rng.nextInt(100, 350);
+        y = rng.nextInt(60, 160);
+      }
+
+      // Clamp to valid game area
+      x = Math.max(50, Math.min(400, x));
+      y = Math.max(30, Math.min(200, y));
+
+      wells.push({
+        x,
+        y,
+        type: rng.pick(types),
+        radius: rng.nextInt(40, 70),
+        strength: rng.nextFloat(0.1, 0.3),
+        scale: rng.nextFloat(0.8, 1.2),
+      });
+    }
+
+    return wells;
   }
 
   private tryPropAdjustments(level: ArcadeLevel, rng: SeededRandom): GenerationResult {
