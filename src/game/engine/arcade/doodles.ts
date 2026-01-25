@@ -1,9 +1,17 @@
 // src/game/engine/arcade/doodles.ts
-import type { DoodlePlacement, DoodleSize } from './types';
+import type { DoodlePlacement, DoodleSize, DoodleMotion } from './types';
+import {
+  createMovingDoodleState,
+  updateMovingDoodle,
+  resetMovingDoodlePhase,
+  type MovingDoodleState,
+} from './movingDoodles';
 
 export interface Doodle {
-  x: number;
+  x: number;           // Base position (for static) or updated position (for motion)
   y: number;
+  baseX: number;       // Original placement position
+  baseY: number;
   hitRadius: number;
   displaySize: number;
   sprite: string;
@@ -12,6 +20,7 @@ export interface Doodle {
   collectedAt: number;  // timestamp for animation
   scale: number;        // Custom scale multiplier
   rotation: number;     // Rotation in degrees
+  motionState: MovingDoodleState | null;  // Motion state for moving doodles
 }
 
 const SIZE_CONFIG: Record<DoodleSize, { hitRadius: number; displaySize: number }> = {
@@ -22,9 +31,18 @@ const SIZE_CONFIG: Record<DoodleSize, { hitRadius: number; displaySize: number }
 export function createDoodleFromPlacement(placement: DoodlePlacement): Doodle {
   const config = SIZE_CONFIG[placement.size];
   const scale = placement.scale ?? 1.0;
+  const motion = placement.motion ?? { type: 'static' as const };
+
+  // Create motion state if not static
+  const motionState = motion.type !== 'static'
+    ? createMovingDoodleState(placement.x, placement.y, motion)
+    : null;
+
   return {
     x: placement.x,
     y: placement.y,
+    baseX: placement.x,
+    baseY: placement.y,
     hitRadius: config.hitRadius * scale,
     displaySize: config.displaySize * scale,
     sprite: placement.sprite,
@@ -33,6 +51,7 @@ export function createDoodleFromPlacement(placement: DoodlePlacement): Doodle {
     collectedAt: 0,
     scale,
     rotation: placement.rotation ?? 0,
+    motionState,
   };
 }
 
@@ -63,7 +82,28 @@ export function resetDoodles(doodles: Doodle[]): void {
   doodles.forEach(d => {
     d.collected = false;
     d.collectedAt = 0;
+    // Reset motion to base position
+    if (d.motionState) {
+      resetMovingDoodlePhase(d.motionState);
+      d.x = d.baseX;
+      d.y = d.baseY;
+    }
   });
+}
+
+/**
+ * Update all doodle positions based on motion
+ * @param doodles - Array of doodles
+ * @param deltaMs - Time elapsed in milliseconds
+ */
+export function updateDoodles(doodles: Doodle[], deltaMs: number): void {
+  for (const doodle of doodles) {
+    if (doodle.motionState && !doodle.collected) {
+      updateMovingDoodle(doodle.motionState, deltaMs);
+      doodle.x = doodle.motionState.currentX;
+      doodle.y = doodle.motionState.currentY;
+    }
+  }
 }
 
 export function countCollectedDoodles(doodles: Doodle[]): number {

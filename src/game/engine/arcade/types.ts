@@ -3,6 +3,12 @@ export type DoodleSize = 'small' | 'large';
 export type SpringDirection = 'up' | 'up-left' | 'up-right' | 'down';
 export type PortalExitDirection = 'straight' | 'up-45' | 'down-45';
 
+// Motion patterns for moving doodles (World 3+)
+export type DoodleMotion =
+  | { type: 'static' }
+  | { type: 'linear'; axis: 'x' | 'y'; range: number; speed: number }
+  | { type: 'circular'; radius: number; speed: number };
+
 export interface DoodlePlacement {
   x: number;
   y: number;
@@ -11,6 +17,7 @@ export interface DoodlePlacement {
   sequence: number;    // 1, 2, 3... for order objective
   scale?: number;      // Custom scale multiplier (default 1.0)
   rotation?: number;   // Rotation in degrees (default 0)
+  motion?: DoodleMotion;  // Motion pattern (default static)
 }
 
 export interface SpringPlacement {
