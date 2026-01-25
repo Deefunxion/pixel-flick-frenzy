@@ -500,6 +500,13 @@ const Game = () => {
 
   useEffect(() => {
     console.log('[Game] useEffect running');
+
+    // Don't run game loop when in portrait mode on mobile - canvas won't exist
+    if (isPortrait && isMobileRef.current) {
+      console.log('[Game] Portrait mode, skipping game loop');
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) {
       console.log('[Game] No canvas ref');
@@ -978,7 +985,7 @@ const Game = () => {
       stopChargeToneHybrid(audioRefs.current);
       stopEdgeWarning(audioRefs.current);
     };
-  }, [initState, playZenoJingle, triggerHaptic, handleNewPersonalBest, isLoading]);
+  }, [initState, playZenoJingle, triggerHaptic, handleNewPersonalBest, isLoading, isPortrait]);
 
   const theme = getTheme(themeId);
 
