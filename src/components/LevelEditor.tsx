@@ -1,6 +1,6 @@
 // src/components/LevelEditor.tsx
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { ArcadeLevel, DoodlePlacement, SpringPlacement, SpringDirection, DoodleSize, PortalExitDirection } from '@/game/engine/arcade/types';
+import type { ArcadeLevel, DoodlePlacement, SpringPlacement, SpringDirection, DoodleSize, PortalExitDirection, HazardPlacement, WindZonePlacement, WindDirection, GravityWellPlacement, GravityWellType, FrictionZonePlacement, FrictionType } from '@/game/engine/arcade/types';
 import type { GhostInput } from '@/game/engine/arcade/generator/types';
 import { ARCADE_LEVELS } from '@/game/engine/arcade/levels';
 import { W, H } from '@/game/constants';
@@ -8,11 +8,15 @@ import { assetPath } from '@/lib/assetPath';
 import { backgroundRenderer } from '@/game/engine/backgroundRenderer';
 import { GeneratorModal } from './GeneratorModal';
 
-type EditorTool = 'select' | 'doodle' | 'spring' | 'portal' | 'eraser';
+type EditorTool = 'select' | 'doodle' | 'spring' | 'portal' | 'hazard' | 'wind' | 'gravity' | 'friction' | 'eraser';
 type SelectedObject =
   | { type: 'doodle'; index: number }
   | { type: 'spring'; index: number }
   | { type: 'portal' }
+  | { type: 'hazard'; index: number }
+  | { type: 'windZone'; index: number }
+  | { type: 'gravityWell'; index: number }
+  | { type: 'frictionZone'; index: number }
   | null;
 
 interface LevelEditorProps {
@@ -79,9 +83,30 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
   const [newPortalExitSpeed, setNewPortalExitSpeed] = useState(1.0);
   const [newPortalScale, setNewPortalScale] = useState(1.0);
 
+  // Hazard tool state
+  const [newHazardSprite, setNewHazardSprite] = useState<'spike' | 'saw' | 'fire'>('spike');
+  const [newHazardScale, setNewHazardScale] = useState(1.0);
+  const [newHazardRadius, setNewHazardRadius] = useState(12);
+
+  // Wind zone tool state
+  const [newWindDirection, setNewWindDirection] = useState<WindDirection>('right');
+  const [newWindStrength, setNewWindStrength] = useState(0.25);
+  const [newWindWidth, setNewWindWidth] = useState(80);
+  const [newWindHeight, setNewWindHeight] = useState(60);
+
+  // Gravity well tool state
+  const [newGravityType, setNewGravityType] = useState<GravityWellType>('attract');
+  const [newGravityRadius, setNewGravityRadius] = useState(50);
+  const [newGravityStrength, setNewGravityStrength] = useState(0.2);
+  const [newGravityScale, setNewGravityScale] = useState(1.0);
+
+  // Friction zone tool state
+  const [newFrictionType, setNewFrictionType] = useState<FrictionType>('ice');
+  const [newFrictionWidth, setNewFrictionWidth] = useState(60);
+
   const [portalStep, setPortalStep] = useState<'entry' | 'exit'>('entry');
   const [pendingPortalEntry, setPendingPortalEntry] = useState<{ x: number; y: number } | null>(null);
-  const [dragging, setDragging] = useState<{ type: 'doodle' | 'spring' | 'portal-entry' | 'portal-exit'; index: number } | null>(null);
+  const [dragging, setDragging] = useState<{ type: 'doodle' | 'spring' | 'portal-entry' | 'portal-exit' | 'hazard' | 'windZone' | 'gravityWell' | 'frictionZone'; index: number } | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [swapping, setSwapping] = useState(false);
@@ -303,6 +328,52 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
         setPendingPortalEntry(null);
         setPortalStep('entry');
       }
+    } else if (tool === 'hazard') {
+      const newHazard: HazardPlacement = {
+        x, y,
+        radius: newHazardRadius,
+        sprite: newHazardSprite,
+        scale: newHazardScale !== 1.0 ? newHazardScale : undefined,
+      };
+      updateLevel(prev => ({
+        ...prev,
+        hazards: [...(prev.hazards || []), newHazard],
+      }));
+    } else if (tool === 'wind') {
+      const newZone: WindZonePlacement = {
+        x, y,
+        width: newWindWidth,
+        height: newWindHeight,
+        direction: newWindDirection,
+        strength: newWindStrength,
+      };
+      updateLevel(prev => ({
+        ...prev,
+        windZones: [...(prev.windZones || []), newZone],
+      }));
+    } else if (tool === 'gravity') {
+      const newWell: GravityWellPlacement = {
+        x, y,
+        type: newGravityType,
+        radius: newGravityRadius,
+        strength: newGravityStrength,
+        scale: newGravityScale !== 1.0 ? newGravityScale : undefined,
+      };
+      updateLevel(prev => ({
+        ...prev,
+        gravityWells: [...(prev.gravityWells || []), newWell],
+      }));
+    } else if (tool === 'friction') {
+      const newZone: FrictionZonePlacement = {
+        x,
+        y: 220, // Always at ground level
+        width: newFrictionWidth,
+        type: newFrictionType,
+      };
+      updateLevel(prev => ({
+        ...prev,
+        frictionZones: [...(prev.frictionZones || []), newZone],
+      }));
     } else if (tool === 'eraser') {
       const doodleIdx = level.doodles.findIndex(d =>
         Math.abs(d.x - x) < 20 && Math.abs(d.y - y) < 20
@@ -336,10 +407,14 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
   }, [tool, newDoodleSize, newDoodleSprite, newDoodleScale, newDoodleRotation,
       newSpringDirection, newSpringStrength, newSpringScale,
       newPortalExitDir, newPortalExitSpeed, newPortalScale,
+      newHazardSprite, newHazardScale, newHazardRadius,
+      newWindDirection, newWindStrength, newWindWidth, newWindHeight,
+      newGravityType, newGravityRadius, newGravityStrength, newGravityScale,
+      newFrictionType, newFrictionWidth,
       portalStep, pendingPortalEntry, level, dragging, updateLevel]);
 
   // Drag handling
-  const handleMouseDown = useCallback((e: React.MouseEvent, type: 'doodle' | 'spring' | 'portal-entry' | 'portal-exit', index: number) => {
+  const handleMouseDown = useCallback((e: React.MouseEvent, type: 'doodle' | 'spring' | 'portal-entry' | 'portal-exit' | 'hazard' | 'windZone' | 'gravityWell' | 'frictionZone', index: number) => {
     if (tool !== 'select') return;
     e.stopPropagation();
     setDragging({ type, index });
@@ -347,6 +422,10 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
     // Also select the object
     if (type === 'doodle') setSelected({ type: 'doodle', index });
     else if (type === 'spring') setSelected({ type: 'spring', index });
+    else if (type === 'hazard') setSelected({ type: 'hazard', index });
+    else if (type === 'windZone') setSelected({ type: 'windZone', index });
+    else if (type === 'gravityWell') setSelected({ type: 'gravityWell', index });
+    else if (type === 'frictionZone') setSelected({ type: 'frictionZone', index });
     else setSelected({ type: 'portal' });
   }, [tool]);
 
@@ -364,6 +443,14 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
         newLevel.portal = { ...newLevel.portal, entry: { x, y } };
       } else if (dragging.type === 'portal-exit' && newLevel.portal) {
         newLevel.portal = { ...newLevel.portal, exit: { x, y } };
+      } else if (dragging.type === 'hazard' && newLevel.hazards) {
+        newLevel.hazards[dragging.index] = { ...newLevel.hazards[dragging.index], x, y };
+      } else if (dragging.type === 'windZone' && newLevel.windZones) {
+        newLevel.windZones[dragging.index] = { ...newLevel.windZones[dragging.index], x, y };
+      } else if (dragging.type === 'gravityWell' && newLevel.gravityWells) {
+        newLevel.gravityWells[dragging.index] = { ...newLevel.gravityWells[dragging.index], x, y };
+      } else if (dragging.type === 'frictionZone' && newLevel.frictionZones) {
+        newLevel.frictionZones[dragging.index] = { ...newLevel.frictionZones[dragging.index], x };
       }
       return { ...h, present: newLevel };
     });
@@ -619,13 +706,14 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
 
           <div className="border-l border-gray-600 h-6 mx-1" />
 
-          {(['select', 'doodle', 'spring', 'portal', 'eraser'] as EditorTool[]).map(t => (
+          {(['select', 'doodle', 'spring', 'portal', 'hazard', 'wind', 'gravity', 'friction', 'eraser'] as EditorTool[]).map(t => (
             <button
               key={t}
               onClick={() => { setTool(t); setSelected(null); }}
               className={`px-2 py-1 rounded text-sm ${tool === t ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+              title={t.charAt(0).toUpperCase() + t.slice(1)}
             >
-              {t === 'select' ? '✋' : t === 'doodle' ? '🪙' : t === 'spring' ? '🔺' : t === 'portal' ? '🌀' : '🗑️'}
+              {t === 'select' ? '✋' : t === 'doodle' ? '🪙' : t === 'spring' ? '🔺' : t === 'portal' ? '🌀' : t === 'hazard' ? '⚠️' : t === 'wind' ? '💨' : t === 'gravity' ? '🌀' : t === 'friction' ? '❄️' : '🗑️'}
             </button>
           ))}
 
@@ -819,6 +907,114 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
               </>
             )}
 
+            {/* Hazards */}
+            {(level.hazards || []).map((h, i) => {
+              const scale = h.scale ?? 1.0;
+              const size = h.radius * 2 * scale * 2;
+              const isSelected = selected?.type === 'hazard' && selected.index === i;
+              return (
+                <div
+                  key={`hazard-${i}`}
+                  onMouseDown={e => handleMouseDown(e, 'hazard', i)}
+                  className={`absolute flex items-center justify-center ${tool === 'select' ? 'cursor-move' : ''}`}
+                  style={{
+                    left: h.x * 2 - size / 2,
+                    top: h.y * 2 - size / 2,
+                    width: size, height: size,
+                    outline: isSelected ? '3px solid #3b82f6' : undefined,
+                    outlineOffset: '2px',
+                  }}
+                >
+                  <div className={`w-full h-full rounded-full flex items-center justify-center ${
+                    h.sprite === 'spike' ? 'bg-gray-600' :
+                    h.sprite === 'saw' ? 'bg-gray-400' :
+                    'bg-orange-500'
+                  }`}>
+                    <span className="text-white" style={{ fontSize: size * 0.4 }}>
+                      {h.sprite === 'spike' ? '▲' : h.sprite === 'saw' ? '⚙' : '🔥'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Wind Zones */}
+            {(level.windZones || []).map((w, i) => {
+              const isSelected = selected?.type === 'windZone' && selected.index === i;
+              return (
+                <div
+                  key={`wind-${i}`}
+                  onMouseDown={e => handleMouseDown(e, 'windZone', i)}
+                  className={`absolute border-2 border-dashed border-sky-400 bg-sky-300/30 flex items-center justify-center ${tool === 'select' ? 'cursor-move' : ''}`}
+                  style={{
+                    left: (w.x - w.width / 2) * 2,
+                    top: (w.y - w.height / 2) * 2,
+                    width: w.width * 2,
+                    height: w.height * 2,
+                    outline: isSelected ? '3px solid #3b82f6' : undefined,
+                    outlineOffset: '2px',
+                  }}
+                >
+                  <span className="text-sky-600 text-2xl">
+                    {w.direction === 'left' ? '←' : w.direction === 'right' ? '→' : w.direction === 'up' ? '↑' : '↓'}
+                  </span>
+                </div>
+              );
+            })}
+
+            {/* Gravity Wells */}
+            {(level.gravityWells || []).map((g, i) => {
+              const isSelected = selected?.type === 'gravityWell' && selected.index === i;
+              const scale = g.scale ?? 1.0;
+              const size = g.radius * 2 * scale * 2;
+              return (
+                <div
+                  key={`gravity-${i}`}
+                  onMouseDown={e => handleMouseDown(e, 'gravityWell', i)}
+                  className={`absolute rounded-full border-2 border-dashed flex items-center justify-center ${
+                    g.type === 'attract' ? 'border-blue-500 bg-blue-500/20' : 'border-red-500 bg-red-500/20'
+                  } ${tool === 'select' ? 'cursor-move' : ''}`}
+                  style={{
+                    left: g.x * 2 - size / 2,
+                    top: g.y * 2 - size / 2,
+                    width: size,
+                    height: size,
+                    outline: isSelected ? '3px solid #3b82f6' : undefined,
+                    outlineOffset: '2px',
+                  }}
+                >
+                  <span className={`text-2xl ${g.type === 'attract' ? 'text-blue-400' : 'text-red-400'}`}>
+                    {g.type === 'attract' ? '◉' : '◎'}
+                  </span>
+                </div>
+              );
+            })}
+
+            {/* Friction Zones */}
+            {(level.frictionZones || []).map((f, i) => {
+              const isSelected = selected?.type === 'frictionZone' && selected.index === i;
+              return (
+                <div
+                  key={`friction-${i}`}
+                  onMouseDown={e => handleMouseDown(e, 'frictionZone', i)}
+                  className={`absolute h-4 flex items-center justify-center ${
+                    f.type === 'ice' ? 'bg-cyan-300/50 border-cyan-400' : 'bg-amber-700/50 border-amber-600'
+                  } border-2 ${tool === 'select' ? 'cursor-move' : ''}`}
+                  style={{
+                    left: (f.x - f.width / 2) * 2,
+                    top: f.y * 2 - 8,
+                    width: f.width * 2,
+                    outline: isSelected ? '3px solid #3b82f6' : undefined,
+                    outlineOffset: '2px',
+                  }}
+                >
+                  <span className="text-xs">
+                    {f.type === 'ice' ? '❄️' : '🪤'}
+                  </span>
+                </div>
+              );
+            })}
+
             {/* Pending portal */}
             {pendingPortalEntry && (
               <div className="absolute w-8 h-8 rounded-full bg-purple-500/50 border-2 border-dashed border-purple-700"
@@ -926,6 +1122,118 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
                 <label className="text-gray-400 text-xs">Scale: {newPortalScale.toFixed(1)}x</label>
                 <input type="range" min="0.5" max="2" step="0.1" value={newPortalScale}
                   onChange={e => setNewPortalScale(Number(e.target.value))}
+                  className="w-full mt-1" />
+              </div>
+            </div>
+          )}
+
+          {tool === 'hazard' && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-gray-400 text-xs">Sprite</label>
+                <select value={newHazardSprite} onChange={e => setNewHazardSprite(e.target.value as 'spike' | 'saw' | 'fire')}
+                  className="w-full bg-gray-700 text-white px-2 py-1 rounded mt-1">
+                  <option value="spike">▲ Spike</option>
+                  <option value="saw">⚙ Saw</option>
+                  <option value="fire">🔥 Fire</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs">Radius: {newHazardRadius}px</label>
+                <input type="range" min="8" max="30" step="1" value={newHazardRadius}
+                  onChange={e => setNewHazardRadius(Number(e.target.value))}
+                  className="w-full mt-1" />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs">Scale: {newHazardScale.toFixed(1)}x</label>
+                <input type="range" min="0.5" max="2" step="0.1" value={newHazardScale}
+                  onChange={e => setNewHazardScale(Number(e.target.value))}
+                  className="w-full mt-1" />
+              </div>
+            </div>
+          )}
+
+          {tool === 'wind' && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-gray-400 text-xs">Direction</label>
+                <select value={newWindDirection} onChange={e => setNewWindDirection(e.target.value as WindDirection)}
+                  className="w-full bg-gray-700 text-white px-2 py-1 rounded mt-1">
+                  <option value="left">← Left</option>
+                  <option value="right">→ Right</option>
+                  <option value="up">↑ Up</option>
+                  <option value="down">↓ Down</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs">Width: {newWindWidth}px</label>
+                <input type="range" min="40" max="200" step="10" value={newWindWidth}
+                  onChange={e => setNewWindWidth(Number(e.target.value))}
+                  className="w-full mt-1" />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs">Height: {newWindHeight}px</label>
+                <input type="range" min="30" max="150" step="10" value={newWindHeight}
+                  onChange={e => setNewWindHeight(Number(e.target.value))}
+                  className="w-full mt-1" />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs">Strength: {newWindStrength.toFixed(2)}</label>
+                <input type="range" min="0.05" max="0.5" step="0.05" value={newWindStrength}
+                  onChange={e => setNewWindStrength(Number(e.target.value))}
+                  className="w-full mt-1" />
+              </div>
+            </div>
+          )}
+
+          {tool === 'gravity' && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-gray-400 text-xs">Type</label>
+                <select value={newGravityType} onChange={e => setNewGravityType(e.target.value as GravityWellType)}
+                  className="w-full bg-gray-700 text-white px-2 py-1 rounded mt-1">
+                  <option value="attract">◉ Attract (Blue)</option>
+                  <option value="repel">◎ Repel (Red)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs">Radius: {newGravityRadius}px</label>
+                <input type="range" min="30" max="100" step="5" value={newGravityRadius}
+                  onChange={e => setNewGravityRadius(Number(e.target.value))}
+                  className="w-full mt-1" />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs">Strength: {newGravityStrength.toFixed(2)}</label>
+                <input type="range" min="0.05" max="0.5" step="0.05" value={newGravityStrength}
+                  onChange={e => setNewGravityStrength(Number(e.target.value))}
+                  className="w-full mt-1" />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs">Scale: {newGravityScale.toFixed(1)}x</label>
+                <input type="range" min="0.5" max="2" step="0.1" value={newGravityScale}
+                  onChange={e => setNewGravityScale(Number(e.target.value))}
+                  className="w-full mt-1" />
+              </div>
+            </div>
+          )}
+
+          {tool === 'friction' && (
+            <div className="space-y-3">
+              <div className="text-yellow-400 text-xs mb-2">
+                Placed at ground level (y=220)
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs">Type</label>
+                <select value={newFrictionType} onChange={e => setNewFrictionType(e.target.value as FrictionType)}
+                  className="w-full bg-gray-700 text-white px-2 py-1 rounded mt-1">
+                  <option value="ice">❄️ Ice (Slippery)</option>
+                  <option value="sticky">🪤 Sticky (Grippy)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs">Width: {newFrictionWidth}px</label>
+                <input type="range" min="30" max="150" step="10" value={newFrictionWidth}
+                  onChange={e => setNewFrictionWidth(Number(e.target.value))}
                   className="w-full mt-1" />
               </div>
             </div>
