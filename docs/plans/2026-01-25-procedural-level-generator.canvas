@@ -198,7 +198,7 @@
       "width": 180,
       "height": 100,
       "color": "6",
-      "text": "### Task 11\n**Hazards**\nWorld 8-9\nStatic + Moving\n\n⬜ Pending"
+      "text": "### Task 11\n**Hazards**\nWorld 8-9\nStatic + Moving\n\n✅ Completed"
     },
     {
       "id": "task12",
@@ -208,7 +208,7 @@
       "width": 180,
       "height": 100,
       "color": "6",
-      "text": "### Task 12\n**Gravity Wells**\nWorld 10-11\nAttract + Repel\n\n⬜ Pending"
+      "text": "### Task 12\n**Gravity Wells**\nWorld 10-11\nAttract + Repel\n\n✅ Completed"
     },
     {
       "id": "task13",
@@ -218,7 +218,7 @@
       "width": 180,
       "height": 100,
       "color": "6",
-      "text": "### Task 13\n**Timed Portals**\nWorld 12\nOpen/close\n\n⬜ Pending"
+      "text": "### Task 13\n**Timed Portals**\nWorld 12\nOpen/close\n\n✅ Completed"
     },
     {
       "id": "task14",
