@@ -40,6 +40,12 @@ export interface PortalPair {
   exitDirection?: PortalExitDirection;  // Direction to launch player (default 'straight')
   exitSpeed?: number;                   // Speed multiplier on exit (default 1.0)
   scale?: number;                       // Visual scale for both portals (default 1.0)
+  // Timing for on/off cycling (World 12+)
+  timing?: {
+    onDuration: number;   // Time portal is active in ms
+    offDuration: number;  // Time portal is inactive in ms
+    offset?: number;      // Initial phase offset in ms (default 0)
+  };
 }
 
 // Wind zone direction
@@ -55,13 +61,43 @@ export interface WindZonePlacement {
   strength: number;    // Force applied per frame (0.1 = gentle, 0.5 = strong)
 }
 
+// Hazard motion patterns (World 8-9)
+export type HazardMotion =
+  | { type: 'static' }
+  | { type: 'linear'; axis: 'x' | 'y'; range: number; speed: number }
+  | { type: 'circular'; radius: number; speed: number };
+
+// Hazards damage the player on contact (World 8+)
+export interface HazardPlacement {
+  x: number;           // Center X
+  y: number;           // Center Y
+  radius: number;      // Collision radius
+  sprite: string;      // 'spike', 'saw', 'fire'
+  motion?: HazardMotion;  // Motion pattern (default static)
+  scale?: number;      // Visual scale (default 1.0)
+}
+
+// Gravity wells attract or repel the player (World 10-11)
+export type GravityWellType = 'attract' | 'repel';
+
+export interface GravityWellPlacement {
+  x: number;           // Center X
+  y: number;           // Center Y
+  type: GravityWellType;
+  radius: number;      // Effect radius
+  strength: number;    // Force strength (0.1 = weak, 0.5 = strong)
+  scale?: number;      // Visual scale (default 1.0)
+}
+
 export interface ArcadeLevel {
   id: number;
   landingTarget: number;  // 409 + id (level 1 = 410, level 10 = 419)
   doodles: DoodlePlacement[];
   springs: SpringPlacement[];
   portal: PortalPair | null;
-  windZones?: WindZonePlacement[];  // Wind zones (World 5+)
+  windZones?: WindZonePlacement[];      // Wind zones (World 5+)
+  hazards?: HazardPlacement[];          // Hazards (World 8+)
+  gravityWells?: GravityWellPlacement[];  // Gravity wells (World 10+)
 }
 
 // Star objectives
