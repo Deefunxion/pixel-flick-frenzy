@@ -3,7 +3,7 @@
  * Handles flight mechanics, air controls, ring collision, bounce, and landing transition
  */
 
-import { BASE_GRAV, CLIFF_EDGE, H } from '@/game/constants';
+import { BASE_GRAV, CEILING_Y, CLIFF_EDGE, H } from '@/game/constants';
 import type { Theme } from '@/game/themes';
 import type { GameState } from '../types';
 import {
@@ -190,6 +190,30 @@ export function updateFlightPhysics(
 
   state.px += state.vx * effectiveTimeScale;
   state.py += state.vy * effectiveTimeScale;
+
+  // CEILING COLLISION - "sticky ceiling" mechanic
+  // The harder you hit, the longer you stay stuck sliding along
+  if (state.ceilingStuckFrames > 0) {
+    // Currently stuck to ceiling
+    state.py = CEILING_Y;
+    state.vy = 0;
+    state.ceilingStuckFrames--;
+    // Horizontal velocity continues but slightly dampened
+    state.vx *= 0.995;
+  } else if (state.py < CEILING_Y) {
+    // Just hit the ceiling
+    const impactVelocity = Math.abs(state.vy); // How hard we hit (upward velocity)
+    state.ceilingImpactVelocity = impactVelocity;
+
+    // Calculate stuck frames: harder hit = longer stuck (up to ~1 second at max power)
+    // At vy = -10 (max power, 85° angle), ~60 frames = 1 second
+    // At vy = -3 (weak hit), ~18 frames = 0.3 seconds
+    state.ceilingStuckFrames = Math.round(impactVelocity * 6);
+
+    // Clamp to ceiling
+    state.py = CEILING_Y;
+    state.vy = 0; // Absorb vertical velocity
+  }
 
   // Update trail
   const pastTarget = state.px >= state.zenoTarget;

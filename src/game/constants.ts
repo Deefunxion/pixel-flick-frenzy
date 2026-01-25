@@ -9,8 +9,11 @@ export const MIN_POWER = 3;
 export const MAX_POWER = 10;
 
 export const MIN_ANGLE = 20;
-export const MAX_ANGLE = 70;
+export const MAX_ANGLE = 85;  // Almost vertical launch allowed
 export const OPTIMAL_ANGLE = 45;
+
+// Ceiling collision - must account for sprite size (50x50, drawn from center)
+export const CEILING_Y = 28;  // Top boundary - keeps full sprite visible
 
 export const LAUNCH_PAD_X = 30;
 

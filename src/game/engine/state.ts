@@ -3,6 +3,7 @@ import {
   FREE_THROWS_CAP,
   H,
   LAUNCH_PAD_X,
+  MAX_ANGLE,
   MIN_ANGLE,
   NEW_PLAYER_BONUS_THROWS,
   OPTIMAL_ANGLE,
@@ -298,6 +299,9 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     arcadeDoodles: [],
     arcadeSprings: [],
     arcadePortal: null,
+    // Ceiling collision
+    ceilingStuckFrames: 0,
+    ceilingImpactVelocity: 0,
   };
 
   // Initialize arcade level objects
@@ -443,6 +447,10 @@ export function resetPhysics(state: GameState) {
     resetSprings(state.arcadeSprings);
     resetPortal(state.arcadePortal);
   }
+
+  // Reset ceiling collision state
+  state.ceilingStuckFrames = 0;
+  state.ceilingImpactVelocity = 0;
 }
 
 export function nextWind(state: GameState) {
@@ -504,7 +512,7 @@ export function spawnCelebration(
 }
 
 export function clampAngle(angle: number) {
-  return Math.max(MIN_ANGLE, Math.min(70, angle));
+  return Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, angle));
 }
 
 export function loadArcadeLevel(state: GameState, levelId: number): void {

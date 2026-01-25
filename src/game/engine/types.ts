@@ -280,4 +280,7 @@ export interface GameState {
   arcadeDoodles: Doodle[];
   arcadeSprings: Spring[];
   arcadePortal: Portal | null;
+  // Ceiling collision - "sticky" ceiling mechanic
+  ceilingStuckFrames: number;  // Frames remaining stuck to ceiling
+  ceilingImpactVelocity: number;  // How hard we hit (for particle intensity)
 }
