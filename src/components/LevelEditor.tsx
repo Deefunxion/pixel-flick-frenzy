@@ -48,6 +48,52 @@ function loadSprite(name: string): HTMLImageElement | null {
 // Preload common sprites
 ['coin', 'star'].forEach(loadSprite);
 
+// Arcade sprite cache for editor previews
+const arcadeSpriteCache = new Map<string, HTMLImageElement>();
+
+function loadArcadeSprite(path: string): HTMLImageElement | null {
+  if (arcadeSpriteCache.has(path)) {
+    const img = arcadeSpriteCache.get(path)!;
+    return img.complete && img.naturalWidth > 0 ? img : null;
+  }
+  const img = new Image();
+  img.src = assetPath(path);
+  arcadeSpriteCache.set(path, img);
+  return null;
+}
+
+// Arcade sprite paths for editor
+const ARCADE_SPRITE_PATHS = {
+  hazards: {
+    spike: '/assets/arcade/hazards/spike1a.png',
+    saw: '/assets/arcade/hazards/saw1a.png',
+    fire: '/assets/arcade/hazards/fire1a.png',
+  },
+  springs: '/assets/arcade/springs/spring1a.png',
+  portals: {
+    blue: '/assets/arcade/portals/portal_blue_1.png',
+    green: '/assets/arcade/portals/portal_green_1.png',
+    orange: '/assets/arcade/portals/portal_orange_1.png',
+    pink: '/assets/arcade/portals/portal_pink_1.png',
+    purple: '/assets/arcade/portals/portal_purple_1.png',
+    yellow: '/assets/arcade/portals/portal_yellow_1.png',
+  },
+  zones: {
+    ice: '/assets/arcade/zones/ice1a.png',
+    sticky: '/assets/arcade/zones/sticky1a.png',
+    wind: '/assets/arcade/zones/wind1a.png',
+  },
+} as const;
+
+// Portal color names for colorId lookup
+const PORTAL_COLOR_NAMES = ['blue', 'green', 'orange', 'pink', 'purple', 'yellow'] as const;
+
+// Preload arcade sprites on module load
+Object.values(ARCADE_SPRITE_PATHS.hazards).forEach(loadArcadeSprite);
+loadArcadeSprite(ARCADE_SPRITE_PATHS.springs);
+Object.values(ARCADE_SPRITE_PATHS.portals).forEach(loadArcadeSprite);
+Object.values(ARCADE_SPRITE_PATHS.zones).forEach(loadArcadeSprite);
+
 // Generate empty level template
 function getEmptyLevel(id: number): ArcadeLevel {
   return {
@@ -894,6 +940,14 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
               const scale = s.scale ?? 1.0;
               const size = 32 * scale;
               const isSelected = selected?.type === 'spring' && selected.index === i;
+              const sprite = loadArcadeSprite(ARCADE_SPRITE_PATHS.springs);
+              // Direction rotation angles
+              const directionAngle = {
+                'up': 0,
+                'up-right': 45,
+                'up-left': -45,
+                'down': 180,
+              }[s.direction] ?? 0;
               return (
                 <div
                   key={`spring-${i}`}
@@ -903,19 +957,23 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
                     left: s.x * 2 - size / 2,
                     top: s.y * 2 - size / 2,
                     width: size, height: size,
-                    transform: s.rotation ? `rotate(${s.rotation}deg)` : undefined,
+                    transform: `rotate(${directionAngle + (s.rotation ?? 0)}deg)`,
                     outline: isSelected ? '3px solid #3b82f6' : undefined,
                     outlineOffset: '2px',
                   }}
                 >
-                  <div className="w-full h-full bg-red-400 rounded border-2 border-red-600 flex items-center justify-center shadow-md">
-                    <span className="text-white" style={{ fontSize: size * 0.5 }}>
-                      {s.direction === 'up' ? '↑' : s.direction === 'down' ? '↓' : s.direction === 'up-left' ? '↖' : '↗'}
-                    </span>
-                  </div>
+                  {sprite ? (
+                    <img src={sprite.src} alt="spring" className="w-full h-full object-contain" />
+                  ) : (
+                    <div className="w-full h-full bg-red-400 rounded border-2 border-red-600 flex items-center justify-center shadow-md">
+                      <span className="text-white" style={{ fontSize: size * 0.5 }}>
+                        {s.direction === 'up' ? '↑' : s.direction === 'down' ? '↓' : s.direction === 'up-left' ? '↖' : '↗'}
+                      </span>
+                    </div>
+                  )}
                   {s.strength && s.strength !== 1.0 && (
                     <span className="absolute -bottom-1 text-xs bg-yellow-500 text-black px-1 rounded"
-                      style={{ transform: s.rotation ? `rotate(${-s.rotation}deg)` : undefined }}>
+                      style={{ transform: `rotate(${-(directionAngle + (s.rotation ?? 0))}deg)` }}>
                       ×{s.strength.toFixed(1)}
                     </span>
                   )}
@@ -971,6 +1029,8 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
               const scale = h.scale ?? 1.0;
               const size = h.radius * 2 * scale * 2;
               const isSelected = selected?.type === 'hazard' && selected.index === i;
+              const spritePath = ARCADE_SPRITE_PATHS.hazards[h.sprite as keyof typeof ARCADE_SPRITE_PATHS.hazards];
+              const sprite = spritePath ? loadArcadeSprite(spritePath) : null;
               return (
                 <div
                   key={`hazard-${i}`}
@@ -985,15 +1045,19 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
                     outlineOffset: '2px',
                   }}
                 >
-                  <div className={`w-full h-full rounded-full flex items-center justify-center ${
-                    h.sprite === 'spike' ? 'bg-gray-600' :
-                    h.sprite === 'saw' ? 'bg-gray-400' :
-                    'bg-orange-500'
-                  }`}>
-                    <span className="text-white" style={{ fontSize: size * 0.4 }}>
-                      {h.sprite === 'spike' ? '▲' : h.sprite === 'saw' ? '⚙' : '🔥'}
-                    </span>
-                  </div>
+                  {sprite ? (
+                    <img src={sprite.src} alt={h.sprite} className="w-full h-full object-contain" />
+                  ) : (
+                    <div className={`w-full h-full rounded-full flex items-center justify-center ${
+                      h.sprite === 'spike' ? 'bg-gray-600' :
+                      h.sprite === 'saw' ? 'bg-gray-400' :
+                      'bg-orange-500'
+                    }`}>
+                      <span className="text-white" style={{ fontSize: size * 0.4 }}>
+                        {h.sprite === 'spike' ? '▲' : h.sprite === 'saw' ? '⚙' : '🔥'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               );
             })}
