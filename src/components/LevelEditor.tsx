@@ -1,9 +1,12 @@
 // src/components/LevelEditor.tsx
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { ArcadeLevel, DoodlePlacement, SpringPlacement, SpringDirection, DoodleSize, PortalExitDirection } from '@/game/engine/arcade/types';
+import type { GhostInput } from '@/game/engine/arcade/generator/types';
 import { ARCADE_LEVELS } from '@/game/engine/arcade/levels';
 import { W, H } from '@/game/constants';
 import { assetPath } from '@/lib/assetPath';
+import { backgroundRenderer } from '@/game/engine/backgroundRenderer';
+import { GeneratorModal } from './GeneratorModal';
 
 type EditorTool = 'select' | 'doodle' | 'spring' | 'portal' | 'eraser';
 type SelectedObject =
@@ -81,9 +84,13 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
   const [dragging, setDragging] = useState<{ type: 'doodle' | 'spring' | 'portal-entry' | 'portal-exit'; index: number } | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [swapping, setSwapping] = useState(false);
+  const [showGenerator, setShowGenerator] = useState(false);
   const [, setSpriteLoadTick] = useState(0);
+  const [bgReady, setBgReady] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const bgCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Trigger re-render when sprites load
   useEffect(() => {
@@ -95,6 +102,33 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
       if (anyLoading) setSpriteLoadTick(t => t + 1);
     }, 100);
     return () => clearInterval(interval);
+  }, []);
+
+  // Load and render background
+  useEffect(() => {
+    const renderBackground = async () => {
+      if (!bgCanvasRef.current) return;
+
+      // Preload if not ready
+      if (!backgroundRenderer.isReady()) {
+        await backgroundRenderer.preload();
+      }
+
+      const canvas = bgCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // Render at 2x scale for the editor
+      ctx.save();
+      ctx.scale(2, 2);
+      backgroundRenderer.update(0, performance.now()); // No wind, static background
+      backgroundRenderer.render(ctx);
+      ctx.restore();
+
+      setBgReady(true);
+    };
+
+    renderBackground();
   }, []);
 
   // Update level with history tracking
@@ -406,6 +440,122 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
     }
   };
 
+  // Handle generated levels from generator modal
+  const handleGeneratorComplete = useCallback(async (
+    levels: ArcadeLevel[],
+    ghostReplays: Record<number, GhostInput[]>
+  ) => {
+    setShowGenerator(false);
+
+    if (levels.length === 0) {
+      alert('No levels were generated.');
+      return;
+    }
+
+    // Save all generated levels
+    let savedCount = 0;
+    let failedCount = 0;
+
+    for (const lvl of levels) {
+      try {
+        const response = await fetch('/api/save-level', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(lvl),
+        });
+        if (response.ok) {
+          savedCount++;
+        } else {
+          failedCount++;
+        }
+      } catch (error) {
+        console.error(`Failed to save level ${lvl.id}:`, error);
+        failedCount++;
+      }
+    }
+
+    // Save ghost replays to localStorage for future use
+    if (Object.keys(ghostReplays).length > 0) {
+      try {
+        const existing = JSON.parse(localStorage.getItem('ghostReplays') || '{}');
+        const merged = { ...existing, ...ghostReplays };
+        localStorage.setItem('ghostReplays', JSON.stringify(merged));
+      } catch {
+        // Ignore localStorage errors
+      }
+    }
+
+    const message = failedCount > 0
+      ? `Saved ${savedCount} levels. ${failedCount} failed to save.`
+      : `Successfully saved ${savedCount} levels!`;
+
+    alert(`${message}\n\nRefresh to see the new levels in the dropdown.`);
+  }, []);
+
+  // Move level up (swap with previous ID)
+  const moveUp = async () => {
+    const currentId = level.id;
+    const targetId = currentId - 1;
+    if (targetId < 1) return;
+
+    // Check if target level exists
+    const targetExists = ARCADE_LEVELS.some(l => l.id === targetId);
+    if (!targetExists) {
+      alert(`Level ${targetId} doesn't exist. Create it first.`);
+      return;
+    }
+
+    setSwapping(true);
+    try {
+      const response = await fetch('/api/swap-levels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idA: currentId, idB: targetId }),
+      });
+      if (!response.ok) throw new Error('Swap failed');
+
+      // Reload the page to get fresh ARCADE_LEVELS
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to swap levels:', error);
+      alert('Failed to swap levels');
+    } finally {
+      setSwapping(false);
+    }
+  };
+
+  // Move level down (swap with next ID)
+  const moveDown = async () => {
+    const currentId = level.id;
+    const targetId = currentId + 1;
+    if (targetId > 100) return;
+
+    // Check if target level exists
+    const targetExists = ARCADE_LEVELS.some(l => l.id === targetId);
+    if (!targetExists) {
+      alert(`Level ${targetId} doesn't exist. Create it first.`);
+      return;
+    }
+
+    setSwapping(true);
+    try {
+      const response = await fetch('/api/swap-levels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idA: currentId, idB: targetId }),
+      });
+      if (!response.ok) throw new Error('Swap failed');
+
+      // Reload the page to get fresh ARCADE_LEVELS
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to swap levels:', error);
+      alert('Failed to swap levels');
+    } finally {
+      setSwapping(false);
+    }
+  };
+
   const importLevel = () => {
     const json = prompt('Paste level JSON:');
     if (json) {
@@ -440,6 +590,32 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
               );
             })}
           </select>
+
+          {/* Move up/down buttons */}
+          <button
+            onClick={moveUp}
+            disabled={swapping || level.id <= 1 || !ARCADE_LEVELS.some(l => l.id === level.id)}
+            className={`px-2 py-1 rounded text-sm ${
+              swapping || level.id <= 1 || !ARCADE_LEVELS.some(l => l.id === level.id)
+                ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                : 'bg-gray-700 text-white hover:bg-gray-600'
+            }`}
+            title="Move level up (swap with previous)"
+          >
+            ↑
+          </button>
+          <button
+            onClick={moveDown}
+            disabled={swapping || level.id >= 100 || !ARCADE_LEVELS.some(l => l.id === level.id)}
+            className={`px-2 py-1 rounded text-sm ${
+              swapping || level.id >= 100 || !ARCADE_LEVELS.some(l => l.id === level.id)
+                ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                : 'bg-gray-700 text-white hover:bg-gray-600'
+            }`}
+            title="Move level down (swap with next)"
+          >
+            ↓
+          </button>
 
           <div className="border-l border-gray-600 h-6 mx-1" />
 
@@ -481,6 +657,13 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
             {saving ? '...' : saveStatus === 'success' ? '✓ Saved!' : saveStatus === 'error' ? '📋 Copied' : '💾 Save'}
           </button>
           <button onClick={importLevel} className="bg-yellow-600 text-white px-2 py-1 rounded text-sm">📥</button>
+          <button
+            onClick={() => setShowGenerator(true)}
+            className="bg-purple-600 text-white px-2 py-1 rounded text-sm hover:bg-purple-500"
+            title="Auto-generate levels using Chinese character patterns"
+          >
+            🎲 Generate
+          </button>
           <button onClick={onClose} className="bg-red-600 text-white px-2 py-1 rounded text-sm">✕</button>
         </div>
 
@@ -489,16 +672,32 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
           <div
             ref={canvasRef}
             onClick={handleCanvasClick}
-            className="relative bg-amber-50 border-2 border-amber-900"
+            className="relative border-2 border-amber-900 overflow-hidden"
             style={{
               width: W * 2, height: H * 2,
               cursor: tool === 'select' ? 'default' : 'crosshair',
-              backgroundImage: 'repeating-linear-gradient(#e5dcc8 0px, #e5dcc8 1px, transparent 1px, transparent 40px)',
             }}
           >
-            {/* Grid overlay */}
+            {/* Game background canvas */}
+            <canvas
+              ref={bgCanvasRef}
+              width={W * 2}
+              height={H * 2}
+              className="absolute inset-0"
+            />
+
+            {/* Loading overlay */}
+            {!bgReady && (
+              <div className="absolute inset-0 flex items-center justify-center bg-amber-50">
+                <span className="text-amber-700">Loading background...</span>
+              </div>
+            )}
+
+            {/* Grid overlay - semi-transparent for visibility */}
             <div className="absolute inset-0 pointer-events-none"
-              style={{ backgroundImage: 'repeating-linear-gradient(90deg, #ddd3 0px, #ddd3 1px, transparent 1px, transparent 40px)' }} />
+              style={{
+                backgroundImage: 'repeating-linear-gradient(rgba(100,100,100,0.15) 0px, rgba(100,100,100,0.15) 1px, transparent 1px, transparent 40px), repeating-linear-gradient(90deg, rgba(100,100,100,0.15) 0px, rgba(100,100,100,0.15) 1px, transparent 1px, transparent 40px)',
+              }} />
 
             {/* Cliff edge */}
             <div className="absolute top-0 bottom-0 w-1 bg-red-500 opacity-50" style={{ left: `${(420 / W) * 100}%` }} />
@@ -892,6 +1091,14 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
           )}
         </div>
       </div>
+
+      {/* Generator Modal */}
+      {showGenerator && (
+        <GeneratorModal
+          onClose={() => setShowGenerator(false)}
+          onComplete={handleGeneratorComplete}
+        />
+      )}
     </div>
   );
 }
