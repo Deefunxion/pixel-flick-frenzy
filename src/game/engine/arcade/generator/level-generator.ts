@@ -289,7 +289,12 @@ export class LevelGenerator {
     // Add props if needed
     const props = shouldUseProps(levelId);
     if (props.springs) {
-      level.springs = this.generateSprings(positions, rng);
+      level.springs = this.generateSprings(
+        positions,
+        rng,
+        worldConfig.mechanics.timedSprings,
+        worldConfig.mechanics.breakableSprings
+      );
     }
     if (props.portals) {
       level.portal = this.generatePortal(rng);
@@ -387,7 +392,9 @@ export class LevelGenerator {
 
   private generateSprings(
     doodlePositions: { x: number; y: number }[],
-    rng: SeededRandom
+    rng: SeededRandom,
+    allowTimed: boolean = false,
+    allowBreakable: boolean = false
   ): SpringPlacement[] {
     const springs: SpringPlacement[] = [];
     const springCount = rng.nextInt(1, 3);
@@ -406,12 +413,28 @@ export class LevelGenerator {
         y = rng.nextInt(150, 200);
       }
 
-      springs.push({
+      const spring: SpringPlacement = {
         x,
         y,
         direction: rng.pick(['up', 'up-right', 'up-left'] as const),
         strength: rng.nextFloat(0.8, 1.5),
-      });
+      };
+
+      // Add timing for levels 61+
+      if (allowTimed && rng.next() > 0.5) {
+        spring.timing = {
+          onDuration: rng.nextInt(1000, 2000),
+          offDuration: rng.nextInt(500, 1500),
+          offset: rng.nextInt(0, 1000),
+        };
+      }
+
+      // Add breakable for levels 161+
+      if (allowBreakable && rng.next() > 0.7) {
+        spring.breakable = true;
+      }
+
+      springs.push(spring);
     }
 
     return springs;
