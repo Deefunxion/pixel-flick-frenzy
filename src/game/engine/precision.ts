@@ -143,7 +143,7 @@ const FLOAT_MIN_GRAVITY = 0.20;        // Best float (rapid tapping) = 20% gravi
 const FLOAT_MAX_GRAVITY = 0.40;        // Single tap = 40% gravity (still falls)
 
 // Tap detection (short window = must tap constantly)
-const TAP_WINDOW_MS = 200;             // Only 200ms! Must rapid tap to stay up
+const TAP_WINDOW_MS = 250;             // 250ms = ~4 taps/sec to stay up
 const MIN_TAPS_FOR_FLOAT = 1;          // 1+ tap in window starts float
 const MAX_TAPS_FOR_BEST_FLOAT = 3;     // Need 3+ taps for best float
 
