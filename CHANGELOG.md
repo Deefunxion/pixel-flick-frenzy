@@ -4,6 +4,37 @@ All notable changes to One-More-Flick are documented in this file.
 
 ## [Unreleased] - 2026-01-25
 
+### Changed - UX Improvements
+- **High Score display**: Now shows up to 6 decimal places using Zeno precision system (was fixed 2)
+- **Portal slow-mo**: Fixed edge cases where slow-mo persisted after teleportation
+  - Reduced portal proximity trigger from 30px to 15px (tighter activation)
+  - Portal juice now ignores edge-based slow-mo (no stacking)
+  - Decaying slow-mo intensity after warp (0.9 → 0.7 over 24 frames)
+- **Air control**: Improved floating and velocity buildup
+  - 2-3 taps now reach max velocity (was 14 taps)
+  - TAP_VELOCITY_BOOST increased to 2.5 (from 0.5)
+  - Better float: gravity reduced to 5-15% when tapping (was 10-30%)
+  - Tap window extended to 500ms (from 400ms)
+
+### Added - Visual Effects
+- **Doodle center glow**: Vibrant pulsing white orb at center of each collectible
+  - Shows exact hitbox for precision collection
+  - 4-pixel (2x2) bright white core with soft radial halo
+- **Portal juice enhancement**: More dramatic teleportation feedback
+  - Entry portal blue sparks (15 particles)
+  - Exit portal orange burst (25 particles)
+  - Swirl particles at exit (12 particles)
+  - Screen shake on warp
+  - Exit ripple animation (expanding rings at exit portal)
+  - Enhanced audio (3-tone harmonic whoosh)
+
+### Added - Bounce Reversal Mechanic
+- When moving right after bounce, taps reverse direction:
+  - First tap: stop (vx = 0)
+  - Second tap: half speed leftward (vx = -3.5)
+- Adds strategic control for trajectory correction after bounces
+- New state tracking in `AirControl`: `postBounceMovingRight`, `postBounceTapCount`
+
 ### Added - Procedural Level Generator
 - **250 levels** using Chinese character stroke patterns from Make Me a Hanzi database
 - **9,574 characters** imported with stroke medians for doodle placement

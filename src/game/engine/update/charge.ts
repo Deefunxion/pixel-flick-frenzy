@@ -167,6 +167,8 @@ export function executeLaunch(
     brakeTaps: 0,
     recentTapTimes: [],
     isHoldingBrake: false,
+    postBounceMovingRight: false,
+    postBounceTapCount: 0,
   };
 
   // Reset stamina tracking for this throw

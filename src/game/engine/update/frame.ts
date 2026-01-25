@@ -274,16 +274,20 @@ export function updateFrame(state: GameState, svc: GameServices): void {
   updateRecordZone(state);
 
   // === CINEMATIC EFFECTS ===
-  // Portal proximity slow-mo: pre-warp and post-exit bubble (~30px) at 90% slowdown
+  // Portal proximity slow-mo: triggers closer to portal (15px buffer)
+  // After teleport, only portal slow-mo applies (ignores edge-based slow-mo)
   let portalProximityActive = false;
   let portalProximityX = state.zoomTargetX;
   let portalProximityY = state.zoomTargetY;
+  const portalJuiceActive = state.portalJuiceTimer > 0;
+
   if (!state.reduceFx && state.arcadeMode && state.arcadePortal) {
-    const bufferPx = 30;
+    const bufferPx = 15; // Tighter trigger for portal slow-mo (was 30)
     const { aX, aY, bX, bY, usedThisThrow, lastUsedSide } = state.arcadePortal;
     const distA = Math.hypot(state.px - aX, state.py - aY);
     const distB = Math.hypot(state.px - bX, state.py - bY);
 
+    // Pre-warp: approaching portal
     if (!usedThisThrow && (distA <= bufferPx || distB <= bufferPx)) {
       portalProximityActive = true;
       if (distA <= distB) {
@@ -293,7 +297,9 @@ export function updateFrame(state: GameState, svc: GameServices): void {
         portalProximityX = bX;
         portalProximityY = bY;
       }
-    } else if (usedThisThrow && lastUsedSide) {
+    }
+    // Post-warp: only apply proximity slow-mo very close to exit (not the extended juice period)
+    else if (usedThisThrow && lastUsedSide && !portalJuiceActive) {
       const exitX = lastUsedSide === 'a' ? bX : aX;
       const exitY = lastUsedSide === 'a' ? bY : aY;
       const distExit = Math.hypot(state.px - exitX, state.py - exitY);
@@ -305,18 +311,28 @@ export function updateFrame(state: GameState, svc: GameServices): void {
     }
   }
 
+  // Calculate edge-based cinematic effects (slow-mo, zoom)
+  // Skip edge-based slow-mo during portal juice period (after teleport)
   const { targetSlowMo, targetZoom } = calculateCinematicEffects(state, audio);
-  let adjSlowMo = targetSlowMo;
-  let adjZoom = targetZoom;
+
+  // During portal juice period, ignore edge-based slow-mo entirely
+  let adjSlowMo = portalJuiceActive ? 0 : targetSlowMo;
+  let adjZoom = portalJuiceActive ? 1 : targetZoom;
+
+  // Portal proximity slow-mo (approaching portal)
   if (portalProximityActive) {
-    adjSlowMo = Math.max(adjSlowMo, 0.9);
+    adjSlowMo = 0.85; // Fixed slow-mo near portal (not max)
+    adjZoom = Math.max(adjZoom, 1.5);
     state.zoomTargetX = portalProximityX;
     state.zoomTargetY = portalProximityY;
   }
-  if (state.portalJuiceTimer > 0 && !state.reduceFx) {
-    // Stronger cue while portal juice is active
-    adjSlowMo = Math.max(adjSlowMo, 0.9);
-    adjZoom = Math.max(adjZoom, 1.9);
+
+  // Portal juice effect (after teleportation) - short dramatic effect
+  if (portalJuiceActive && !state.reduceFx) {
+    // Stronger cue immediately after warp, then decay
+    const juiceIntensity = Math.min(1, state.portalJuiceTimer / 20); // Peak at first 20 frames
+    adjSlowMo = 0.7 + juiceIntensity * 0.2; // 0.7 to 0.9 slow-mo
+    adjZoom = 1.5 + juiceIntensity * 0.4; // 1.5 to 1.9 zoom
     state.zoomTargetX = state.portalZoomTargetX;
     state.zoomTargetY = state.portalZoomTargetY;
     state.portalJuiceTimer--;

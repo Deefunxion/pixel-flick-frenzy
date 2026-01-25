@@ -31,9 +31,7 @@ export function getZenoPrecision(score: number): number {
   if (distanceFromEdge > 5) return 3;
   if (distanceFromEdge > 1) return 4;
   if (distanceFromEdge > 0.1) return 5;
-  if (distanceFromEdge > 0.01) return 6;
-  if (distanceFromEdge > 0.001) return 7;
-  return 8; // Max precision
+  return 6; // Max 6 decimals for display clarity
 }
 
 /**

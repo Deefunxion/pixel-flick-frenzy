@@ -125,7 +125,7 @@ export function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameSt
 
   // Arcade mode objects (portal behind, then springs, then doodles)
   if (state.arcadeMode) {
-    renderPortal(ctx, state.arcadePortal, nowMs);
+    renderPortal(ctx, state.arcadePortal, nowMs, state.portalJuiceTimer);
     renderSprings(ctx, state.arcadeSprings, nowMs);
     renderDoodles(ctx, state.arcadeDoodles, nowMs);
   }

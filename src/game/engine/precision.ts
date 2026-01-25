@@ -137,15 +137,15 @@ export function applySlideControl(
 // 3. HOLD (0.3sec+) = Progressive brake (ramps from gentle to strong)
 // ============================================
 
-// Gravity multipliers (softer than before)
-const HEAVY_GRAVITY_MULT = 1.2;        // No input = 1.0x gravity (noticeable but not harsh)
-const FLOAT_MIN_GRAVITY = 0.1;         // Best float (fast tapping) = 10% gravity
-const FLOAT_MAX_GRAVITY = 0.3;         // Slow tapping = 30% gravity
+// Gravity multipliers (responsive - needs constant flapping!)
+const HEAVY_GRAVITY_MULT = 1.2;        // No input = heavier than normal (falls fast)
+const FLOAT_MIN_GRAVITY = 0.20;        // Best float (rapid tapping) = 20% gravity
+const FLOAT_MAX_GRAVITY = 0.40;        // Single tap = 40% gravity (still falls)
 
-// Tap detection
-const TAP_WINDOW_MS = 400;             // Count taps in last 400ms
+// Tap detection (short window = must tap constantly)
+const TAP_WINDOW_MS = 200;             // Only 200ms! Must rapid tap to stay up
 const MIN_TAPS_FOR_FLOAT = 1;          // 1+ tap in window starts float
-const MAX_TAPS_FOR_BEST_FLOAT = 2;     // 2+ taps = best float
+const MAX_TAPS_FOR_BEST_FLOAT = 3;     // Need 3+ taps for best float
 
 // Progressive brake (hold 0.3sec+)
 // Brake strength ramps up over time for smooth deceleration
@@ -156,9 +156,10 @@ const BRAKE_RAMP_FRAMES = 60;          // 1 second to reach full brake strength
 const HARD_BRAKE_COST_PER_SEC = 40;    // Stamina cost for brake (slightly lower)
 
 // Tap cost and boost
-const TAP_STAMINA_COST = 5;            // Small cost per tap
-const TAP_VELOCITY_BOOST = 0.50;       // Forward velocity gain per tap (20% less than before)
-const MAX_VELOCITY = 7.0;              // Maximum forward velocity (physics cap)
+const TAP_STAMINA_COST = 3;            // Lower cost for rapid tapping
+const TAP_VELOCITY_BOOST = 0.8;        // Small boost per tap (4 taps ≈ cruising speed 3)
+const FLOAT_MAX_VELOCITY = 3.5;        // Max velocity from tapping (NOT launch speed)
+const MAX_VELOCITY = 7.0;              // Maximum forward velocity (launch only)
 
 // Export for update.ts
 export { BRAKE_ACTIVATION_FRAMES, TAP_VELOCITY_BOOST, MAX_VELOCITY };
@@ -176,12 +177,22 @@ export type BrakeResult = PrecisionResult & {
 };
 
 /**
- * Register a tap for the float system.
- * Each tap:
+ * Register a tap for the float system (BOMB JACK STYLE).
+ *
+ * FIRST TAP (after pause in tapping):
+ * - FULL STOP: vx = 0, vy = 0
+ * - Start floating right with small velocity
+ *
+ * SUBSEQUENT RAPID TAPS:
  * - Extends float time (via recentTapTimes → reduced gravity)
- * - If ASCENDING (vy < 0): NEUTRALIZES upward motion (vy = 0), NO velocity boost
- * - If DESCENDING (vy >= 0): Gives forward velocity boost (vx)
- * - Costs stamina
+ * - Small velocity boost rightward, capped at FLOAT_MAX_VELOCITY (3.5)
+ * - If moving left, gradually reduces leftward momentum
+ *
+ * BOUNCE REVERSAL (special case after bounce):
+ * - First tap = stop (vx = 0, vy = 0)
+ * - Second tap = half speed leftward
+ *
+ * Costs stamina (low cost for rapid tapping)
  */
 export function registerFloatTap(
   state: GameState,
@@ -196,6 +207,12 @@ export function registerFloatTap(
 
   state.stamina -= cost;
 
+  // Check if this is a "fresh" tap (no recent taps = first tap after pause)
+  const recentTaps = state.airControl.recentTapTimes.filter(
+    t => nowMs - t < TAP_WINDOW_MS
+  );
+  const isFreshTap = recentTaps.length === 0;
+
   // Add tap timestamp (for float gravity calculation)
   state.airControl.recentTapTimes.push(nowMs);
 
@@ -204,24 +221,47 @@ export function registerFloatTap(
     t => nowMs - t < TAP_WINDOW_MS
   );
 
-  // Check if ascending (vy < 0 means moving upward)
-  const isAscending = state.vy < 0;
-
-  if (isAscending) {
-    // NEUTRALIZE upward motion - tap cancels the rise
-    state.vy = 0;
-    // NO velocity boost during ascent - prevents launch tap abuse
-    return {
-      applied: true,
-      denied: false,
-      velocityBoost: 0
-    };
+  // BOUNCE REVERSAL MECHANIC (special case)
+  // If player is moving right after a bounce, taps change direction
+  if (state.airControl.postBounceMovingRight && state.vx > 0) {
+    if (state.airControl.postBounceTapCount === 0) {
+      // First tap: stop completely
+      state.vx = 0;
+      state.vy = 0;
+      state.airControl.postBounceTapCount = 1;
+      return { applied: true, denied: false, velocityBoost: 0 };
+    } else if (state.airControl.postBounceTapCount === 1) {
+      // Second tap: half speed in opposite direction (leftward)
+      state.vx = -MAX_VELOCITY / 2; // -3.5
+      state.airControl.postBounceTapCount = 2;
+      state.airControl.postBounceMovingRight = false; // End bounce reversal mode
+      return { applied: true, denied: false, velocityBoost: -MAX_VELOCITY / 2 };
+    }
   }
 
-  // DESCENDING or LEVEL: Apply forward velocity boost
-  // Capped at MAX_VELOCITY to prevent infinite acceleration
+  // BOMB JACK STYLE TAP BEHAVIOR
+  // First tap after pause = FULL STOP + start floating right
+  // Subsequent rapid taps = continue floating with small boosts
+
+  if (isFreshTap) {
+    // FIRST TAP: Full velocity reset, start fresh floating right
+    state.vx = TAP_VELOCITY_BOOST; // Start with one boost worth of rightward velocity
+    state.vy = 0; // Stop falling
+    return { applied: true, denied: false, velocityBoost: TAP_VELOCITY_BOOST };
+  }
+
+  // SUBSEQUENT TAPS: Small boost, capped at cruising speed
+  // Already floating (recent taps exist), just add momentum
   const oldVx = state.vx;
-  state.vx = Math.min(state.vx + TAP_VELOCITY_BOOST, MAX_VELOCITY);
+
+  // Only boost if below float cruising speed and moving right (or stopped)
+  if (state.vx >= 0 && state.vx < FLOAT_MAX_VELOCITY) {
+    state.vx = Math.min(state.vx + TAP_VELOCITY_BOOST, FLOAT_MAX_VELOCITY);
+  } else if (state.vx < 0) {
+    // Moving left - tap reduces leftward momentum toward 0
+    state.vx = Math.min(state.vx + TAP_VELOCITY_BOOST, FLOAT_MAX_VELOCITY);
+  }
+
   const actualBoost = state.vx - oldVx;
 
   return {

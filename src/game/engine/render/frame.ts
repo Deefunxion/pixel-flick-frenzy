@@ -1,6 +1,7 @@
 import type { Theme } from '@/game/themes';
 import type { GameState } from '../types';
 import { H, W, FREE_THROWS_CAP } from '@/game/constants';
+import { formatZenoScore } from '@/game/leaderboard';
 import { getMsUntilNextThrow, formatRegenTime } from '../throws';
 import { renderFlipbookFrame } from './flipbookFrame';
 import { renderNoirFrame } from './noirFrame';
@@ -80,19 +81,19 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
   // HIGH label
   ctx.fillStyle = theme.accent3;
   ctx.fillText('HIGH', W - 8, 12);
-  // HIGH value
+  // HIGH value - uses Zeno precision (up to 6 decimals near edge)
   ctx.font = 'bold 10px monospace';
   ctx.fillStyle = theme.highlight;
-  ctx.fillText(state.best.toFixed(2), W - 8, 23);
+  ctx.fillText(formatZenoScore(state.best), W - 8, 23);
 
   // LAST label
   ctx.font = '8px "Comic Sans MS", cursive';
   ctx.fillStyle = theme.accent3;
   ctx.fillText('LAST', W - 8, 36);
-  // LAST value - orange for visibility
+  // LAST value - uses Zeno precision (up to 6 decimals near edge)
   ctx.font = 'bold 10px monospace';
   ctx.fillStyle = '#ed8818';  // Orange for visibility
-  ctx.fillText(state.lastDist !== null ? state.lastDist.toFixed(2) : '-', W - 8, 47);
+  ctx.fillText(state.lastDist !== null ? formatZenoScore(state.lastDist) : '-', W - 8, 47);
 
   ctx.restore();
 

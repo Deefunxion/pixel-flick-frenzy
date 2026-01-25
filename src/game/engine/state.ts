@@ -283,6 +283,8 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
       brakeTaps: 0,
       recentTapTimes: [],
       isHoldingBrake: false,
+      postBounceMovingRight: false,
+      postBounceTapCount: 0,
     },
     // Bounce surface (puzzle mechanic) - temporarily disabled
     bounce: null,
@@ -419,6 +421,8 @@ export function resetPhysics(state: GameState) {
     brakeTaps: 0,
     recentTapTimes: [],
     isHoldingBrake: false,
+    postBounceMovingRight: false,
+    postBounceTapCount: 0,
   };
 
   // Bounce surfaces disabled

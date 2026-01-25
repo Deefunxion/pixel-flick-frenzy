@@ -96,6 +96,9 @@ export interface AirControl {
   brakeTaps: number;           // Count for contract validation
   recentTapTimes: number[];    // Timestamps of recent taps for float detection
   isHoldingBrake: boolean;     // True when holding for hard brake
+  // Bounce reversal mechanic
+  postBounceMovingRight: boolean;  // True if moving right after a bounce
+  postBounceTapCount: number;      // Taps since last bounce (0, 1, 2+)
 }
 
 export type TutorialPhase = 'none' | 'idle' | 'charge' | 'air' | 'slide';

@@ -183,6 +183,13 @@ export function updateFlightPhysics(
   // Apply gravity with calculated multiplier
   state.vy += BASE_GRAV * effectiveTimeScale * gravityMult;
 
+  // BOMB JACK STYLE AIR FRICTION
+  // When NOT floating (no recent taps), horizontal velocity slowly decays
+  // When floating (rapid taps), you maintain momentum better
+  const isFloating = gravityMult < 0.5; // Floating if gravity is significantly reduced
+  const airFriction = isFloating ? 0.998 : 0.992; // Less drag when floating
+  state.vx *= airFriction;
+
   // Wind effect with 50% resistance when air-braking
   const isAirBraking = pressed && state.precisionInput.holdDuration > BRAKE_ACTIVATION_FRAMES;
   const windResistance = isAirBraking ? 0.5 : 1.0;
@@ -314,6 +321,11 @@ export function processBounceCollision(
   if (state.bounce && checkBounceCollision(state.px, state.py, state.bounce)) {
     const bounced = applyBounce(state, state.bounce);
     if (bounced) {
+      // Track bounce direction for reversal mechanic
+      // If moving right after bounce, player can tap to reverse direction
+      state.airControl.postBounceMovingRight = state.vx > 0;
+      state.airControl.postBounceTapCount = 0;
+
       // Visual feedback
       state.screenShake = state.reduceFx ? 0 : 3;
       if (state.particleSystem) {
@@ -406,33 +418,67 @@ export function processArcadeCollisions(
   // Portal collision (bidirectional - can enter from either side)
   const portalSide = state.arcadePortal ? checkPortalEntry(state.px, state.py, state.arcadePortal) : null;
   if (portalSide) {
+    // Store entry position before teleport
+    const entryX = state.px;
+    const entryY = state.py;
+
     applyPortalTeleport(state.arcadePortal!, portalSide, state, state);
 
-    // Visual feedback: portal effect
-    state.screenFlash = 0.5;
+    // Visual feedback: ENHANCED portal juice
+    state.screenFlash = 0.7; // Stronger flash
+    state.screenShake = 8; // Add screen shake
     if (!state.reduceFx) {
       // Post-warp punch: keep slow-mo and push zoom a bit more to highlight exit
-      state.portalJuiceTimer = 36; // ~0.6s at 60fps
+      state.portalJuiceTimer = 24; // Shorter but more intense (~0.4s at 60fps)
       state.portalZoomTargetX = state.px;
       state.portalZoomTargetY = state.py;
     }
+
     if (state.particleSystem) {
+      // Entry portal burst (where player entered)
+      state.particleSystem.emit('spark', {
+        x: entryX,
+        y: entryY,
+        count: 15,
+        baseAngle: 0,
+        spread: Math.PI * 2,
+        speed: 6,
+        life: 25,
+        color: '#1e3a5f', // Blue for entry
+        gravity: 0,
+      });
+
+      // Exit portal burst (where player appeared) - more dramatic
       state.particleSystem.emit('spark', {
         x: state.px,
         y: state.py,
-        count: 20,
+        count: 25,
         baseAngle: 0,
         spread: Math.PI * 2,
-        speed: 5,
-        life: 30,
-        color: '#d35400', // Orange for flipbook portal
+        speed: 8,
+        life: 35,
+        color: '#d35400', // Orange for exit
+        gravity: 0,
+      });
+
+      // Swirl particles at exit (slower, spiraling out)
+      state.particleSystem.emit('swirl', {
+        x: state.px,
+        y: state.py,
+        count: 12,
+        baseAngle: 0,
+        spread: Math.PI * 2,
+        speed: 2,
+        life: 45,
+        color: '#f5f0e1', // Paper white
         gravity: 0,
       });
     }
 
-    // Audio: portal whoosh
-    audio.tone(200, 0.15, 'sine', 0.1);
-    audio.tone(400, 0.1, 'sine', 0.08);
+    // Audio: enhanced portal whoosh (harmonic series)
+    audio.tone(200, 0.12, 'sine', 0.12);
+    audio.tone(300, 0.10, 'sine', 0.10);
+    audio.tone(450, 0.08, 'sine', 0.08);
   }
 }
 

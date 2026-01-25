@@ -77,8 +77,45 @@ function renderActiveDoodle(
 
   ctx.restore();
 
+  // Center glow indicator - small vibrant white orb for precise hitbox
+  renderCenterGlow(ctx, x, y + bobOffset, timeMs);
+
   // Sequence number indicator (not rotated)
   renderSequenceNumber(ctx, x, y + bobOffset, displaySize, sequence);
+}
+
+/**
+ * Render a small vibrant white glow at the center of each doodle
+ * This shows the exact hitbox center for precision collection
+ */
+function renderCenterGlow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  timeMs: number
+): void {
+  ctx.save();
+
+  // Pulsing intensity
+  const pulse = 0.8 + Math.sin(timeMs * 0.008) * 0.2;
+
+  // Outer glow (soft halo)
+  const glowGradient = ctx.createRadialGradient(x, y, 0, x, y, 8);
+  glowGradient.addColorStop(0, `rgba(255, 255, 255, ${0.9 * pulse})`);
+  glowGradient.addColorStop(0.3, `rgba(255, 255, 240, ${0.5 * pulse})`);
+  glowGradient.addColorStop(0.6, `rgba(255, 220, 150, ${0.2 * pulse})`);
+  glowGradient.addColorStop(1, 'rgba(255, 200, 100, 0)');
+
+  ctx.beginPath();
+  ctx.arc(x, y, 8, 0, Math.PI * 2);
+  ctx.fillStyle = glowGradient;
+  ctx.fill();
+
+  // Core: bright white 4-pixel (2x2) square
+  ctx.fillStyle = `rgba(255, 255, 255, ${pulse})`;
+  ctx.fillRect(x - 1, y - 1, 2, 2);
+
+  ctx.restore();
 }
 
 function renderFallbackDoodle(

@@ -9,13 +9,23 @@ const PORTAL_GLOW = 'rgba(30, 58, 95, 0.4)';
 export function renderPortal(
   ctx: CanvasRenderingContext2D,
   portal: Portal | null,
-  timeMs: number
+  timeMs: number,
+  portalJuiceTimer: number = 0
 ): void {
   if (!portal) return;
 
+  // Determine if exit ripple should be shown (just warped)
+  const showExitRipple = portal.usedThisThrow && portalJuiceTimer > 0;
+  const rippleIntensity = portalJuiceTimer / 24; // 0-1 based on remaining juice
+
   // Render both portals identically (bidirectional)
-  renderPortalOrb(ctx, portal.aX, portal.aY, portal.radius, timeMs, portal.usedThisThrow);
-  renderPortalOrb(ctx, portal.bX, portal.bY, portal.radius, timeMs, portal.usedThisThrow);
+  const isExitA = portal.lastUsedSide === 'b'; // If entered B, exit is A
+  const isExitB = portal.lastUsedSide === 'a'; // If entered A, exit is B
+
+  renderPortalOrb(ctx, portal.aX, portal.aY, portal.radius, timeMs, portal.usedThisThrow,
+    showExitRipple && isExitA ? rippleIntensity : 0);
+  renderPortalOrb(ctx, portal.bX, portal.bY, portal.radius, timeMs, portal.usedThisThrow,
+    showExitRipple && isExitB ? rippleIntensity : 0);
 
   // Connection line - hand-drawn dashed style
   if (!portal.usedThisThrow) {
@@ -38,7 +48,8 @@ function renderPortalOrb(
   y: number,
   radius: number,
   timeMs: number,
-  used: boolean
+  used: boolean,
+  rippleIntensity: number = 0
 ): void {
   ctx.save();
 
@@ -47,6 +58,36 @@ function renderPortalOrb(
   const r = radius * pulse;
 
   ctx.translate(x, y);
+
+  // Exit ripple effect (expanding rings when just teleported)
+  if (rippleIntensity > 0) {
+    const rippleProgress = 1 - rippleIntensity; // 0 to 1 as timer decreases
+    const rippleRadius = r + rippleProgress * 60; // Expands outward
+    const rippleAlpha = rippleIntensity * 0.6;
+
+    // Multiple ripple rings
+    for (let i = 0; i < 3; i++) {
+      const ringProgress = (rippleProgress + i * 0.15) % 1;
+      const ringRadius = r + ringProgress * 50;
+      const ringAlpha = (1 - ringProgress) * rippleAlpha * 0.4;
+
+      ctx.beginPath();
+      ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(211, 84, 0, ${ringAlpha})`;
+      ctx.lineWidth = 3 - ringProgress * 2;
+      ctx.stroke();
+    }
+
+    // Bright flash at center
+    const flashGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 2);
+    flashGradient.addColorStop(0, `rgba(255, 255, 255, ${rippleIntensity * 0.8})`);
+    flashGradient.addColorStop(0.3, `rgba(211, 84, 0, ${rippleIntensity * 0.5})`);
+    flashGradient.addColorStop(1, 'rgba(211, 84, 0, 0)');
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 2, 0, Math.PI * 2);
+    ctx.fillStyle = flashGradient;
+    ctx.fill();
+  }
 
   // Outer glow (hand-drawn feel)
   if (!used) {
