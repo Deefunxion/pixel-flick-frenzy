@@ -1,5 +1,5 @@
 // src/game/engine/arcade/generator/level-generator.ts
-import type { ArcadeLevel, DoodlePlacement, SpringPlacement, PortalPair } from '../types';
+import type { ArcadeLevel, DoodlePlacement, SpringPlacement, PortalPair, HazardPlacement, HazardMotion, WindZonePlacement, WindDirection, GravityWellPlacement, GravityWellType, FrictionZonePlacement, FrictionType, DoodleMotion } from '../types';
 import type { GenerationResult, CharacterData, GhostInput } from './types';
 import { SeededRandom } from './random';
 import { StrokeTransformer } from './transform';
@@ -255,7 +255,14 @@ export class LevelGenerator {
       doodles,
       springs: [],
       portal: null,
+      hazards: [],
+      windZones: [],
+      gravityWells: [],
+      frictionZones: [],
     };
+
+    // Get world config for this level
+    const worldConfig = getWorldConfig(levelId);
 
     // Add props if needed
     const props = shouldUseProps(levelId);
@@ -264,6 +271,15 @@ export class LevelGenerator {
     }
     if (props.portals) {
       level.portal = this.generatePortal(rng);
+    }
+
+    // Add hazards for levels 71+
+    if (worldConfig.mechanics.staticHazards) {
+      level.hazards = this.generateHazards(
+        positions,
+        rng.derive('hazards'),
+        worldConfig.mechanics.movingHazards
+      );
     }
 
     // Validate with physics
@@ -379,6 +395,65 @@ export class LevelGenerator {
       exitDirection: rng.pick(['straight', 'up-45'] as const),
       exitSpeed: rng.nextFloat(0.6, 1.2),
     };
+  }
+
+  private generateHazards(
+    doodlePositions: { x: number; y: number }[],
+    rng: SeededRandom,
+    allowMoving: boolean
+  ): HazardPlacement[] {
+    const hazards: HazardPlacement[] = [];
+    const hazardCount = rng.nextInt(1, 3);
+    const sprites = ['spike', 'saw', 'fire'] as const;
+
+    for (let i = 0; i < hazardCount; i++) {
+      // Place hazards NOT directly on doodle paths
+      let x: number, y: number;
+      let attempts = 0;
+
+      do {
+        x = rng.nextInt(80, 380);
+        y = rng.nextInt(50, 180);
+        attempts++;
+      } while (
+        attempts < 20 &&
+        doodlePositions.some(d =>
+          Math.abs(d.x - x) < 40 && Math.abs(d.y - y) < 40
+        )
+      );
+
+      const sprite = rng.pick(sprites);
+
+      // Motion for moving hazards (level 81+)
+      let motion: HazardMotion | undefined;
+      if (allowMoving && rng.next() > 0.4) {
+        if (rng.next() > 0.5) {
+          motion = {
+            type: 'linear',
+            axis: rng.pick(['x', 'y'] as const),
+            range: rng.nextInt(30, 60),
+            speed: rng.nextFloat(0.3, 0.8),
+          };
+        } else {
+          motion = {
+            type: 'circular',
+            radius: rng.nextInt(20, 40),
+            speed: rng.nextFloat(0.2, 0.5),
+          };
+        }
+      }
+
+      hazards.push({
+        x,
+        y,
+        radius: sprite === 'fire' ? 15 : 12,
+        sprite,
+        motion,
+        scale: rng.nextFloat(0.8, 1.2),
+      });
+    }
+
+    return hazards;
   }
 
   private tryPropAdjustments(level: ArcadeLevel, rng: SeededRandom): GenerationResult {
