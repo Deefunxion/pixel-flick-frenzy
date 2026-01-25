@@ -2,13 +2,14 @@
 import type { CharacterData, StrokePoint } from './types';
 
 // Game canvas bounds (game units)
+// Full play area: x from 35 (after launch pad) to 410 (before cliff edge)
 const GAME_CANVAS = {
   width: 420,
   height: 240,
-  launchZone: 35,    // x < 35 is launch area
-  dangerZone: 400,   // x > 400 is danger zone
-  topMargin: 20,
-  bottomMargin: 220, // Leave space for ground
+  minX: 35,          // Start of play area (after launch pad)
+  maxX: 410,         // End of play area (before cliff edge at 420)
+  topMargin: 25,     // Leave space at top
+  bottomMargin: 200, // Leave space for ground (ground at ~220)
 };
 
 // SVG source bounds (Make Me a Hanzi uses 0-1000)
@@ -29,10 +30,11 @@ export class StrokeTransformer {
 
   constructor(options: TransformOptions = {}) {
     this.options = {
-      maintainAspectRatio: options.maintainAspectRatio ?? true,
+      // Default: DON'T maintain aspect ratio - stretch to fill the wide game canvas
+      maintainAspectRatio: options.maintainAspectRatio ?? false,
       rotation: options.rotation ?? 0,
       flipHorizontal: options.flipHorizontal ?? false,
-      padding: options.padding ?? 10,
+      padding: options.padding ?? 5, // Smaller padding to maximize spread
     };
   }
 
@@ -115,37 +117,37 @@ export class StrokeTransformer {
       x = SVG_BOUNDS.width - x;
     }
 
-    // Calculate target bounds (play zone)
+    // Calculate target bounds (full play zone: 35-410 x 25-200)
     const targetX = {
-      min: GAME_CANVAS.launchZone + this.options.padding,
-      max: GAME_CANVAS.dangerZone - this.options.padding,
+      min: GAME_CANVAS.minX + this.options.padding,   // 35 + 5 = 40
+      max: GAME_CANVAS.maxX - this.options.padding,   // 410 - 5 = 405
     };
     const targetY = {
-      min: GAME_CANVAS.topMargin + this.options.padding,
-      max: GAME_CANVAS.bottomMargin - this.options.padding,
+      min: GAME_CANVAS.topMargin + this.options.padding,     // 25 + 5 = 30
+      max: GAME_CANVAS.bottomMargin - this.options.padding,  // 200 - 5 = 195
     };
 
-    const targetWidth = targetX.max - targetX.min;
-    const targetHeight = targetY.max - targetY.min;
+    const targetWidth = targetX.max - targetX.min;   // 405 - 40 = 365
+    const targetHeight = targetY.max - targetY.min;  // 195 - 30 = 165
 
-    // Scale factors
-    let scaleX = targetWidth / SVG_BOUNDS.width;
-    let scaleY = targetHeight / SVG_BOUNDS.height;
+    // Scale factors - stretch to fill the wide game canvas
+    let scaleX = targetWidth / SVG_BOUNDS.width;   // 365/1000 = 0.365
+    let scaleY = targetHeight / SVG_BOUNDS.height; // 165/1000 = 0.165
 
-    // Maintain aspect ratio if requested
+    // Maintain aspect ratio if requested (off by default for better spread)
     if (this.options.maintainAspectRatio) {
       const scale = Math.min(scaleX, scaleY);
       scaleX = scale;
       scaleY = scale;
     }
 
-    // Center offset for aspect ratio preservation
+    // Center offset (only used if maintaining aspect ratio)
     const usedWidth = SVG_BOUNDS.width * scaleX;
     const usedHeight = SVG_BOUNDS.height * scaleY;
     const offsetX = (targetWidth - usedWidth) / 2;
     const offsetY = (targetHeight - usedHeight) / 2;
 
-    // Apply transformation
+    // Apply transformation - spread character across full play area
     const transformedX = targetX.min + offsetX + (x / SVG_BOUNDS.width) * usedWidth;
     const transformedY = targetY.min + offsetY + (y / SVG_BOUNDS.height) * usedHeight;
 

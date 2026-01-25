@@ -17,12 +17,12 @@ describe('StrokeTransformer', () => {
     const transformer = new StrokeTransformer();
     const points = transformer.transformToGameCanvas(mockCharacter);
 
-    // All points should be within game bounds
+    // All points should be within game bounds (35-410 x 25-200)
     for (const point of points) {
-      expect(point.x).toBeGreaterThanOrEqual(35); // After launch zone
-      expect(point.x).toBeLessThanOrEqual(400); // Before danger zone
-      expect(point.y).toBeGreaterThanOrEqual(20);
-      expect(point.y).toBeLessThanOrEqual(220);
+      expect(point.x).toBeGreaterThanOrEqual(35); // After launch pad
+      expect(point.x).toBeLessThanOrEqual(410); // Before cliff edge
+      expect(point.y).toBeGreaterThanOrEqual(25);
+      expect(point.y).toBeLessThanOrEqual(200);
     }
   });
 
