@@ -1,0 +1,384 @@
+[
+  {
+    "id": 1,
+    "landingTarget": 410,
+    "doodles": [],
+    "springs": [],
+    "portal": null
+  },
+  {
+    "id": 2,
+    "landingTarget": 411,
+    "doodles": [
+      {
+        "x": 200,
+        "y": 100,
+        "size": "large",
+        "sprite": "coin",
+        "sequence": 1
+      }
+    ],
+    "springs": [],
+    "portal": null
+  },
+  {
+    "id": 3,
+    "landingTarget": 412,
+    "doodles": [
+      {
+        "x": 150,
+        "y": 90,
+        "size": "large",
+        "sprite": "coin",
+        "sequence": 1
+      },
+      {
+        "x": 280,
+        "y": 110,
+        "size": "small",
+        "sprite": "star",
+        "sequence": 2
+      }
+    ],
+    "springs": [],
+    "portal": null
+  },
+  {
+    "id": 4,
+    "landingTarget": 413,
+    "doodles": [
+      {
+        "x": 120,
+        "y": 80,
+        "size": "large",
+        "sprite": "star",
+        "sequence": 1
+      },
+      {
+        "x": 220,
+        "y": 100,
+        "size": "small",
+        "sprite": "coin",
+        "sequence": 2
+      },
+      {
+        "x": 320,
+        "y": 120,
+        "size": "small",
+        "sprite": "star",
+        "sequence": 3
+      }
+    ],
+    "springs": [],
+    "portal": null
+  },
+  {
+    "id": 5,
+    "landingTarget": 414,
+    "doodles": [
+      {
+        "x": 140,
+        "y": 70,
+        "size": "large",
+        "sprite": "coin",
+        "sequence": 1
+      },
+      {
+        "x": 250,
+        "y": 120,
+        "size": "small",
+        "sprite": "star",
+        "sequence": 2
+      },
+      {
+        "x": 340,
+        "y": 90,
+        "size": "small",
+        "sprite": "coin",
+        "sequence": 3
+      }
+    ],
+    "springs": [],
+    "portal": null
+  },
+  {
+    "id": 6,
+    "landingTarget": 415,
+    "doodles": [
+      {
+        "x": 130,
+        "y": 60,
+        "size": "large",
+        "sprite": "star",
+        "sequence": 1
+      },
+      {
+        "x": 240,
+        "y": 50,
+        "size": "small",
+        "sprite": "coin",
+        "sequence": 2
+      },
+      {
+        "x": 350,
+        "y": 100,
+        "size": "small",
+        "sprite": "star",
+        "sequence": 3
+      }
+    ],
+    "springs": [
+      {
+        "x": 180,
+        "y": 130,
+        "direction": "up"
+      }
+    ],
+    "portal": null
+  },
+  {
+    "id": 7,
+    "landingTarget": 416,
+    "doodles": [
+      {
+        "x": 100,
+        "y": 80,
+        "size": "large",
+        "sprite": "coin",
+        "sequence": 1
+      },
+      {
+        "x": 180,
+        "y": 40,
+        "size": "small",
+        "sprite": "star",
+        "sequence": 2
+      },
+      {
+        "x": 280,
+        "y": 60,
+        "size": "small",
+        "sprite": "coin",
+        "sequence": 3
+      },
+      {
+        "x": 360,
+        "y": 110,
+        "size": "small",
+        "sprite": "star",
+        "sequence": 4
+      }
+    ],
+    "springs": [
+      {
+        "x": 140,
+        "y": 120,
+        "direction": "up-right"
+      },
+      {
+        "x": 240,
+        "y": 100,
+        "direction": "up"
+      }
+    ],
+    "portal": null
+  },
+  {
+    "id": 8,
+    "landingTarget": 417,
+    "doodles": [
+      {
+        "x": 80,
+        "y": 90,
+        "size": "large",
+        "sprite": "star",
+        "sequence": 1
+      },
+      {
+        "x": 150,
+        "y": 50,
+        "size": "small",
+        "sprite": "coin",
+        "sequence": 2
+      },
+      {
+        "x": 380,
+        "y": 60,
+        "size": "small",
+        "sprite": "star",
+        "sequence": 3
+      },
+      {
+        "x": 320,
+        "y": 100,
+        "size": "small",
+        "sprite": "coin",
+        "sequence": 4
+      },
+      {
+        "x": 390,
+        "y": 130,
+        "size": "small",
+        "sprite": "star",
+        "sequence": 5
+      }
+    ],
+    "springs": [
+      {
+        "x": 120,
+        "y": 130,
+        "direction": "up"
+      },
+      {
+        "x": 350,
+        "y": 90,
+        "direction": "up-left"
+      }
+    ],
+    "portal": {
+      "entry": {
+        "x": 15,
+        "y": 40
+      },
+      "exit": {
+        "x": 380,
+        "y": 60
+      }
+    }
+  },
+  {
+    "id": 9,
+    "landingTarget": 418,
+    "doodles": [
+      {
+        "x": 90,
+        "y": 70,
+        "size": "large",
+        "sprite": "coin",
+        "sequence": 1
+      },
+      {
+        "x": 160,
+        "y": 45,
+        "size": "small",
+        "sprite": "star",
+        "sequence": 2
+      },
+      {
+        "x": 250,
+        "y": 55,
+        "size": "small",
+        "sprite": "coin",
+        "sequence": 3
+      },
+      {
+        "x": 340,
+        "y": 80,
+        "size": "small",
+        "sprite": "star",
+        "sequence": 4
+      },
+      {
+        "x": 400,
+        "y": 120,
+        "size": "small",
+        "sprite": "coin",
+        "sequence": 5
+      }
+    ],
+    "springs": [
+      {
+        "x": 130,
+        "y": 110,
+        "direction": "up-right"
+      },
+      {
+        "x": 300,
+        "y": 120,
+        "direction": "up"
+      }
+    ],
+    "portal": {
+      "entry": {
+        "x": 15,
+        "y": 50
+      },
+      "exit": {
+        "x": 370,
+        "y": 55
+      }
+    }
+  },
+  {
+    "id": 10,
+    "landingTarget": 419,
+    "doodles": [
+      {
+        "x": 70,
+        "y": 80,
+        "size": "large",
+        "sprite": "star",
+        "sequence": 1
+      },
+      {
+        "x": 130,
+        "y": 50,
+        "size": "small",
+        "sprite": "coin",
+        "sequence": 2
+      },
+      {
+        "x": 200,
+        "y": 70,
+        "size": "small",
+        "sprite": "star",
+        "sequence": 3
+      },
+      {
+        "x": 300,
+        "y": 45,
+        "size": "small",
+        "sprite": "coin",
+        "sequence": 4
+      },
+      {
+        "x": 370,
+        "y": 80,
+        "size": "small",
+        "sprite": "star",
+        "sequence": 5
+      },
+      {
+        "x": 410,
+        "y": 110,
+        "size": "small",
+        "sprite": "coin",
+        "sequence": 6
+      }
+    ],
+    "springs": [
+      {
+        "x": 110,
+        "y": 120,
+        "direction": "up"
+      },
+      {
+        "x": 244,
+        "y": 97,
+        "direction": "up-right",
+        "strength": 0.6
+      }
+    ],
+    "portal": {
+      "entry": {
+        "x": 326,
+        "y": 55
+      },
+      "exit": {
+        "x": 28,
+        "y": 28
+      },
+      "exitSpeed": 0.6
+    }
+  }
+]

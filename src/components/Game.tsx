@@ -705,8 +705,9 @@ const Game = () => {
 
     const handleKeyDown = async (e: KeyboardEvent) => {
       // Dev mode: Ctrl+E toggles level editor
-      if (import.meta.env.DEV && e.key === 'e' && e.ctrlKey) {
+      if (import.meta.env.DEV && e.ctrlKey && (e.key === 'e' || e.key === 'E' || e.code === 'KeyE')) {
         e.preventDefault();
+        e.stopPropagation();
         setShowEditor(prev => !prev);
         return;
       }

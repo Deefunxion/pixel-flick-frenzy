@@ -10,6 +10,8 @@ export interface Doodle {
   sequence: number;
   collected: boolean;
   collectedAt: number;  // timestamp for animation
+  scale: number;        // Custom scale multiplier
+  rotation: number;     // Rotation in degrees
 }
 
 const SIZE_CONFIG: Record<DoodleSize, { hitRadius: number; displaySize: number }> = {
@@ -19,15 +21,18 @@ const SIZE_CONFIG: Record<DoodleSize, { hitRadius: number; displaySize: number }
 
 export function createDoodleFromPlacement(placement: DoodlePlacement): Doodle {
   const config = SIZE_CONFIG[placement.size];
+  const scale = placement.scale ?? 1.0;
   return {
     x: placement.x,
     y: placement.y,
-    hitRadius: config.hitRadius,
-    displaySize: config.displaySize,
+    hitRadius: config.hitRadius * scale,
+    displaySize: config.displaySize * scale,
     sprite: placement.sprite,
     sequence: placement.sequence,
     collected: false,
     collectedAt: 0,
+    scale,
+    rotation: placement.rotation ?? 0,
   };
 }
 

@@ -46,10 +46,19 @@ function renderActiveDoodle(
   doodle: Doodle,
   timeMs: number
 ): void {
-  const { x, y, displaySize, sprite, sequence } = doodle;
+  const { x, y, displaySize, sprite, sequence, rotation } = doodle;
 
   // Gentle bob animation
   const bobOffset = Math.sin(timeMs * 0.003 + sequence) * 3;
+
+  ctx.save();
+
+  // Apply rotation if set
+  if (rotation !== 0) {
+    ctx.translate(x, y + bobOffset);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.translate(-x, -(y + bobOffset));
+  }
 
   // Try to render sprite
   const img = getDoodleSprite(sprite);
@@ -66,7 +75,9 @@ function renderActiveDoodle(
     renderFallbackDoodle(ctx, x, y + bobOffset, displaySize, sequence);
   }
 
-  // Sequence number indicator
+  ctx.restore();
+
+  // Sequence number indicator (not rotated)
   renderSequenceNumber(ctx, x, y + bobOffset, displaySize, sequence);
 }
 

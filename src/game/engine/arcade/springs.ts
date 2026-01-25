@@ -7,6 +7,7 @@ export interface Spring {
   direction: SpringDirection;
   radius: number;
   force: number;
+  scale: number;
   usedThisThrow: boolean;
 }
 
@@ -22,12 +23,15 @@ const DIRECTION_VECTORS: Record<SpringDirection, { x: number; y: number }> = {
 };
 
 export function createSpringFromPlacement(placement: SpringPlacement): Spring {
+  const scale = placement.scale ?? 1.0;
+  const strength = placement.strength ?? 1.0;
   return {
     x: placement.x,
     y: placement.y,
     direction: placement.direction,
-    radius: DEFAULT_RADIUS,
-    force: DEFAULT_FORCE,
+    radius: DEFAULT_RADIUS * scale,
+    force: DEFAULT_FORCE * strength,
+    scale,
     usedThisThrow: false,
   };
 }

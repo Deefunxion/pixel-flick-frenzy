@@ -1,6 +1,7 @@
 // src/game/engine/arcade/types.ts
 export type DoodleSize = 'small' | 'large';
 export type SpringDirection = 'up' | 'up-left' | 'up-right' | 'down';
+export type PortalExitDirection = 'straight' | 'up-45' | 'down-45';
 
 export interface DoodlePlacement {
   x: number;
@@ -8,17 +9,24 @@ export interface DoodlePlacement {
   size: DoodleSize;
   sprite: string;      // e.g., 'paperplane', 'star', 'globe'
   sequence: number;    // 1, 2, 3... for order objective
+  scale?: number;      // Custom scale multiplier (default 1.0)
+  rotation?: number;   // Rotation in degrees (default 0)
 }
 
 export interface SpringPlacement {
   x: number;
   y: number;
   direction: SpringDirection;
+  strength?: number;   // Impulse multiplier (default 1.0)
+  scale?: number;      // Visual scale (default 1.0)
 }
 
 export interface PortalPair {
   entry: { x: number; y: number };
   exit: { x: number; y: number };
+  exitDirection?: PortalExitDirection;  // Direction to launch player (default 'straight')
+  exitSpeed?: number;                   // Speed multiplier on exit (default 1.0)
+  scale?: number;                       // Visual scale for both portals (default 1.0)
 }
 
 export interface ArcadeLevel {

@@ -1,5 +1,5 @@
 // src/game/engine/arcade/portal.ts
-import type { PortalPair } from './types';
+import type { PortalPair, PortalExitDirection } from './types';
 
 export interface Portal {
   // Portal A (left side)
@@ -10,20 +10,29 @@ export interface Portal {
   bY: number;
   radius: number;
   usedThisThrow: boolean;
-  lastUsedSide: 'a' | 'b' | null;  // Track which side was used
+  lastUsedSide: 'a' | 'b' | null;
+  // Exit behavior
+  exitDirection: PortalExitDirection;
+  exitSpeed: number;
+  scale: number;
 }
 
 const DEFAULT_RADIUS = 18;
+const BASE_EXIT_SPEED = 8; // Base horizontal speed on exit
 
 export function createPortalFromPair(pair: PortalPair): Portal {
+  const scale = pair.scale ?? 1.0;
   return {
     aX: pair.entry.x,
     aY: pair.entry.y,
     bX: pair.exit.x,
     bY: pair.exit.y,
-    radius: DEFAULT_RADIUS,
+    radius: DEFAULT_RADIUS * scale,
     usedThisThrow: false,
     lastUsedSide: null,
+    exitDirection: pair.exitDirection ?? 'straight',
+    exitSpeed: pair.exitSpeed ?? 1.0,
+    scale,
   };
 }
 
@@ -54,13 +63,50 @@ export function checkPortalEntry(
 }
 
 /**
- * Teleport player to the opposite portal
+ * Get exit velocity based on direction setting
+ */
+function getExitVelocity(
+  direction: PortalExitDirection,
+  exitSpeed: number,
+  enteredSide: 'a' | 'b'
+): { vx: number; vy: number } {
+  const speed = BASE_EXIT_SPEED * exitSpeed;
+
+  // When entering A, exit from B (going right)
+  // When entering B, exit from A (going left)
+  const horizontalSign = enteredSide === 'a' ? 1 : -1;
+
+  switch (direction) {
+    case 'up-45':
+      // 45 degrees upward
+      return {
+        vx: speed * horizontalSign * 0.707,
+        vy: -speed * 0.707,  // Negative = up
+      };
+    case 'down-45':
+      // 45 degrees downward
+      return {
+        vx: speed * horizontalSign * 0.707,
+        vy: speed * 0.707,   // Positive = down
+      };
+    case 'straight':
+    default:
+      // Horizontal
+      return {
+        vx: speed * horizontalSign,
+        vy: 0,
+      };
+  }
+}
+
+/**
+ * Teleport player to the opposite portal and apply exit velocity
  */
 export function applyPortalTeleport(
   portal: Portal,
   enteredSide: 'a' | 'b',
   position: { px: number; py: number },
-  _velocity: { vx: number; vy: number }
+  velocity: { vx: number; vy: number }
 ): void {
   // Teleport to opposite side
   if (enteredSide === 'a') {
@@ -71,8 +117,10 @@ export function applyPortalTeleport(
     position.py = portal.aY;
   }
 
-  // Preserve momentum (direction and speed unchanged)
-  // velocity stays the same
+  // Apply exit velocity based on direction setting
+  const exitVel = getExitVelocity(portal.exitDirection, portal.exitSpeed, enteredSide);
+  velocity.vx = exitVel.vx;
+  velocity.vy = exitVel.vy;
 
   portal.usedThisThrow = true;
   portal.lastUsedSide = enteredSide;

@@ -144,6 +144,41 @@ Visual feedback for landing accuracy:
 - **`precisionRender.ts`** - Canvas rendering with segments and particles
 - **Integration**: Called from `update.ts` after successful landing
 
+### Arcade Mode (`src/game/engine/arcade/`)
+
+10-level puzzle mode with collectibles, springs, and portals:
+
+- **`levels-data.json`** - Level definitions (editable via Level Editor)
+- **`levels.ts`** - Imports JSON, exports `ARCADE_LEVELS` array
+- **`types.ts`** - Type definitions for all arcade elements
+- **`doodles.ts`** / **`doodlesRender.ts`** - Collectible system
+- **`springs.ts`** / **`springsRender.ts`** - Directional springs
+- **`portal.ts`** / **`portalRender.ts`** - Bidirectional teleporters
+- **`state.ts`** - Arcade session state and star tracking
+
+**Asset Properties:**
+| Asset | Properties |
+|-------|-----------|
+| Doodle | x, y, size (small/large), sprite (coin/star), sequence, scale?, rotation? |
+| Spring | x, y, direction (up/up-left/up-right/down), strength?, scale? |
+| Portal | entry, exit, exitDirection? (straight/up-45/down-45), exitSpeed?, scale? |
+
+### Level Editor (Dev Tool)
+
+Visual editor for designing arcade levels:
+
+- **Access**: `Ctrl+E` in dev mode
+- **Tools**: Select (✋), Doodle (🪙), Spring (🔺), Portal (🌀), Eraser (🗑️)
+- **Features**:
+  - 100 levels dropdown
+  - Direct save to `levels-data.json` via Vite plugin
+  - Actual sprite previews
+  - Drag to reposition (Select tool)
+  - Property panel for scale, rotation, strength, exitDirection
+  - Undo/Redo (Ctrl+Z / Ctrl+Y)
+  - Delete (Del/Backspace)
+- **Vite Plugin**: `vite-plugin-level-editor.ts` handles `/api/save-level` POST
+
 ## Deployment
 
 **Production URL:** https://one-more-flick.web.app

@@ -24,11 +24,43 @@ All notable changes to One-More-Flick are documented in this file.
 - **New components**: `ArcadeHUD.tsx`, `LevelSelect.tsx`, `LevelEditor.tsx`
 - **New module**: `src/game/engine/arcade/`
   - `types.ts` - Type definitions for doodles, springs, portals, stars
-  - `levels.ts` - 10 hand-crafted level definitions
+  - `levels-data.json` - Level definitions (JSON, editable via Level Editor)
+  - `levels.ts` - Imports JSON and exports ARCADE_LEVELS
   - `state.ts` - Arcade state management and star tracking
   - `doodles.ts`, `doodlesRender.ts` - Doodle system and rendering
   - `springs.ts`, `springsRender.ts` - Spring system and rendering
   - `portal.ts`, `portalRender.ts` - Portal system and rendering
+
+### Enhanced - Level Editor (2026-01-25)
+- **Direct save to code**: Vite plugin writes directly to `levels-data.json`
+  - No clipboard needed - click 💾 Save and it's done
+  - Hot reload picks up changes immediately
+- **100 levels support**: Dropdown shows levels 1-100 (✓ marks existing)
+- **Property panel**: Right-side panel for editing selected objects
+  - Doodles: sprite, size, scale (0.5x-3x), rotation (0°-360°)
+  - Springs: direction, strength (0.5x-3x), scale (0.5x-2x)
+  - Portals: exitDirection, exitSpeed, scale
+- **Drag to reposition**: Select tool (✋) allows dragging objects
+- **Undo/Redo**: Ctrl+Z / Ctrl+Y with full history
+- **Delete shortcut**: Del or Backspace to remove selected object
+- **Actual sprite previews**: Shows real coin/star images, not placeholders
+- **Selection highlight**: Blue outline on selected objects
+
+### Enhanced - Portal System (2026-01-25)
+- **Exit directions**: Portals can launch player in 3 directions
+  - `straight` (→): Horizontal launch
+  - `up-45` (↗): 45° upward launch
+  - `down-45` (↘): 45° downward launch
+- **Exit speed**: Configurable launch velocity multiplier (0.5x-3x)
+- **Bidirectional**: Can enter from either side, exit on opposite side
+- **Visual indicator**: Exit portal shows direction arrow (→, ↗, ↘)
+
+### Enhanced - Asset Properties (2026-01-25)
+- **Doodle scale**: Custom size multiplier affects both visuals and hitbox
+- **Doodle rotation**: 0°-360° rotation with counter-rotated sequence badge
+- **Spring strength**: Impulse force multiplier
+- **Spring scale**: Visual size and collision radius
+- **Portal scale**: Affects both entry and exit portal size
 
 ### Added - Pattern Solving Layer (Bomb Jack-style Air Control)
 - **New Air Control System**: Replaced simple tap/hold with Bomb Jack-inspired mechanics
