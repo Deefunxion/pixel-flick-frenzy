@@ -130,13 +130,13 @@ export function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameSt
   // Arcade mode objects (render order: zones behind, then objects, then collectibles on top)
   if (state.arcadeMode) {
     // Background zones first (behind everything)
-    renderFrictionZones(ctx, state.arcadeFrictionZones, nowMs);
-    renderWindZones(ctx, state.arcadeWindZones, false, nowMs);
-    renderGravityWells(ctx, state.arcadeGravityWells, nowMs);
+    if (state.arcadeFrictionZones?.length) renderFrictionZones(ctx, state.arcadeFrictionZones, nowMs);
+    if (state.arcadeWindZones?.length) renderWindZones(ctx, state.arcadeWindZones, false, nowMs);
+    if (state.arcadeGravityWells?.length) renderGravityWells(ctx, state.arcadeGravityWells, nowMs);
     // Objects
     renderPortal(ctx, state.arcadePortal, nowMs, state.portalJuiceTimer);
     renderSprings(ctx, state.arcadeSprings, nowMs);
-    renderHazards(ctx, state.arcadeHazards, nowMs);
+    if (state.arcadeHazards?.length) renderHazards(ctx, state.arcadeHazards, nowMs);
     // Collectibles on top
     renderDoodles(ctx, state.arcadeDoodles, nowMs);
   }

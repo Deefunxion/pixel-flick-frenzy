@@ -203,14 +203,14 @@ export function updateFlightPhysics(
   // Arcade mode zone forces
   if (state.arcadeMode) {
     // Wind zones apply directional force
-    if (state.arcadeWindZones.length > 0) {
+    if (state.arcadeWindZones?.length > 0) {
       const windForce = applyWindForces(state.px, state.py, state.vx, state.vy, state.arcadeWindZones);
       state.vx += windForce.dvx * effectiveTimeScale;
       state.vy += windForce.dvy * effectiveTimeScale;
     }
 
     // Gravity wells attract or repel
-    if (state.arcadeGravityWells.length > 0) {
+    if (state.arcadeGravityWells?.length > 0) {
       const velocity = { x: state.vx, y: state.vy };
       applyGravityWellForces(state.px, state.py, velocity, state.arcadeGravityWells);
       state.vx = velocity.x;
@@ -505,7 +505,7 @@ export function processArcadeCollisions(
   }
 
   // Hazard collision - causes immediate failure
-  if (state.arcadeHazards.length > 0) {
+  if (state.arcadeHazards?.length > 0) {
     const hitHazard = checkHazardCollision(state.px, state.py, state.arcadeHazards);
     if (hitHazard) {
       // Trigger failure animation
@@ -656,17 +656,17 @@ export function updateArcadeElements(
   if (!state.arcadeMode) return;
 
   // Update moving doodles
-  if (state.arcadeDoodles.length > 0) {
+  if (state.arcadeDoodles?.length > 0) {
     updateDoodles(state.arcadeDoodles, deltaMs);
   }
 
   // Update timed springs
-  if (state.arcadeSprings.length > 0) {
+  if (state.arcadeSprings?.length > 0) {
     updateSprings(state.arcadeSprings, nowMs);
   }
 
   // Update moving hazards
-  if (state.arcadeHazards.length > 0) {
+  if (state.arcadeHazards?.length > 0) {
     updateHazards(state.arcadeHazards, deltaMs);
   }
 
@@ -676,7 +676,7 @@ export function updateArcadeElements(
   }
 
   // Update wind zone particles (visual only)
-  if (state.arcadeWindZones.length > 0) {
+  if (state.arcadeWindZones?.length > 0) {
     updateWindZoneParticles(state.arcadeWindZones, deltaMs);
   }
 }
