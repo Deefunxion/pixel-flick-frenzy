@@ -27,9 +27,14 @@ import {
   createDoodlesFromLevel,
   createSpringsFromLevel,
   createPortalFromPair,
+  createHazardsFromLevel,
+  createWindZonesFromLevel,
+  createGravityWellsFromLevel,
+  createFrictionZonesFromLevel,
   resetDoodles,
   resetSprings,
   resetPortal,
+  resetHazards,
   resetThrowState,
   setLevelDoodleCount,
 } from './arcade';
@@ -301,6 +306,10 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
     arcadeDoodles: [],
     arcadeSprings: [],
     arcadePortal: null,
+    arcadeHazards: [],
+    arcadeWindZones: [],
+    arcadeGravityWells: [],
+    arcadeFrictionZones: [],
     // Ceiling collision
     ceilingStuckFrames: 0,
     ceilingImpactVelocity: 0,
@@ -313,6 +322,10 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
       state.arcadeDoodles = createDoodlesFromLevel(level.doodles);
       state.arcadeSprings = createSpringsFromLevel(level.springs);
       state.arcadePortal = level.portal ? createPortalFromPair(level.portal) : null;
+      state.arcadeHazards = createHazardsFromLevel(level.hazards || []);
+      state.arcadeWindZones = createWindZonesFromLevel(level.windZones);
+      state.arcadeGravityWells = createGravityWellsFromLevel(level.gravityWells || []);
+      state.arcadeFrictionZones = createFrictionZonesFromLevel(level.frictionZones || []);
       // Set doodle count for circular sequence calculation
       setLevelDoodleCount(state.arcadeState, level.doodles.length);
     }
@@ -450,6 +463,8 @@ export function resetPhysics(state: GameState) {
     resetDoodles(state.arcadeDoodles);
     resetSprings(state.arcadeSprings);
     resetPortal(state.arcadePortal);
+    resetHazards(state.arcadeHazards);
+    // WindZones, GravityWells, FrictionZones don't need reset (stateless)
   }
 
   // Reset ceiling collision state
@@ -529,6 +544,10 @@ export function loadArcadeLevel(state: GameState, levelId: number): void {
   state.arcadeDoodles = createDoodlesFromLevel(level.doodles);
   state.arcadeSprings = createSpringsFromLevel(level.springs);
   state.arcadePortal = level.portal ? createPortalFromPair(level.portal) : null;
+  state.arcadeHazards = createHazardsFromLevel(level.hazards || []);
+  state.arcadeWindZones = createWindZonesFromLevel(level.windZones);
+  state.arcadeGravityWells = createGravityWellsFromLevel(level.gravityWells || []);
+  state.arcadeFrictionZones = createFrictionZonesFromLevel(level.frictionZones || []);
 
   // Set doodle count for circular sequence calculation
   setLevelDoodleCount(state.arcadeState, level.doodles.length);

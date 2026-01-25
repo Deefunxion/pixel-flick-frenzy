@@ -11,6 +11,10 @@ import type { ArcadeState } from './arcade/types';
 import type { Doodle } from './arcade/doodles';
 import type { Spring } from './arcade/springs';
 import type { Portal } from './arcade/portal';
+import type { Hazard } from './arcade/hazards';
+import type { WindZone } from './arcade/windZones';
+import type { GravityWell } from './arcade/gravityWells';
+import type { FrictionZone } from './arcade/frictionZones';
 
 export interface Star {
   x: number;
@@ -283,6 +287,10 @@ export interface GameState {
   arcadeDoodles: Doodle[];
   arcadeSprings: Spring[];
   arcadePortal: Portal | null;
+  arcadeHazards: Hazard[];
+  arcadeWindZones: WindZone[];
+  arcadeGravityWells: GravityWell[];
+  arcadeFrictionZones: FrictionZone[];
   // Ceiling collision - "sticky" ceiling mechanic
   ceilingStuckFrames: number;  // Frames remaining stuck to ceiling
   ceilingImpactVelocity: number;  // How hard we hit (for particle intensity)

@@ -18,6 +18,10 @@ import { renderContractHUD } from '../contractRender';
 import { renderDoodles } from '../arcade/doodlesRender';
 import { renderSprings } from '../arcade/springsRender';
 import { renderPortal } from '../arcade/portalRender';
+import { renderHazards } from '../arcade/hazardsRender';
+import { renderWindZones, updateWindZoneParticles } from '../arcade/windZonesRender';
+import { renderGravityWells } from '../arcade/gravityWellsRender';
+import { renderFrictionZones } from '../arcade/frictionZonesRender';
 import { renderRingPopups } from './effects/ringJuice';
 import { renderNearMissSpotlight } from './effects/nearMiss';
 import { renderOnFireMode } from './effects/onFire';
@@ -123,10 +127,17 @@ export function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameSt
   // Render bounce surface
   renderBounce(ctx, state.bounce, nowMs);
 
-  // Arcade mode objects (portal behind, then springs, then doodles)
+  // Arcade mode objects (render order: zones behind, then objects, then collectibles on top)
   if (state.arcadeMode) {
+    // Background zones first (behind everything)
+    renderFrictionZones(ctx, state.arcadeFrictionZones, nowMs);
+    renderWindZones(ctx, state.arcadeWindZones, false, nowMs);
+    renderGravityWells(ctx, state.arcadeGravityWells, nowMs);
+    // Objects
     renderPortal(ctx, state.arcadePortal, nowMs, state.portalJuiceTimer);
     renderSprings(ctx, state.arcadeSprings, nowMs);
+    renderHazards(ctx, state.arcadeHazards, nowMs);
+    // Collectibles on top
     renderDoodles(ctx, state.arcadeDoodles, nowMs);
   }
 

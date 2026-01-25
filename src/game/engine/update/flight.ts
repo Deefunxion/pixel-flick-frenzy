@@ -34,10 +34,15 @@ import { checkRouteNodeProgress } from '../routes';
 import {
   checkDoodleCollision,
   collectDoodle as collectDoodleObj,
+  updateDoodles,
 } from '../arcade/doodles';
-import { checkSpringCollision, applySpringImpulse } from '../arcade/springs';
-import { checkPortalEntry, applyPortalTeleport } from '../arcade/portal';
+import { checkSpringCollision, applySpringImpulse, updateSprings } from '../arcade/springs';
+import { checkPortalEntry, applyPortalTeleport, updatePortal } from '../arcade/portal';
 import { collectDoodle as collectDoodleState } from '../arcade/state';
+import { updateHazards, checkHazardCollision } from '../arcade/hazards';
+import { applyWindForces } from '../arcade/windZones';
+import { applyGravityWellForces } from '../arcade/gravityWells';
+import { updateWindZoneParticles } from '../arcade/windZonesRender';
 
 // Audio interface for flight
 export type FlightAudio = {
@@ -194,6 +199,24 @@ export function updateFlightPhysics(
   const isAirBraking = pressed && state.precisionInput.holdDuration > BRAKE_ACTIVATION_FRAMES;
   const windResistance = isAirBraking ? 0.5 : 1.0;
   state.vx += state.wind * 0.3 * effectiveTimeScale * windResistance;
+
+  // Arcade mode zone forces
+  if (state.arcadeMode) {
+    // Wind zones apply directional force
+    if (state.arcadeWindZones.length > 0) {
+      const windForce = applyWindForces(state.px, state.py, state.vx, state.vy, state.arcadeWindZones);
+      state.vx += windForce.dvx * effectiveTimeScale;
+      state.vy += windForce.dvy * effectiveTimeScale;
+    }
+
+    // Gravity wells attract or repel
+    if (state.arcadeGravityWells.length > 0) {
+      const velocity = { x: state.vx, y: state.vy };
+      applyGravityWellForces(state.px, state.py, velocity, state.arcadeGravityWells);
+      state.vx = velocity.x;
+      state.vy = velocity.y;
+    }
+  }
 
   state.px += state.vx * effectiveTimeScale;
   state.py += state.vy * effectiveTimeScale;
@@ -480,6 +503,40 @@ export function processArcadeCollisions(
     audio.tone(300, 0.10, 'sine', 0.10);
     audio.tone(450, 0.08, 'sine', 0.08);
   }
+
+  // Hazard collision - causes immediate failure
+  if (state.arcadeHazards.length > 0) {
+    const hitHazard = checkHazardCollision(state.px, state.py, state.arcadeHazards);
+    if (hitHazard) {
+      // Trigger failure animation
+      state.fellOff = true;
+      state.failureAnimating = true;
+      state.failureFrame = 0;
+      state.failureType = 'tumble';
+
+      // Visual feedback
+      state.screenShake = state.reduceFx ? 0 : 12;
+      state.screenFlash = 0.8;
+
+      if (state.particleSystem) {
+        state.particleSystem.emit('spark', {
+          x: state.px,
+          y: state.py,
+          count: 20,
+          baseAngle: 0,
+          spread: Math.PI * 2,
+          speed: 5,
+          life: 30,
+          color: '#FF4444', // Red for damage
+          gravity: 0.1,
+        });
+      }
+
+      // Audio: damage sound
+      audio.tone(150, 0.15, 'sawtooth', 0.2);
+      audio.tone(100, 0.2, 'sawtooth', 0.15);
+    }
+  }
 }
 
 /**
@@ -585,5 +642,41 @@ export function checkLandingTransition(
 export function trackLastValidPosition(state: GameState): void {
   if (state.px < CLIFF_EDGE) {
     state.lastValidPx = state.px;
+  }
+}
+
+/**
+ * Update arcade element positions (moving hazards, doodles, timed springs)
+ */
+export function updateArcadeElements(
+  state: GameState,
+  deltaMs: number,
+  nowMs: number
+): void {
+  if (!state.arcadeMode) return;
+
+  // Update moving doodles
+  if (state.arcadeDoodles.length > 0) {
+    updateDoodles(state.arcadeDoodles, deltaMs);
+  }
+
+  // Update timed springs
+  if (state.arcadeSprings.length > 0) {
+    updateSprings(state.arcadeSprings, nowMs);
+  }
+
+  // Update moving hazards
+  if (state.arcadeHazards.length > 0) {
+    updateHazards(state.arcadeHazards, deltaMs);
+  }
+
+  // Update timed portal
+  if (state.arcadePortal) {
+    updatePortal(state.arcadePortal, nowMs);
+  }
+
+  // Update wind zone particles (visual only)
+  if (state.arcadeWindZones.length > 0) {
+    updateWindZoneParticles(state.arcadeWindZones, deltaMs);
   }
 }

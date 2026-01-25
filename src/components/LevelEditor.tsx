@@ -758,7 +758,7 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
     }
   };
 
-  const levelOptions = Array.from({ length: 100 }, (_, i) => i + 1);
+  const levelOptions = Array.from({ length: 250 }, (_, i) => i + 1);
 
   return (
     <div className="fixed inset-0 bg-gray-900 z-50 flex">
@@ -796,9 +796,9 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
           </button>
           <button
             onClick={moveDown}
-            disabled={swapping || level.id >= 100 || !ARCADE_LEVELS.some(l => l.id === level.id)}
+            disabled={swapping || level.id >= 250 || !ARCADE_LEVELS.some(l => l.id === level.id)}
             className={`px-2 py-1 rounded text-sm ${
-              swapping || level.id >= 100 || !ARCADE_LEVELS.some(l => l.id === level.id)
+              swapping || level.id >= 250 || !ARCADE_LEVELS.some(l => l.id === level.id)
                 ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
                 : 'bg-gray-700 text-white hover:bg-gray-600'
             }`}

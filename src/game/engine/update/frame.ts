@@ -35,6 +35,7 @@ import {
   updateJuicePopups,
   checkLandingTransition,
   trackLastValidPosition,
+  updateArcadeElements,
 } from './flight';
 import {
   processSlideControls,
@@ -244,7 +245,10 @@ export function updateFrame(state: GameState, svc: GameServices): void {
     // Bounce collision
     processBounceCollision(state, nowMs, audio);
 
-    // Arcade collisions (doodles, springs, portal)
+    // Update arcade element positions (moving hazards, doodles, timed springs)
+    updateArcadeElements(state, effectiveDeltaMs, nowMs);
+
+    // Arcade collisions (doodles, springs, portal, hazards)
     processArcadeCollisions(state, nowMs, audio);
 
     // Juice popups
