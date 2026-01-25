@@ -17,21 +17,13 @@ describe('StrokeTransformer', () => {
     const transformer = new StrokeTransformer();
     const points = transformer.transformToGameCanvas(mockCharacter);
 
-    // All points should be within game bounds (35-410 x 25-200)
+    // All points should be within game bounds (50-400 x 35-190)
     for (const point of points) {
-      expect(point.x).toBeGreaterThanOrEqual(35); // After launch pad
-      expect(point.x).toBeLessThanOrEqual(410); // Before cliff edge
-      expect(point.y).toBeGreaterThanOrEqual(25);
-      expect(point.y).toBeLessThanOrEqual(200);
+      expect(point.x).toBeGreaterThanOrEqual(50);
+      expect(point.x).toBeLessThanOrEqual(400);
+      expect(point.y).toBeGreaterThanOrEqual(35);
+      expect(point.y).toBeLessThanOrEqual(190);
     }
-  });
-
-  it('maintains aspect ratio when transforming', () => {
-    const transformer = new StrokeTransformer({ maintainAspectRatio: true });
-    const points = transformer.transformToGameCanvas(mockCharacter);
-
-    // Character should not be distorted beyond threshold
-    expect(points.length).toBeGreaterThan(0);
   });
 
   it('can rotate character 90 degrees', () => {
@@ -41,12 +33,32 @@ describe('StrokeTransformer', () => {
     expect(points.length).toBeGreaterThan(0);
   });
 
-  it('extracts stroke endpoints as doodle positions', () => {
+  it('extracts doodle positions spread evenly across play area', () => {
     const transformer = new StrokeTransformer();
-    const doodlePositions = transformer.extractDoodlePositions(mockCharacter);
+    const doodlePositions = transformer.extractDoodlePositions(mockCharacter, 5);
 
-    // Should have one position per stroke endpoint (excluding shared points)
-    expect(doodlePositions.length).toBeGreaterThanOrEqual(mockCharacter.strokeCount);
+    // Should have requested number of positions
+    expect(doodlePositions.length).toBe(5);
+
+    // Positions should span most of the play area (50-400)
+    const minX = Math.min(...doodlePositions.map(p => p.x));
+    const maxX = Math.max(...doodlePositions.map(p => p.x));
+    expect(maxX - minX).toBeGreaterThan(200); // Should span at least 200 pixels
+  });
+
+  it('ensures minimum spacing between doodles', () => {
+    const transformer = new StrokeTransformer();
+    const doodlePositions = transformer.extractDoodlePositions(mockCharacter, 8);
+
+    // Check spacing between consecutive positions
+    for (let i = 1; i < doodlePositions.length; i++) {
+      const prev = doodlePositions[i - 1];
+      const curr = doodlePositions[i];
+      const distance = Math.sqrt(
+        Math.pow(curr.x - prev.x, 2) + Math.pow(curr.y - prev.y, 2)
+      );
+      expect(distance).toBeGreaterThanOrEqual(35); // Allow small tolerance
+    }
   });
 
   it('gets full path for trajectory analysis', () => {

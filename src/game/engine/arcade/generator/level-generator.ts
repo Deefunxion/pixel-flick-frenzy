@@ -130,21 +130,13 @@ export class LevelGenerator {
       flipHorizontal: rng.next() > 0.5,
     });
 
-    const doodlePositions = transformer.extractDoodlePositions(character);
     const targetDoodleCount = getDoodleCount(levelId);
 
-    // Adjust doodle count
-    let positions = [...doodlePositions];
-    if (positions.length < targetDoodleCount) {
-      // Interpolate additional points
-      positions = this.interpolatePositions(positions, targetDoodleCount, rng);
-    } else if (positions.length > targetDoodleCount) {
-      // Take subset
-      positions = rng.shuffle([...positions]).slice(0, targetDoodleCount);
-    }
+    // Get evenly-spread doodle positions from the character pattern
+    // The transformer handles: spreading across X, using Y pattern, ensuring spacing
+    const positions = transformer.extractDoodlePositions(character, targetDoodleCount);
 
-    // Sort positions by x for sequence (left to right traversal)
-    positions.sort((a, b) => a.x - b.x);
+    // Positions are already sorted by X (left to right) from the transformer
 
     // Create doodles
     const doodles: DoodlePlacement[] = positions.map((pos, i) => ({
