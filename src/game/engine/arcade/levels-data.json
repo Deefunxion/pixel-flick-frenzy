@@ -1429,10 +1429,10 @@
         "scale": 1.3
       },
       {
-        "x": 271,
-        "y": 74,
+        "x": 273,
+        "y": 72,
         "direction": "up-right",
-        "strength": 0.6
+        "strength": 0.5
       }
     ],
     "portal": null
