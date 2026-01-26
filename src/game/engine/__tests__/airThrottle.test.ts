@@ -28,8 +28,8 @@ describe('Zeno Air Control System', () => {
 
       registerFloatTap(state, 1000);
 
-      // TAP_STAMINA_COST = 5, ceil(5 * 1) = 5
-      expect(state.stamina).toBe(95);
+      // TAP_STAMINA_COST = 3, ceil(3 * 1) = 3
+      expect(state.stamina).toBe(97);
     });
 
     it('costs more stamina near edge', () => {
@@ -40,7 +40,7 @@ describe('Zeno Air Control System', () => {
       registerFloatTap(state, 1000);
 
       const edgeMult = calculateEdgeMultiplier(410);
-      const expectedCost = Math.ceil(5 * edgeMult); // TAP_STAMINA_COST = 5
+      const expectedCost = Math.ceil(3 * edgeMult); // TAP_STAMINA_COST = 3
       expect(state.stamina).toBe(100 - expectedCost);
     });
 
@@ -67,46 +67,72 @@ describe('Zeno Air Control System', () => {
       expect(state.airControl.recentTapTimes).toEqual([1000]);
     });
 
-    it('applies forward velocity boost when DESCENDING', () => {
+  });
+
+  describe('Directional tap behavior (Bomb Jack style)', () => {
+    it('should reset vx to 0 and add boost when moving LEFT (vx < 0)', () => {
       const state = createInitialState({ reduceFx: false });
-      state.vx = 0; // Stopped (after brake)
-      state.vy = 2; // Descending (positive vy)
+      state.vx = -3;  // Moving left
+      state.vy = 2;   // Falling
       state.stamina = 100;
+      state.airControl.recentTapTimes = [];
 
-      const result = registerFloatTap(state, 1000);
+      registerFloatTap(state, 1000);
 
-      // TAP_VELOCITY_BOOST = 0.50 when descending
-      expect(result.velocityBoost).toBe(0.50);
-      expect(state.vx).toBe(0.50); // Restored forward momentum
-      expect(state.vy).toBe(2);    // vy unchanged
+      expect(state.vx).toBeCloseTo(0.8);  // Reset + boost (TAP_VELOCITY_BOOST)
+      expect(state.vy).toBe(0);            // Stop falling
     });
 
-    it('NEUTRALIZES upward motion when ASCENDING', () => {
+    it('should KEEP vx and only stop vy when moving RIGHT (vx > 0)', () => {
       const state = createInitialState({ reduceFx: false });
-      state.vx = 5;
-      state.vy = -3; // Ascending (negative vy)
+      state.vx = 3;   // Moving right
+      state.vy = 2;   // Falling
       state.stamina = 100;
+      state.airControl.recentTapTimes = [900]; // Not fresh tap
 
-      const result = registerFloatTap(state, 1000);
+      registerFloatTap(state, 1000);
 
-      // Ascending: neutralize vy, no velocity boost
-      expect(result.velocityBoost).toBe(0);
-      expect(state.vx).toBe(5);    // vx unchanged
-      expect(state.vy).toBe(0);    // vy neutralized to 0
+      expect(state.vx).toBeCloseTo(3.8);  // Keep 3 + add boost 0.8
+      expect(state.vy).toBe(0);            // Stop falling
     });
 
-    it('caps velocity at MAX_VELOCITY when descending', () => {
+    it('should KEEP vx and stop vy when vx is 0 (stopped)', () => {
       const state = createInitialState({ reduceFx: false });
-      state.vx = 6.8; // Already near max
-      state.vy = 1;   // Descending
+      state.vx = 0;   // Stopped
+      state.vy = 2;   // Falling
       state.stamina = 100;
+      state.airControl.recentTapTimes = [900];
 
-      const result = registerFloatTap(state, 1000);
+      registerFloatTap(state, 1000);
 
-      // MAX_VELOCITY = 7.0, TAP_VELOCITY_BOOST = 0.50
-      // 6.8 + 0.50 = 7.30 → capped at 7.0
-      expect(state.vx).toBe(7.0);
-      expect(result.velocityBoost).toBeCloseTo(0.2, 1); // Actual boost was capped
+      expect(state.vx).toBeCloseTo(0.8);  // 0 + boost
+      expect(state.vy).toBe(0);            // Stop falling
+    });
+
+    it('should cap vx at FLOAT_MAX_VELOCITY when moving right', () => {
+      const state = createInitialState({ reduceFx: false });
+      state.vx = 4.2;  // Near cap (4.5)
+      state.vy = 1;
+      state.stamina = 100;
+      state.airControl.recentTapTimes = [900];
+
+      registerFloatTap(state, 1000);
+
+      expect(state.vx).toBe(4.5);  // Capped, not 4.2 + 0.8 = 5.0
+      expect(state.vy).toBe(0);
+    });
+
+    it('should stop vy on fresh tap even when moving right', () => {
+      const state = createInitialState({ reduceFx: false });
+      state.vx = 5;   // Moving right fast
+      state.vy = 4;   // Falling fast
+      state.stamina = 100;
+      state.airControl.recentTapTimes = [];  // Fresh tap (no recent taps)
+
+      registerFloatTap(state, 1000);
+
+      expect(state.vx).toBeGreaterThanOrEqual(5);  // Keep or add boost
+      expect(state.vy).toBe(0);                     // Stop falling
     });
   });
 

@@ -242,28 +242,20 @@ export function registerFloatTap(
     }
   }
 
-  // BOMB JACK STYLE TAP BEHAVIOR
-  // First tap after pause = FULL STOP + start floating right
-  // Subsequent rapid taps = continue floating with small boosts
+  // BOMB JACK STYLE DIRECTIONAL TAP
+  // Always stop vertical velocity
+  state.vy = 0;
 
-  if (isFreshTap) {
-    // FIRST TAP: Full velocity reset, start fresh floating right
-    state.vx = TAP_VELOCITY_BOOST; // Start with one boost worth of rightward velocity
-    state.vy = 0; // Stop falling
-    return { applied: true, denied: false, velocityBoost: TAP_VELOCITY_BOOST };
-  }
-
-  // SUBSEQUENT TAPS: Small boost, capped at cruising speed
-  // Already floating (recent taps exist), just add momentum
   const oldVx = state.vx;
 
-  // Only boost if below float cruising speed and moving right (or stopped)
-  if (state.vx >= 0 && state.vx < FLOAT_MAX_VELOCITY) {
-    state.vx = Math.min(state.vx + TAP_VELOCITY_BOOST, FLOAT_MAX_VELOCITY);
-  } else if (state.vx < 0) {
-    // Moving left - tap reduces leftward momentum toward 0
+  if (state.vx < 0) {
+    // MOVING LEFT (wrong direction): Full reset, start fresh right
+    state.vx = TAP_VELOCITY_BOOST;
+  } else if (state.vx < FLOAT_MAX_VELOCITY) {
+    // MOVING RIGHT BUT BELOW CAP: Add boost, cap at float max
     state.vx = Math.min(state.vx + TAP_VELOCITY_BOOST, FLOAT_MAX_VELOCITY);
   }
+  // else: Already at or above float cap (from launch), preserve momentum
 
   const actualBoost = state.vx - oldVx;
 
