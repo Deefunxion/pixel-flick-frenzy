@@ -137,11 +137,11 @@ export function applySlideControl(
 // 3. HOLD (0.3sec+) = Progressive brake (ramps from gentle to strong)
 // ============================================
 
-// Gravity multipliers (responsive - needs constant flapping!)
-const HEAVY_GRAVITY_MULT = 1.2;        // No input = heavier than normal (falls fast)
-const FLOAT_MIN_GRAVITY = 0.15;        // Best float (rapid tapping) = 15% gravity
-const FLOAT_MAX_GRAVITY = 0.60;        // Single tap = 60% gravity (still falls)
-const RAPID_FLAP_GRAVITY = 0.03;       // Rapid flap (7+ taps/sec) = 3% gravity (almost horizontal)
+// Gravity multipliers (50% reduction for Bomb Jack floatier feel)
+const HEAVY_GRAVITY_MULT = 0.6;         // 50% reduction: normal gravity when not tapping
+const FLOAT_MIN_GRAVITY = 0.08;         // 50% reduction: best float with 3+ taps
+const FLOAT_MAX_GRAVITY = 0.30;         // 50% reduction: single tap float
+const RAPID_FLAP_GRAVITY = 0.015;       // 50% reduction: rapid flap almost horizontal
 
 // Tap detection (short window = must tap constantly)
 const TAP_WINDOW_MS = 250;             // 250ms = ~4 taps/sec to stay up

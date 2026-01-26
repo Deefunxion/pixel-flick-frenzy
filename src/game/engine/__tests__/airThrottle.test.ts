@@ -111,13 +111,13 @@ describe('Zeno Air Control System', () => {
   });
 
   describe('calculateTapGravity', () => {
-    it('returns heavy gravity (1.2) when no recent taps', () => {
+    it('returns heavy gravity (0.6) when no recent taps', () => {
       const state = createInitialState({ reduceFx: false });
       state.airControl.recentTapTimes = [];
 
       const gravity = calculateTapGravity(state, 1000);
 
-      expect(gravity).toBe(1.2); // HEAVY_GRAVITY_MULT
+      expect(gravity).toBe(0.6); // HEAVY_GRAVITY_MULT (50% reduction from 1.2)
     });
 
     it('returns reduced gravity with recent taps', () => {
@@ -127,34 +127,70 @@ describe('Zeno Air Control System', () => {
 
       const gravity = calculateTapGravity(state, 1000);
 
-      // Should be between min (0.1) and max (0.3) float gravity
-      expect(gravity).toBeLessThan(1.2);
-      expect(gravity).toBeGreaterThanOrEqual(0.1);
+      // Should be between min (0.08) and max (0.30) float gravity
+      expect(gravity).toBeLessThan(0.6);
+      expect(gravity).toBeGreaterThanOrEqual(0.08);
     });
 
     it('returns best float gravity with rapid tapping', () => {
       const state = createInitialState({ reduceFx: false });
-      // 2+ taps within window = best float (MAX_TAPS_FOR_BEST_FLOAT = 2)
-      state.airControl.recentTapTimes = [900, 950];
+      // 3+ taps within window = best float (MAX_TAPS_FOR_BEST_FLOAT = 3)
+      state.airControl.recentTapTimes = [850, 900, 950];
 
       const gravity = calculateTapGravity(state, 1000);
 
-      // Should be close to FLOAT_MIN_GRAVITY = 0.1
-      expect(gravity).toBeCloseTo(0.1, 1);
+      // Should be FLOAT_MIN_GRAVITY = 0.08
+      expect(gravity).toBeCloseTo(0.08, 5);
     });
 
     it('cleans old taps and recalculates', () => {
       const state = createInitialState({ reduceFx: false });
-      // Mix of old and recent taps
-      state.airControl.recentTapTimes = [100, 200, 800, 900]; // 100, 200 are old
+      // Mix of old and recent taps - taps older than 1 second (TAP_HISTORY_MS) get removed
+      state.airControl.recentTapTimes = [500, 600, 1800, 1900]; // 500, 600 are old (>1sec before 2000)
 
+      const gravity = calculateTapGravity(state, 2000);
+
+      // Only 2 recent taps (1800, 1900) within window (250ms)
+      expect(gravity).toBeGreaterThan(0.08); // Not best float (need 3 taps)
+      expect(gravity).toBeLessThan(0.6);     // But still floating
+
+      // recentTapTimes should be cleaned (keeping 1-second history from 1000-2000)
+      expect(state.airControl.recentTapTimes).toEqual([1800, 1900]);
+    });
+  });
+
+  describe('Lighter gravity multipliers (Bomb Jack style)', () => {
+    it('should have HEAVY_GRAVITY_MULT at 0.6 (was 1.2)', () => {
+      // No input = 60% gravity (was 120%)
+      const state = createInitialState({ reduceFx: false });
+      state.airControl.recentTapTimes = []; // No taps
       const gravity = calculateTapGravity(state, 1000);
+      expect(gravity).toBe(0.6);
+    });
 
-      // Only 2 recent taps (800, 900) = best float
-      expect(gravity).toBeCloseTo(0.1, 1);
+    it('should have FLOAT_MAX_GRAVITY at 0.30 (was 0.60)', () => {
+      // Single tap = 30% gravity
+      const state = createInitialState({ reduceFx: false });
+      state.airControl.recentTapTimes = [900]; // 1 tap within window
+      const gravity = calculateTapGravity(state, 1000);
+      expect(gravity).toBe(0.30);
+    });
 
-      // recentTapTimes should be cleaned
-      expect(state.airControl.recentTapTimes).toEqual([800, 900]);
+    it('should have FLOAT_MIN_GRAVITY at 0.08 (was 0.15)', () => {
+      // 3+ taps = 8% gravity (best float)
+      const state = createInitialState({ reduceFx: false });
+      state.airControl.recentTapTimes = [850, 900, 950]; // 3 taps within window
+      const gravity = calculateTapGravity(state, 1000);
+      expect(gravity).toBeCloseTo(0.08, 5);
+    });
+
+    it('should have RAPID_FLAP_GRAVITY at 0.015 (was 0.03)', () => {
+      // 7+ taps/sec = 1.5% gravity (almost horizontal)
+      const state = createInitialState({ reduceFx: false });
+      // 8 taps in ~1 second = 8 taps/sec
+      state.airControl.recentTapTimes = [100, 200, 300, 400, 500, 600, 700, 800];
+      const gravity = calculateTapGravity(state, 850);
+      expect(gravity).toBe(0.015);
     });
   });
 
