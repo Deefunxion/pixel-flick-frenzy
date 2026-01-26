@@ -3,7 +3,7 @@
  * Handles slow-mo, record zone, zoom, screen effects, edge proximity
  */
 
-import { CLIFF_EDGE } from '@/game/constants';
+import { CLIFF_EDGE, H } from '@/game/constants';
 import type { GameState } from '../types';
 import {
   shouldActivatePrecisionBar,
@@ -13,6 +13,22 @@ import {
 
 // Cinematic zone threshold - triggers 4x zoom and 4x slowdown
 const CINEMATIC_THRESHOLD = 318.5;
+
+// Height-based slow-mo scaling
+const GROUND_Y = H - 20; // 220 - where landing occurs
+const HEIGHT_SLOWMO_THRESHOLD = 180; // Start factoring height below this py value
+
+/**
+ * Calculate height factor for slow-mo scaling.
+ * Returns 0 when high in air (py < 180), 1 when near ground (py >= 220).
+ * Sliding always returns 1 (full slow-mo on ground).
+ */
+function calculateHeightFactor(py: number, isSliding: boolean): number {
+  if (isSliding) return 1; // Full slow-mo when sliding
+  if (py < HEIGHT_SLOWMO_THRESHOLD) return 0; // No slow-mo when high up
+  // Linear interpolation: 0 at threshold, 1 at ground
+  return Math.min(1, (py - HEIGHT_SLOWMO_THRESHOLD) / (GROUND_Y - HEIGHT_SLOWMO_THRESHOLD));
+}
 
 // Audio interface for cinematic
 export type CinematicAudio = {
@@ -68,36 +84,40 @@ export function calculateCinematicEffects(
 
   const edgeProximity = (state.px - 90) / (CLIFF_EDGE - 90);
 
+  // Height factor: 0 when high in air, 1 when near ground or sliding
+  const heightFactor = calculateHeightFactor(state.py, state.sliding);
+
   // Slow-mo is an unlockable feature - requires 'dist_400' achievement
   const hasSlowMoUnlocked = state.achievements.has('dist_400');
 
-  // Base slowMo from edge proximity (only if unlocked)
-  let targetSlowMo = (state.reduceFx || !hasSlowMoUnlocked) ? 0 : Math.min(0.7, edgeProximity * 0.8);
+  // Base slowMo from edge proximity (only if unlocked), scaled by height
+  let targetSlowMo = (state.reduceFx || !hasSlowMoUnlocked) ? 0 : Math.min(0.7, edgeProximity * 0.8) * heightFactor;
   let targetZoom = state.reduceFx ? 1 : (1 + edgeProximity * 0.3);
 
-  // Record Zone Bullet Time - Two Levels (only if unlocked)
+  // Record Zone Bullet Time - Two Levels (only if unlocked), scaled by height
   if (state.recordZoneActive && !state.reduceFx && hasSlowMoUnlocked) {
-    // Level 1: Instant bullet time when entering record zone
-    targetSlowMo = Math.max(0.7, targetSlowMo);
-    targetZoom = Math.max(1.5, targetZoom);
+    // Level 1: Instant bullet time when entering record zone (scaled by height)
+    targetSlowMo = Math.max(0.7 * heightFactor, targetSlowMo);
+    targetZoom = Math.max(1 + 0.5 * heightFactor, targetZoom);
 
-    // Level 2: Peggle super heat when really going for record
+    // Level 2: Peggle super heat when really going for record (scaled by height)
     if (state.recordZoneIntensity > 0.6) {
-      targetSlowMo = 0.85 + state.recordZoneIntensity * 0.1; // 0.91-0.95
-      targetZoom = 1.8 + state.recordZoneIntensity * 0.5; // 2.1-2.3
+      const intensitySlowMo = 0.85 + state.recordZoneIntensity * 0.1; // 0.91-0.95
+      targetSlowMo = intensitySlowMo * heightFactor;
+      targetZoom = 1 + (0.8 + state.recordZoneIntensity * 0.5) * heightFactor; // scaled 2.1-2.3
     }
   }
 
-  // Peak moment - maximum freeze (only if unlocked)
+  // Peak moment - maximum freeze (only if unlocked), scaled by height
   if (state.recordZonePeak && !state.reduceFx && hasSlowMoUnlocked) {
-    targetSlowMo = 0.98;
-    targetZoom = 2.5;
+    targetSlowMo = 0.98 * heightFactor;
+    targetZoom = 1 + 1.5 * heightFactor;
   }
 
-  // CINEMATIC ZONE - 2x zoom and 2x slowdown when passing threshold
+  // CINEMATIC ZONE - 2x zoom and 2x slowdown when passing threshold, scaled by height
   if (state.px > CINEMATIC_THRESHOLD && !state.reduceFx && hasSlowMoUnlocked) {
-    targetZoom = 2;
-    targetSlowMo = 0.5;
+    targetZoom = 1 + 1 * heightFactor; // 1 when high, 2 when near ground
+    targetSlowMo = 0.5 * heightFactor; // 0 when high, 0.5 when near ground
     // Focus on the finish area instead of Zeno
     state.zoomTargetX = CLIFF_EDGE - 30;
     state.zoomTargetY = 240 - 60; // H - 60, ground level area
@@ -186,9 +206,13 @@ export function updatePrecisionBar(
     audio.precisionDrone?.();
   }
 
-  // Apply precision time scale when active (only in 410-420 zone)
+  // Apply precision time scale when active (only in 410-420 zone), scaled by height
   if (state.precisionBarActive && state.px >= 410 && state.px <= CLIFF_EDGE) {
-    state.precisionTimeScale = calculatePrecisionTimeScale(state.px);
+    const heightFactor = calculateHeightFactor(state.py, state.sliding);
+    const baseTimeScale = calculatePrecisionTimeScale(state.px); // 1.0 at 410, 0.2 at 420
+    // Interpolate: when high (heightFactor=0), timeScale=1 (normal speed)
+    // when near ground (heightFactor=1), use full precision slow-mo
+    state.precisionTimeScale = 1 - (1 - baseTimeScale) * heightFactor;
   }
 
   // Deactivate slow-mo when past cliff edge (420) - player fell off

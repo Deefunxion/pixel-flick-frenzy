@@ -1249,6 +1249,7 @@ const Game = () => {
         {import.meta.env.DEV && showEditor && (
           <LevelEditor
             onClose={() => setShowEditor(false)}
+            initialLevel={arcadeHudState.arcadeState?.currentLevelId}
             onTestLevel={(level) => {
               // Load custom level for testing
               const state = stateRef.current;

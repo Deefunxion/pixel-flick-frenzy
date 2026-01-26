@@ -22,6 +22,7 @@ type SelectedObject =
 interface LevelEditorProps {
   onClose: () => void;
   onTestLevel: (level: ArcadeLevel) => void;
+  initialLevel?: number; // Open editor at this level (e.g., current arcade level)
 }
 
 // History for undo/redo
@@ -105,10 +106,13 @@ function getEmptyLevel(id: number): ArcadeLevel {
   };
 }
 
-export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
+export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorProps) {
   // History state for undo/redo
   const [history, setHistory] = useState<HistoryState>(() => {
-    const initial = ARCADE_LEVELS[0] ? structuredClone(ARCADE_LEVELS[0]) : getEmptyLevel(1);
+    // Start at initialLevel if provided, otherwise level 1
+    const startId = initialLevel ?? 1;
+    const existing = ARCADE_LEVELS.find(l => l.id === startId);
+    const initial = existing ? structuredClone(existing) : getEmptyLevel(startId);
     return { past: [], present: initial, future: [] };
   });
 
@@ -161,9 +165,11 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
   const [showGenerator, setShowGenerator] = useState(false);
   const [, setSpriteLoadTick] = useState(0);
   const [bgReady, setBgReady] = useState(false);
+  const [canvasScale, setCanvasScale] = useState(1); // Auto-fit scale
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const bgCanvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   // Trigger re-render when sprites load
   useEffect(() => {
@@ -175,6 +181,32 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
       if (anyLoading) setSpriteLoadTick(t => t + 1);
     }, 100);
     return () => clearInterval(interval);
+  }, []);
+
+  // Auto-fit canvas to available space
+  useEffect(() => {
+    const calculateScale = () => {
+      const container = canvasContainerRef.current;
+      if (!container) return;
+
+      const padding = 32; // p-4 = 16px * 2
+      const availableWidth = container.clientWidth - padding;
+      const availableHeight = container.clientHeight - padding;
+
+      const canvasWidth = W * 2; // 960
+      const canvasHeight = H * 2; // 480
+
+      // Calculate scale to fit, capped at 1 (don't zoom in beyond 100%)
+      const scaleX = availableWidth / canvasWidth;
+      const scaleY = availableHeight / canvasHeight;
+      const newScale = Math.min(1, scaleX, scaleY);
+
+      setCanvasScale(newScale);
+    };
+
+    calculateScale();
+    window.addEventListener('resize', calculateScale);
+    return () => window.removeEventListener('resize', calculateScale);
   }, []);
 
   // Load and render background
@@ -859,7 +891,10 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
         </div>
 
         {/* Canvas */}
-        <div className="flex-1 flex items-center justify-center p-4 bg-gray-700 overflow-auto">
+        <div
+          ref={canvasContainerRef}
+          className="flex-1 flex items-center justify-center p-4 bg-gray-700 overflow-hidden"
+        >
           <div
             ref={canvasRef}
             onClick={handleCanvasClick}
@@ -867,6 +902,8 @@ export function LevelEditor({ onClose, onTestLevel }: LevelEditorProps) {
             style={{
               width: W * 2, height: H * 2,
               cursor: tool === 'select' ? 'default' : 'crosshair',
+              transform: `scale(${canvasScale})`,
+              transformOrigin: 'center center',
             }}
           >
             {/* Game background canvas */}

@@ -79,20 +79,20 @@ describe('Zeno Air Control System', () => {
 
       registerFloatTap(state, 1000);
 
-      expect(state.vx).toBeCloseTo(0.8);  // Reset + boost (TAP_VELOCITY_BOOST)
+      expect(state.vx).toBeCloseTo(0.4);  // Reset + boost (TAP_VELOCITY_BOOST)
       expect(state.vy).toBe(0);            // Stop falling
     });
 
     it('should KEEP vx and only stop vy when moving RIGHT (vx > 0)', () => {
       const state = createInitialState({ reduceFx: false });
-      state.vx = 3;   // Moving right
-      state.vy = 2;   // Falling
+      state.vx = 1.5;   // Moving right (below cap)
+      state.vy = 2;     // Falling
       state.stamina = 100;
       state.airControl.recentTapTimes = [900]; // Not fresh tap
 
       registerFloatTap(state, 1000);
 
-      expect(state.vx).toBeCloseTo(3.8);  // Keep 3 + add boost 0.8
+      expect(state.vx).toBeCloseTo(1.9);  // Keep 1.5 + add boost 0.4
       expect(state.vy).toBe(0);            // Stop falling
     });
 
@@ -105,20 +105,20 @@ describe('Zeno Air Control System', () => {
 
       registerFloatTap(state, 1000);
 
-      expect(state.vx).toBeCloseTo(0.8);  // 0 + boost
+      expect(state.vx).toBeCloseTo(0.4);  // 0 + boost
       expect(state.vy).toBe(0);            // Stop falling
     });
 
     it('should cap vx at FLOAT_MAX_VELOCITY when moving right', () => {
       const state = createInitialState({ reduceFx: false });
-      state.vx = 4.2;  // Near cap (4.5)
+      state.vx = 2.0;  // Near cap (2.25)
       state.vy = 1;
       state.stamina = 100;
       state.airControl.recentTapTimes = [900];
 
       registerFloatTap(state, 1000);
 
-      expect(state.vx).toBe(4.5);  // Capped, not 4.2 + 0.8 = 5.0
+      expect(state.vx).toBe(2.25);  // Capped, not 2.0 + 0.4 = 2.4
       expect(state.vy).toBe(0);
     });
 

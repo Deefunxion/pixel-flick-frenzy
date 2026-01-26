@@ -434,10 +434,10 @@
         "strength": 0.8
       },
       {
-        "x": 248,
-        "y": 93,
+        "x": 246,
+        "y": 94,
         "direction": "up-right",
-        "strength": 1.2
+        "strength": 0.7
       }
     ],
     "portal": {
@@ -1419,7 +1419,7 @@
         "x": 162,
         "y": 170,
         "direction": "up",
-        "strength": 1.330849948618561
+        "strength": 1.1
       },
       {
         "x": 412,
@@ -1429,10 +1429,10 @@
         "scale": 1.3
       },
       {
-        "x": 269,
-        "y": 73,
+        "x": 271,
+        "y": 74,
         "direction": "up-right",
-        "strength": 1
+        "strength": 0.6
       }
     ],
     "portal": null
@@ -1659,15 +1659,15 @@
         "sequence": 13
       },
       {
-        "x": 368,
+        "x": 366,
         "y": 196,
         "size": "large",
         "sprite": "coin",
         "sequence": 14
       },
       {
-        "x": 385,
-        "y": 206,
+        "x": 381,
+        "y": 201,
         "size": "small",
         "sprite": "coin",
         "sequence": 15,
@@ -1682,10 +1682,10 @@
         "strength": 0.7
       },
       {
-        "x": 405,
-        "y": 214,
-        "direction": "up-left",
-        "strength": 0.5,
+        "x": 391,
+        "y": 223,
+        "direction": "up",
+        "strength": 1.4,
         "scale": 1.2
       }
     ],
@@ -2041,7 +2041,8 @@
         "y": 182.89995996796796,
         "size": "large",
         "sprite": "coin",
-        "sequence": 12
+        "sequence": 12,
+        "scale": 0.7
       },
       {
         "x": 350,
@@ -2067,16 +2068,17 @@
     ],
     "springs": [
       {
-        "x": 294,
-        "y": 156.44997998398398,
-        "direction": "up-right",
-        "strength": 0.9636536968871952
+        "x": 334,
+        "y": 206,
+        "direction": "up",
+        "strength": 0.8
       },
       {
         "x": 111,
         "y": 94,
-        "direction": "up-right",
-        "strength": 0.8583356824936346
+        "direction": "up",
+        "strength": 0.8583356824936346,
+        "rotation": 15
       }
     ],
     "portal": null
@@ -2086,8 +2088,8 @@
     "landingTarget": 410,
     "doodles": [
       {
-        "x": 50,
-        "y": 185,
+        "x": 64,
+        "y": 138,
         "size": "large",
         "sprite": "coin",
         "sequence": 1
@@ -2149,8 +2151,8 @@
         "sequence": 9
       },
       {
-        "x": 275,
-        "y": 154.67496997597596,
+        "x": 279,
+        "y": 157,
         "size": "small",
         "sprite": "star",
         "sequence": 10
@@ -2193,32 +2195,26 @@
     ],
     "springs": [
       {
-        "x": 323,
-        "y": 182.224989991992,
-        "direction": "up-right",
-        "strength": 1.238294976740144
-      },
-      {
-        "x": 58,
-        "y": 130,
-        "direction": "up-right",
-        "strength": 1.1378654141211881
-      },
-      {
-        "x": 196,
-        "y": 127.22498999199199,
+        "x": 277,
+        "y": 170,
         "direction": "up",
-        "strength": 1.226793510071002
+        "strength": 0.8
+      },
+      {
+        "x": 182,
+        "y": 122,
+        "direction": "up",
+        "strength": 0.7
       }
     ],
     "portal": {
       "entry": {
-        "x": 306,
-        "y": 114
+        "x": 322,
+        "y": 126
       },
       "exit": {
-        "x": 88,
-        "y": 37
+        "x": 171,
+        "y": 19
       },
       "exitDirection": "straight",
       "exitSpeed": 0.7549485156778246
@@ -2336,10 +2332,11 @@
     ],
     "springs": [
       {
-        "x": 238,
-        "y": 131.224989991992,
-        "direction": "up-left",
-        "strength": 0.8482630603481085
+        "x": 209,
+        "y": 115,
+        "direction": "up",
+        "strength": 1.3,
+        "rotation": 330
       },
       {
         "x": 328,
@@ -2462,10 +2459,16 @@
     ],
     "springs": [
       {
-        "x": 201,
-        "y": 158.67496997597596,
-        "direction": "up-left",
-        "strength": 1.4973206346621737
+        "x": 249,
+        "y": 176,
+        "direction": "up",
+        "strength": 1,
+        "rotation": 0
+      },
+      {
+        "x": 327,
+        "y": 192,
+        "direction": "up"
       }
     ],
     "portal": null
@@ -2475,15 +2478,15 @@
     "landingTarget": 410,
     "doodles": [
       {
-        "x": 50,
-        "y": 168,
+        "x": 81,
+        "y": 106,
         "size": "large",
         "sprite": "coin",
         "sequence": 1
       },
       {
-        "x": 75,
-        "y": 92,
+        "x": 90,
+        "y": 83,
         "size": "small",
         "sprite": "coin",
         "sequence": 2
@@ -2517,8 +2520,8 @@
         "sequence": 6
       },
       {
-        "x": 200,
-        "y": 123.67496997597597,
+        "x": 199,
+        "y": 109,
         "size": "large",
         "sprite": "coin",
         "sequence": 7
@@ -2582,8 +2585,8 @@
     ],
     "springs": [
       {
-        "x": 278,
-        "y": 145,
+        "x": 275,
+        "y": 159,
         "direction": "up",
         "strength": 1.4827773253899068
       },

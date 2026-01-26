@@ -160,8 +160,8 @@ const HARD_BRAKE_COST_PER_SEC = 40;    // Stamina cost for brake (slightly lower
 
 // Tap cost and boost
 const TAP_STAMINA_COST = 3;            // Lower cost for rapid tapping
-const TAP_VELOCITY_BOOST = 0.8;        // Small boost per tap (4 taps ≈ cruising speed 3)
-const FLOAT_MAX_VELOCITY = 4.5;        // Max velocity from tapping (NOT launch speed)
+const TAP_VELOCITY_BOOST = 0.4;        // Smaller boost per tap (was 0.8)
+const FLOAT_MAX_VELOCITY = 2.25;       // Half hover speed (was 4.5)
 const MAX_VELOCITY = 7.0;              // Maximum forward velocity (launch only)
 
 // Export for update.ts
