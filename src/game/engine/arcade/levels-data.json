@@ -428,16 +428,16 @@
     ],
     "springs": [
       {
-        "x": 335,
-        "y": 25,
+        "x": 354,
+        "y": 12,
         "direction": "down",
-        "strength": 0.8
+        "strength": 0.6
       },
       {
         "x": 246,
         "y": 94,
         "direction": "up-right",
-        "strength": 0.7
+        "strength": 0.5
       }
     ],
     "portal": {

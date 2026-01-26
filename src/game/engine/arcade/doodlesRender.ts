@@ -31,7 +31,8 @@ export function renderDoodles(
   ctx: CanvasRenderingContext2D,
   doodles: Doodle[],
   timeMs: number,
-  levelId: number = 1
+  levelId: number = 1,
+  nextSequence: number = 1  // Which doodle should glow (Bomb Jack style)
 ): void {
   // Render connecting lines first (behind doodles) for tutorial levels
   renderConnectingLines(ctx, doodles, levelId);
@@ -40,7 +41,8 @@ export function renderDoodles(
     if (doodle.collected) {
       renderCollectedDoodle(ctx, doodle, timeMs);
     } else {
-      renderActiveDoodle(ctx, doodle, timeMs);
+      const isNextToCollect = doodle.sequence === nextSequence;
+      renderActiveDoodle(ctx, doodle, timeMs, isNextToCollect);
     }
   });
 }
@@ -86,16 +88,17 @@ function renderConnectingLines(
 function renderActiveDoodle(
   ctx: CanvasRenderingContext2D,
   doodle: Doodle,
-  timeMs: number
+  timeMs: number,
+  isNextToCollect: boolean = false
 ): void {
-  const { x, y, displaySize, sprite, sequence, rotation, isStrokeStart } = doodle;
+  const { x, y, displaySize, sprite, sequence, rotation } = doodle;
 
   // Gentle bob animation
   const bobOffset = Math.sin(timeMs * 0.003 + sequence) * 3;
 
-  // Stroke start glow (rendered behind doodle)
-  if (isStrokeStart) {
-    renderStrokeStartGlow(ctx, x, y + bobOffset, displaySize, timeMs);
+  // Bomb Jack style glow - the next doodle to collect glows bright
+  if (isNextToCollect) {
+    renderNextDoodleGlow(ctx, x, y + bobOffset, displaySize, timeMs);
   }
 
   ctx.save();
@@ -166,10 +169,10 @@ function renderCenterGlow(
 }
 
 /**
- * Render a prominent glow for stroke start doodles
- * Helps players identify where each stroke begins
+ * Render a vibrant, shiny glow for the next doodle to collect (Bomb Jack style)
+ * Bright pulsing effect that clearly indicates "collect me next!"
  */
-function renderStrokeStartGlow(
+function renderNextDoodleGlow(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -178,20 +181,47 @@ function renderStrokeStartGlow(
 ): void {
   ctx.save();
 
-  // Strong pulsing effect
-  const pulse = 0.7 + Math.sin(timeMs * 0.005) * 0.3;
-  const radius = displaySize * 0.8;
+  // Fast, energetic pulse
+  const fastPulse = 0.6 + Math.sin(timeMs * 0.012) * 0.4;
+  const slowPulse = 0.8 + Math.sin(timeMs * 0.004) * 0.2;
+  const radius = displaySize * 1.2;
 
-  // Outer golden glow
-  const glowGradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-  glowGradient.addColorStop(0, `rgba(255, 215, 0, ${0.6 * pulse})`);
-  glowGradient.addColorStop(0.4, `rgba(255, 180, 0, ${0.3 * pulse})`);
-  glowGradient.addColorStop(0.7, `rgba(255, 150, 0, ${0.15 * pulse})`);
-  glowGradient.addColorStop(1, 'rgba(255, 100, 0, 0)');
+  // Outer sparkle ring (rotating)
+  const sparkleAngle = (timeMs * 0.003) % (Math.PI * 2);
+  for (let i = 0; i < 6; i++) {
+    const angle = sparkleAngle + (i * Math.PI / 3);
+    const sparkleX = x + Math.cos(angle) * (radius * 0.7);
+    const sparkleY = y + Math.sin(angle) * (radius * 0.7);
+    const sparkleSize = 3 + Math.sin(timeMs * 0.015 + i) * 2;
+
+    ctx.beginPath();
+    ctx.arc(sparkleX, sparkleY, sparkleSize * fastPulse, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.8 * fastPulse})`;
+    ctx.fill();
+  }
+
+  // Bright outer glow - electric blue/white
+  const outerGlow = ctx.createRadialGradient(x, y, 0, x, y, radius);
+  outerGlow.addColorStop(0, `rgba(255, 255, 255, ${0.9 * fastPulse})`);
+  outerGlow.addColorStop(0.2, `rgba(200, 230, 255, ${0.7 * fastPulse})`);
+  outerGlow.addColorStop(0.4, `rgba(100, 200, 255, ${0.5 * slowPulse})`);
+  outerGlow.addColorStop(0.7, `rgba(50, 150, 255, ${0.25 * slowPulse})`);
+  outerGlow.addColorStop(1, 'rgba(0, 100, 255, 0)');
 
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fillStyle = glowGradient;
+  ctx.fillStyle = outerGlow;
+  ctx.fill();
+
+  // Inner bright core
+  const coreGlow = ctx.createRadialGradient(x, y, 0, x, y, displaySize * 0.5);
+  coreGlow.addColorStop(0, `rgba(255, 255, 255, ${0.95 * fastPulse})`);
+  coreGlow.addColorStop(0.5, `rgba(255, 255, 200, ${0.6 * fastPulse})`);
+  coreGlow.addColorStop(1, 'rgba(255, 220, 100, 0)');
+
+  ctx.beginPath();
+  ctx.arc(x, y, displaySize * 0.5, 0, Math.PI * 2);
+  ctx.fillStyle = coreGlow;
   ctx.fill();
 
   ctx.restore();

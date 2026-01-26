@@ -137,8 +137,10 @@ export function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameSt
     renderPortal(ctx, state.arcadePortal, nowMs, state.portalJuiceTimer);
     renderSprings(ctx, state.arcadeSprings, nowMs);
     if (state.arcadeHazards?.length) renderHazards(ctx, state.arcadeHazards, nowMs);
-    // Collectibles on top
-    renderDoodles(ctx, state.arcadeDoodles, nowMs);
+    // Collectibles on top - pass level and next sequence for Bomb Jack style glow
+    const levelId = state.arcadeState?.currentLevelId ?? 1;
+    const nextSequence = state.arcadeState?.expectedNextSequence ?? 1;
+    renderDoodles(ctx, state.arcadeDoodles, nowMs, levelId, nextSequence);
   }
 
   // Ring juice effects (disabled with rings off)
