@@ -1256,7 +1256,9 @@ const Game = () => {
               if (state && state.arcadeState) {
                 loadArcadeLevel(state, level.id);
                 // Override with custom level data
-                state.arcadeDoodles = createDoodlesFromLevel(level.doodles);
+                // Pass portals for stroke detection in calligraphic flow
+                const portalsArray = level.portals ?? (level.portal ? [level.portal] : []);
+                state.arcadeDoodles = createDoodlesFromLevel(level.doodles, portalsArray);
                 state.arcadeSprings = createSpringsFromLevel(level.springs);
                 state.arcadePortal = level.portal ? createPortalFromPair(level.portal) : null;
                 state.arcadeHazards = createHazardsFromLevel(level.hazards || []);

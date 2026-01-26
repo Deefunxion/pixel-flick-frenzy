@@ -319,7 +319,9 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
   if (state.arcadeMode && state.arcadeState) {
     const level = getLevel(state.arcadeState.currentLevelId);
     if (level) {
-      state.arcadeDoodles = createDoodlesFromLevel(level.doodles);
+      // Pass portals for stroke detection in calligraphic flow
+      const portalsArray = level.portals ?? (level.portal ? [level.portal] : []);
+      state.arcadeDoodles = createDoodlesFromLevel(level.doodles, portalsArray);
       state.arcadeSprings = createSpringsFromLevel(level.springs);
       state.arcadePortal = level.portal ? createPortalFromPair(level.portal) : null;
       state.arcadeHazards = createHazardsFromLevel(level.hazards || []);
@@ -541,7 +543,9 @@ export function loadArcadeLevel(state: GameState, levelId: number): void {
   if (!level) return;
 
   state.arcadeState.currentLevelId = levelId;
-  state.arcadeDoodles = createDoodlesFromLevel(level.doodles);
+  // Pass portals for stroke detection in calligraphic flow
+  const portalsArray = level.portals ?? (level.portal ? [level.portal] : []);
+  state.arcadeDoodles = createDoodlesFromLevel(level.doodles, portalsArray);
   state.arcadeSprings = createSpringsFromLevel(level.springs);
   state.arcadePortal = level.portal ? createPortalFromPair(level.portal) : null;
   state.arcadeHazards = createHazardsFromLevel(level.hazards || []);
