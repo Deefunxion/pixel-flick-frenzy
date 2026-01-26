@@ -2,7 +2,35 @@
 
 All notable changes to One-More-Flick are documented in this file.
 
-## [Unreleased] - 2026-01-26
+## [Unreleased] - 2026-01-27
+
+### Added - Calligraphic Flow Size System
+- **Doodle sizing inspired by Chinese brush calligraphy**:
+  - Each "stroke" (trajectory segment) starts large and shrinks like ink fading from a brush
+  - Scale range: 1.8x (stroke start) → 0.7x (stroke end) with eased interpolation
+  - Stroke boundaries detected via portals or X-position resets
+- **New module**: `src/game/engine/arcade/calligraphicScale.ts`
+  - `detectStrokeBoundaries()` - Splits sequences at portals/X-resets
+  - `calculateDoodleScale()` - Eased scale interpolation (progress²)
+  - `assignDoodleSprite()` - Stars at boundaries, coins in middle
+  - `applyCalligraphicFlow()` - Applies scale + sprite to level doodles
+- **Bomb Jack style glow**: Next doodle to collect glows bright
+  - Rotating sparkle ring (6 sparkles orbiting)
+  - Electric blue/white gradient outer glow
+  - Bright white/yellow pulsing inner core
+  - Glow follows collection sequence (1st glows → 2nd after collecting 1st → etc.)
+- **Tutorial connecting lines**: Levels 1-10 show dashed orange lines between doodles
+- **Reduced Zeno display size**: 40×40 → 35×35 for better visibility in multi-trajectory levels
+
+### Technical - Calligraphic Flow
+- Level generator applies calligraphic flow after portal generation
+- `createDoodlesFromLevel()` now accepts portals array for stroke detection
+- `renderDoodles()` accepts `levelId` and `nextSequence` parameters
+- 12 unit tests for stroke detection, scale calculation, and sprite assignment
+
+---
+
+## [Previous] - 2026-01-26
 
 ### Added - Arcade Sprite Assets System
 - **`arcadeAssets.ts`**: Centralized sprite configuration for all arcade elements

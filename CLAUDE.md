@@ -151,6 +151,7 @@ Visual feedback for landing accuracy:
 - **`levels-data.json`** - Level definitions (editable via Level Editor)
 - **`levels.ts`** - Imports JSON, exports `ARCADE_LEVELS` array
 - **`types.ts`** - Type definitions for all arcade elements
+- **`calligraphicScale.ts`** - Size progression system for doodles (see below)
 - **`doodles.ts`** / **`doodlesRender.ts`** - Collectible system (static + moving)
 - **`springs.ts`** / **`springsRender.ts`** - Directional springs (timed + breakable)
 - **`portal.ts`** / **`portalRender.ts`** - Teleporters (timed + multi-portal)
@@ -194,6 +195,25 @@ Centralized sprite configuration for arcade elements:
 - **PORTAL_SPRITES**: 6 colors (blue, green, orange, pink, purple, yellow), 3 frames each
 - **ZONE_SPRITES**: ice, sticky, wind textures
 - **Functions**: `getSprite()`, `getAnimationFrame()`, `preloadArcadeSprites()`
+
+### Calligraphic Flow Size System (`src/game/engine/arcade/calligraphicScale.ts`)
+
+Doodle sizing inspired by Chinese brush calligraphy - each "stroke" starts large and shrinks like ink fading:
+
+- **`detectStrokeBoundaries()`** - Splits doodle sequences at portals or X-position resets
+- **`calculateDoodleScale()`** - Eased interpolation from 1.8x (start) to 0.7x (end)
+- **`assignDoodleSprite()`** - Stars at stroke start/end, coins in middle
+- **`applyCalligraphicFlow()`** - Applies scale + sprite to all doodles in a level
+
+**Visual Features:**
+- **Bomb Jack glow**: Next doodle to collect glows with rotating sparkles and electric blue/white gradient
+- **Tutorial lines**: Levels 1-10 show dashed connecting lines between doodles
+- **Zeno size**: 35×35 display size (reduced for multi-trajectory levels)
+
+**Integration:**
+- Level generator applies calligraphic flow after portal generation
+- `renderDoodles()` accepts `nextSequence` param for dynamic glow
+- Glow follows collection order (1st glows, then 2nd after collecting 1st, etc.)
 
 ### Level Editor (Dev Tool)
 
