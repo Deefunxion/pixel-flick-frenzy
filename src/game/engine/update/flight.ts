@@ -44,6 +44,10 @@ import { applyWindForces } from '../arcade/windZones';
 import { applyGravityWellForces } from '../arcade/gravityWells';
 import { updateWindZoneParticles } from '../arcade/windZonesRender';
 
+// Collision Y offset: moves collision point from feet to sprite center
+// This matches ZENO_Y_OFFSET in render, so collisions happen at visual center
+const COLLISION_Y_OFFSET = -20;
+
 // Audio interface for flight
 export type FlightAudio = {
   airBrakeTap?: () => void;
@@ -383,9 +387,10 @@ export function processArcadeCollisions(
 ): void {
   if (!state.arcadeMode) return;
 
-  // Doodle collection
+  // Doodle collection (use sprite center for collision)
+  const collisionY = state.py + COLLISION_Y_OFFSET;
   for (const doodle of state.arcadeDoodles) {
-    if (checkDoodleCollision(state.px, state.py, doodle)) {
+    if (checkDoodleCollision(state.px, collisionY, doodle)) {
       collectDoodleObj(doodle, nowMs);
       if (state.arcadeState) {
         collectDoodleState(state.arcadeState, doodle.sequence);
@@ -412,9 +417,9 @@ export function processArcadeCollisions(
     }
   }
 
-  // Spring collision
+  // Spring collision (use sprite center)
   for (const spring of state.arcadeSprings) {
-    if (checkSpringCollision(state.px, state.py, spring)) {
+    if (checkSpringCollision(state.px, collisionY, spring)) {
       applySpringImpulse(spring, state);
 
       // Visual feedback
@@ -439,8 +444,8 @@ export function processArcadeCollisions(
     }
   }
 
-  // Portal collision (bidirectional - can enter from either side)
-  const portalSide = state.arcadePortal ? checkPortalEntry(state.px, state.py, state.arcadePortal) : null;
+  // Portal collision (bidirectional - can enter from either side, use sprite center)
+  const portalSide = state.arcadePortal ? checkPortalEntry(state.px, collisionY, state.arcadePortal) : null;
   if (portalSide) {
     // Store entry position before teleport
     const entryX = state.px;
@@ -505,9 +510,9 @@ export function processArcadeCollisions(
     audio.tone(450, 0.08, 'sine', 0.08);
   }
 
-  // Hazard collision - causes immediate failure
+  // Hazard collision - causes immediate failure (use sprite center)
   if (state.arcadeHazards?.length > 0) {
-    const hitHazard = checkHazardCollision(state.px, state.py, state.arcadeHazards);
+    const hitHazard = checkHazardCollision(state.px, collisionY, state.arcadeHazards);
     if (hitHazard) {
       // Trigger failure animation
       state.fellOff = true;

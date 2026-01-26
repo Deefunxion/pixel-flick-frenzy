@@ -33,6 +33,10 @@ const MAX_FRAMES = 60 * 30; // 30 seconds max simulation
 const DOODLE_RADIUS = 20;
 const GROUND_Y = H - 20;
 
+// Collision Y offset: moves collision point from feet to sprite center
+// This matches the game's COLLISION_Y_OFFSET for accurate simulation
+const COLLISION_Y_OFFSET = -20;
+
 // Match actual game physics (from precision.ts)
 const TAP_VELOCITY_BOOST = 0.8;       // Forward boost on tap
 const FLOAT_MAX_VELOCITY = 4.5;       // Max velocity from tapping
@@ -178,9 +182,12 @@ export class PhysicsSimulator {
         px += vx;
         py += vy;
 
+        // Use sprite center for collision (not feet)
+        const collisionY = py + COLLISION_Y_OFFSET;
+
         // Check hazard collision (instant fail)
         if (hazards.length > 0) {
-          const hitHazard = checkHazardCollision(px, py, hazards);
+          const hitHazard = checkHazardCollision(px, collisionY, hazards);
           if (hitHazard) {
             fellOff = true; // Treat hazard hit as failure
             break;
@@ -191,7 +198,7 @@ export class PhysicsSimulator {
         for (const doodle of doodleStates) {
           if (!doodle.collected) {
             const dx = px - doodle.x;
-            const dy = py - doodle.y;
+            const dy = collisionY - doodle.y;
             if (Math.sqrt(dx * dx + dy * dy) < DOODLE_RADIUS) {
               doodle.collected = true;
               doodlesCollected.push(doodle.sequence);
@@ -201,7 +208,7 @@ export class PhysicsSimulator {
 
         // Check spring collision
         for (let i = 0; i < springs.length; i++) {
-          if (!springs[i].usedThisThrow && checkSpringCollision(px, py, springs[i])) {
+          if (!springs[i].usedThisThrow && checkSpringCollision(px, collisionY, springs[i])) {
             // Create velocity object for spring impulse
             const vel = { vx, vy };
             applySpringImpulse(springs[i], vel);
@@ -213,7 +220,7 @@ export class PhysicsSimulator {
 
         // Check portal
         if (portal && !portal.usedThisThrow) {
-          const side = checkPortalEntry(px, py, portal);
+          const side = checkPortalEntry(px, collisionY, portal);
           if (side) {
             const pos = { px, py };
             const vel = { vx, vy };

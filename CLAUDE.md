@@ -180,25 +180,36 @@ Generates 250 levels using Chinese character stroke patterns:
 - **`stroke-data.ts`** - Loads hanzi-strokes.json, stroke count ranges
 - **`random.ts`** - Seeded PRNG (mulberry32) for deterministic generation
 - **`transform.ts`** - SVG coordinates → game canvas transformer
-- **`physics-simulator.ts`** - Headless physics for level validation
-- **`level-generator.ts`** - Core generator engine
+- **`physics-simulator.ts`** - Headless physics for level validation (simulates springs, portals, hazards, wind zones, gravity wells)
+- **`level-generator.ts`** - Core generator engine (world progression, mechanic unlocks per level range)
 
 **Data:** `public/data/hanzi-strokes.json` - 9,574 Chinese characters with stroke data
+
+### Arcade Sprite Assets (`src/game/engine/arcade/arcadeAssets.ts`)
+
+Centralized sprite configuration for arcade elements:
+
+- **HAZARD_SPRITES**: spike, saw, fire (3 frames each, looping)
+- **SPRING_SPRITES**: 3-frame bounce animation
+- **PORTAL_SPRITES**: 6 colors (blue, green, orange, pink, purple, yellow), 3 frames each
+- **ZONE_SPRITES**: ice, sticky, wind textures
+- **Functions**: `getSprite()`, `getAnimationFrame()`, `preloadArcadeSprites()`
 
 ### Level Editor (Dev Tool)
 
 Visual editor for designing arcade levels:
 
 - **Access**: `Ctrl+E` in dev mode
-- **Tools**: Select (✋), Doodle (🪙), Spring (🔺), Portal (🌀), Eraser (🗑️)
+- **Tools**: Select (✋), Doodle (🪙), Spring (🔺), Portal (🌀), Hazard (💀), Wind (💨), Gravity (🌀), Friction (❄️), Eraser (🗑️)
 - **Features**:
-  - 100 levels dropdown
+  - 250 levels dropdown
   - Direct save to `levels-data.json` via Vite plugin
-  - Actual sprite previews
+  - Actual sprite previews for all element types
   - Drag to reposition (Select tool)
   - Property panel for scale, rotation, strength, exitDirection
   - Undo/Redo (Ctrl+Z / Ctrl+Y)
   - Delete (Del/Backspace)
+  - Procedural level generator with seed input
 - **Vite Plugin**: `vite-plugin-level-editor.ts` handles `/api/save-level` POST
 
 ## Deployment

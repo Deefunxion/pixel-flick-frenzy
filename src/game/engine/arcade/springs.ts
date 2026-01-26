@@ -28,6 +28,11 @@ export interface Spring {
 const DEFAULT_RADIUS = 18;
 const DEFAULT_FORCE = 10;
 
+// Sprite is rendered at radius * 2.5 (diameter), so visual radius = radius * 1.25
+// To have collision cover ~80% of visual sprite, multiply by ~1.0
+// But user feedback says hitbox feels too small, so we increase to 1.1 (88% of visual)
+const COLLISION_RADIUS_MULTIPLIER = 1.1;
+
 // Direction vectors (normalized)
 const DIRECTION_VECTORS: Record<SpringDirection, { x: number; y: number }> = {
   up: { x: 0, y: -1 },
@@ -82,7 +87,9 @@ export function checkSpringCollision(
   const dy = playerY - spring.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
 
-  return distance < spring.radius;
+  // Use expanded collision radius to match ~80% of visual sprite
+  const collisionRadius = spring.radius * COLLISION_RADIUS_MULTIPLIER;
+  return distance < collisionRadius;
 }
 
 export function applySpringImpulse(

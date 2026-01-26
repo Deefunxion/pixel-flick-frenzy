@@ -149,7 +149,6 @@ const Game = () => {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputPadRef = useRef<HTMLDivElement>(null);
-  const extraInputPadRef = useRef<HTMLDivElement>(null); // Extra touch area below stats
   const stateRef = useRef<GameState | null>(null);
   const pressedRef = useRef(false);
   const audioRefs = useRef<AudioRefs>({ ctx: null, chargeOsc: null, chargeGain: null, edgeOsc: null, edgeGain: null, tensionOsc: null, tensionGain: null, unlocked: false, stateChangeHandler: null });
@@ -524,8 +523,6 @@ const Game = () => {
       return;
     }
 
-    const extraInputPad = extraInputPadRef.current; // May be null, that's ok
-
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       console.log('[Game] No canvas context');
@@ -899,14 +896,6 @@ const Game = () => {
     inputPad.addEventListener('pointerup', handlePointerUp);
     inputPad.addEventListener('pointercancel', handlePointerCancel);
 
-    // Extra touch area below stats (for comfortable thumb reach on mobile)
-    if (extraInputPad) {
-      extraInputPad.addEventListener('pointerdown', handlePointerDown);
-      extraInputPad.addEventListener('pointermove', handlePointerMove);
-      extraInputPad.addEventListener('pointerup', handlePointerUp);
-      extraInputPad.addEventListener('pointercancel', handlePointerCancel);
-    }
-
     console.log('[Game] Starting game loop, state:', !!stateRef.current, 'ctx:', !!ctx);
 
     const loop = () => {
@@ -983,12 +972,6 @@ const Game = () => {
       inputPad.removeEventListener('pointermove', handlePointerMove);
       inputPad.removeEventListener('pointerup', handlePointerUp);
       inputPad.removeEventListener('pointercancel', handlePointerCancel);
-      if (extraInputPad) {
-        extraInputPad.removeEventListener('pointerdown', handlePointerDown);
-        extraInputPad.removeEventListener('pointermove', handlePointerMove);
-        extraInputPad.removeEventListener('pointerup', handlePointerUp);
-        extraInputPad.removeEventListener('pointercancel', handlePointerCancel);
-      }
       window.clearInterval(hudInterval);
       cancelAnimationFrame(animFrameRef.current);
       stopChargeToneHybrid(audioRefs.current);
@@ -1017,11 +1000,26 @@ const Game = () => {
     return <RotateScreen />;
   }
 
+  // Check if any modal is open (to disable game input)
+  const anyModalOpen = menuOpen || showStats || showLeaderboard || needsOnboarding || showEditor;
+
   return (
     <div
       className="w-full h-[100svh] flex items-center justify-center"
       style={{ background: `linear-gradient(180deg, ${theme.background} 0%, ${theme.horizon} 100%)` }}
     >
+      {/* Full-screen input overlay - tap/hold anywhere on screen */}
+      <div
+        ref={inputPadRef}
+        className="fixed inset-0 z-[5]"
+        style={{
+          touchAction: 'none',
+          cursor: anyModalOpen ? 'default' : 'pointer',
+          pointerEvents: anyModalOpen ? 'none' : 'auto',
+        }}
+        aria-label="Game input area - tap anywhere"
+      />
+
       <div
         className={`w-full max-w-md flex flex-col items-center ${isMobileRef.current ? 'gap-1 p-1' : 'gap-2 p-2'}`}
       >
@@ -1087,14 +1085,6 @@ const Game = () => {
               }}
             />
           </div>
-
-          {/* Full-area input overlay so you can tap/hold outside the canvas on mobile */}
-          <div
-            ref={inputPadRef}
-            className="absolute inset-0 z-10"
-            style={{ touchAction: 'none', cursor: 'pointer' }}
-            aria-label="Game input area"
-          />
 
           {/* Mobile hint overlay */}
           {showMobileHint && isMobileRef.current && (

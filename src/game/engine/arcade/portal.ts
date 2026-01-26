@@ -33,6 +33,10 @@ export interface Portal {
 const DEFAULT_RADIUS = 18;
 const BASE_EXIT_SPEED = 8; // Base horizontal speed on exit
 
+// Sprite is rendered at radius * 2.5 (diameter), so visual radius = radius * 1.25
+// Multiplier of 1.1 gives ~88% of visual sprite as hitbox
+const COLLISION_RADIUS_MULTIPLIER = 1.1;
+
 export function createPortalFromPair(pair: PortalPair, defaultColorId: number = 0): Portal {
   const scale = pair.scale ?? 1.0;
 
@@ -137,17 +141,20 @@ export function checkPortalEntry(
   // Portal must be active and not used this throw
   if (!portal.isActive || portal.usedThisThrow) return null;
 
+  // Use expanded collision radius to match ~88% of visual sprite
+  const collisionRadius = portal.radius * COLLISION_RADIUS_MULTIPLIER;
+
   // Check portal A
   const dxA = playerX - portal.aX;
   const dyA = playerY - portal.aY;
   const distA = Math.sqrt(dxA * dxA + dyA * dyA);
-  if (distA < portal.radius) return 'a';
+  if (distA < collisionRadius) return 'a';
 
   // Check portal B
   const dxB = playerX - portal.bX;
   const dyB = playerY - portal.bY;
   const distB = Math.sqrt(dxB * dxB + dyB * dyB);
-  if (distB < portal.radius) return 'b';
+  if (distB < collisionRadius) return 'b';
 
   return null;
 }

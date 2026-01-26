@@ -2,7 +2,40 @@
 
 All notable changes to One-More-Flick are documented in this file.
 
-## [Unreleased] - 2026-01-25
+## [Unreleased] - 2026-01-26
+
+### Added - Arcade Sprite Assets System
+- **`arcadeAssets.ts`**: Centralized sprite configuration for all arcade elements
+  - Hazard sprites: spike, saw, fire (3 frames each, animated)
+  - Spring sprites: 3-frame bounce animation
+  - Portal sprites: 6 colors with 3 frames each
+  - Zone sprites: ice, sticky, wind textures
+  - Sprite cache with `getSprite()` and `getAnimationFrame()` helpers
+  - `preloadArcadeSprites()` for eager loading on game init
+
+### Enhanced - Level Generator Physics Simulation
+- **Physics simulator now validates complex mechanics**:
+  - Wind zone force application during flight
+  - Gravity well attract/repel forces
+  - Hazard collision detection (instant fail)
+- **Optimized generation speed**: Reduced validation attempts for complex levels (20 vs 50)
+- **Level Editor expanded to 250 levels** (was 100)
+
+### Fixed - Arcade Element Integration
+- **Level Editor Test button**: Now properly loads hazards, wind zones, gravity wells, and friction zones when testing levels
+- **Wind force application**: Fixed `applyWindForces` call signature (velocity object, not separate numbers)
+- **Null protection**: Added safety check to `createFrictionZonesFromLevel` for undefined placements
+- **GameState fields**: All arcade element arrays properly initialized and loaded from level data
+
+### Technical - Arcade Integration
+- Extended `Game.tsx` onTestLevel to create all arcade element types
+- Added imports for hazard, wind, gravity, friction creation functions
+- Physics simulator imports and uses arcade element modules
+- Reduced validation attempts for levels with hazards/wind/gravity (faster generation)
+
+---
+
+## [Previous] - 2026-01-25
 
 ### Changed - UX Improvements
 - **High Score display**: Now shows up to 6 decimal places using Zeno precision system (was fixed 2)
