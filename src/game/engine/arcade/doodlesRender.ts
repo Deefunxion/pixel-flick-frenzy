@@ -46,10 +46,15 @@ function renderActiveDoodle(
   doodle: Doodle,
   timeMs: number
 ): void {
-  const { x, y, displaySize, sprite, sequence, rotation } = doodle;
+  const { x, y, displaySize, sprite, sequence, rotation, isStrokeStart } = doodle;
 
   // Gentle bob animation
   const bobOffset = Math.sin(timeMs * 0.003 + sequence) * 3;
+
+  // Stroke start glow (rendered behind doodle)
+  if (isStrokeStart) {
+    renderStrokeStartGlow(ctx, x, y + bobOffset, displaySize, timeMs);
+  }
 
   ctx.save();
 
@@ -114,6 +119,38 @@ function renderCenterGlow(
   // Core: bright white 4-pixel (2x2) square
   ctx.fillStyle = `rgba(255, 255, 255, ${pulse})`;
   ctx.fillRect(x - 1, y - 1, 2, 2);
+
+  ctx.restore();
+}
+
+/**
+ * Render a prominent glow for stroke start doodles
+ * Helps players identify where each stroke begins
+ */
+function renderStrokeStartGlow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  displaySize: number,
+  timeMs: number
+): void {
+  ctx.save();
+
+  // Strong pulsing effect
+  const pulse = 0.7 + Math.sin(timeMs * 0.005) * 0.3;
+  const radius = displaySize * 0.8;
+
+  // Outer golden glow
+  const glowGradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+  glowGradient.addColorStop(0, `rgba(255, 215, 0, ${0.6 * pulse})`);
+  glowGradient.addColorStop(0.4, `rgba(255, 180, 0, ${0.3 * pulse})`);
+  glowGradient.addColorStop(0.7, `rgba(255, 150, 0, ${0.15 * pulse})`);
+  glowGradient.addColorStop(1, 'rgba(255, 100, 0, 0)');
+
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = glowGradient;
+  ctx.fill();
 
   ctx.restore();
 }

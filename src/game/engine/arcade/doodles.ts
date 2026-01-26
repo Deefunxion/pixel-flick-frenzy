@@ -1,11 +1,12 @@
 // src/game/engine/arcade/doodles.ts
-import type { DoodlePlacement, DoodleSize, DoodleMotion } from './types';
+import type { DoodlePlacement, DoodleSize, DoodleMotion, PortalPair } from './types';
 import {
   createMovingDoodleState,
   updateMovingDoodle,
   resetMovingDoodlePhase,
   type MovingDoodleState,
 } from './movingDoodles';
+import { detectStrokeBoundaries } from './calligraphicScale';
 
 export interface Doodle {
   x: number;           // Base position (for static) or updated position (for motion)
@@ -21,6 +22,7 @@ export interface Doodle {
   scale: number;        // Custom scale multiplier
   rotation: number;     // Rotation in degrees
   motionState: MovingDoodleState | null;  // Motion state for moving doodles
+  isStrokeStart: boolean;  // For glow effect on stroke starts
 }
 
 const SIZE_CONFIG: Record<DoodleSize, { hitRadius: number; displaySize: number }> = {
@@ -28,7 +30,10 @@ const SIZE_CONFIG: Record<DoodleSize, { hitRadius: number; displaySize: number }
   large: { hitRadius: 36, displaySize: 36 },
 };
 
-export function createDoodleFromPlacement(placement: DoodlePlacement): Doodle {
+export function createDoodleFromPlacement(
+  placement: DoodlePlacement,
+  isStrokeStart: boolean = false
+): Doodle {
   const config = SIZE_CONFIG[placement.size];
   const scale = placement.scale ?? 1.0;
   const motion = placement.motion ?? { type: 'static' as const };
@@ -52,11 +57,20 @@ export function createDoodleFromPlacement(placement: DoodlePlacement): Doodle {
     scale,
     rotation: placement.rotation ?? 0,
     motionState,
+    isStrokeStart,
   };
 }
 
-export function createDoodlesFromLevel(placements: DoodlePlacement[]): Doodle[] {
-  return placements.map(createDoodleFromPlacement);
+export function createDoodlesFromLevel(
+  placements: DoodlePlacement[],
+  portals: PortalPair[] = []
+): Doodle[] {
+  const strokes = detectStrokeBoundaries(placements, portals);
+  const strokeStartIndices = new Set(strokes.map(s => s.startIndex));
+
+  return placements.map((placement, index) =>
+    createDoodleFromPlacement(placement, strokeStartIndices.has(index))
+  );
 }
 
 export function checkDoodleCollision(
