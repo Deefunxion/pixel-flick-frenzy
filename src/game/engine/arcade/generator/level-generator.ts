@@ -5,6 +5,7 @@ import { SeededRandom } from './random';
 import { StrokeTransformer } from './transform';
 import { PhysicsSimulator } from './physics-simulator';
 import { loadStrokeDatabase, getCharactersByStrokeCount, getStrokeRangeForLevel, getCharacterDatabase } from './stroke-data';
+import { applyCalligraphicFlow } from '../calligraphicScale';
 
 // World definitions - which mechanics are available per level range
 interface WorldConfig {
@@ -243,12 +244,12 @@ export class LevelGenerator {
     const worldConfig = getWorldConfig(levelId);
 
     // Create doodles with potential motion for levels 21+
-    const doodles: DoodlePlacement[] = positions.map((pos, i) => {
+    let doodles: DoodlePlacement[] = positions.map((pos, i) => {
       const doodle: DoodlePlacement = {
         x: pos.x,
         y: pos.y,
-        size: rng.next() > 0.5 ? 'large' : 'small',
-        sprite: rng.next() > 0.7 ? 'star' : 'coin',
+        size: 'large',  // Base size, scale will override visual
+        sprite: 'coin', // Will be overridden by calligraphic flow
         sequence: i + 1,
       };
 
@@ -273,21 +274,43 @@ export class LevelGenerator {
       return doodle;
     });
 
+    // Generate portals first (needed for calligraphic stroke detection)
+    const props = shouldUseProps(levelId);
+    let portal: PortalPair | null = null;
+    let portalsArray: PortalPair[] = [];
+
+    if (props.portals) {
+      const portalResult = this.generatePortals(
+        rng.derive('portals'),
+        worldConfig.mechanics.timedPortals,
+        worldConfig.mechanics.multiPortals
+      );
+      portal = portalResult.portal;
+      if (portalResult.portals) {
+        portalsArray = portalResult.portals;
+      } else if (portal) {
+        portalsArray = [portal];
+      }
+    }
+
+    // Apply calligraphic flow sizing (scale + sprite based on stroke position)
+    doodles = applyCalligraphicFlow(doodles, portalsArray);
+
     // Create level
     const level: ArcadeLevel = {
       id: levelId,
       landingTarget: getLandingTarget(levelId),
       doodles,
       springs: [],
-      portal: null,
+      portal,
+      portals: portalsArray.length > 1 ? portalsArray : undefined,
       hazards: [],
       windZones: [],
       gravityWells: [],
       frictionZones: [],
     };
 
-    // Add props if needed
-    const props = shouldUseProps(levelId);
+    // Add springs if needed
     if (props.springs) {
       level.springs = this.generateSprings(
         positions,
@@ -295,17 +318,6 @@ export class LevelGenerator {
         worldConfig.mechanics.timedSprings,
         worldConfig.mechanics.breakableSprings
       );
-    }
-    if (props.portals) {
-      const portalResult = this.generatePortals(
-        rng.derive('portals'),
-        worldConfig.mechanics.timedPortals,
-        worldConfig.mechanics.multiPortals
-      );
-      level.portal = portalResult.portal;
-      if (portalResult.portals) {
-        level.portals = portalResult.portals;
-      }
     }
 
     // Add hazards for levels 71+
