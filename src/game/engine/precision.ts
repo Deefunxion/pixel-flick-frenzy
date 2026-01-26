@@ -346,8 +346,8 @@ export function applyHardBrake(
   const rampProgress = Math.min(1, holdFramesPastThreshold / BRAKE_RAMP_FRAMES);
   const decel = BRAKE_MIN_DECEL - (rampProgress * (BRAKE_MIN_DECEL - BRAKE_MAX_DECEL));
 
-  // Apply progressive deceleration to VERTICAL only (Bomb Jack parachute style)
-  // Horizontal momentum is preserved - player keeps moving forward
+  // Apply progressive deceleration
+  state.vx *= decel;
   state.vy *= decel;
 
   return { applied: true, denied: false, velocityMultiplier: decel };
