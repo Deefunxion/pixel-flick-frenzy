@@ -1,6 +1,6 @@
 // src/firebase/config.ts
 import { initializeApp, type FirebaseApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator, type Auth } from 'firebase/auth';
+import { getAuth, connectAuthEmulator, browserLocalPersistence, setPersistence, type Auth } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator, type Firestore } from 'firebase/firestore';
 import { FIREBASE_ENABLED } from './flags';
 
@@ -25,6 +25,11 @@ if (FIREBASE_ENABLED) {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);
+
+  // Ensure auth session persists across page reloads
+  setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.error('[Firebase] Failed to set auth persistence:', error);
+  });
 
   // Connect to emulators in development
   if (USE_EMULATORS) {
