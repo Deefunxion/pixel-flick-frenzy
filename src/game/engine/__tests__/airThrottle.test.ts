@@ -233,7 +233,8 @@ describe('Zeno Air Control System', () => {
 
       expect(result.applied).toBe(true);
       // BRAKE_MIN_DECEL = 0.98 (gentle start)
-      expect(state.vx).toBeCloseTo(5 * 0.98, 2);
+      // Vertical-only: vx unchanged, vy braked
+      expect(state.vx).toBe(5);
       expect(state.vy).toBeCloseTo(3 * 0.98, 2);
     });
 
@@ -249,7 +250,8 @@ describe('Zeno Air Control System', () => {
 
       expect(result.applied).toBe(true);
       // BRAKE_MAX_DECEL = 0.80 (full brake)
-      expect(state.vx).toBeCloseTo(5 * 0.80, 2);
+      // Vertical-only: vx unchanged, vy braked
+      expect(state.vx).toBe(5);
       expect(state.vy).toBeCloseTo(3 * 0.80, 2);
     });
 
@@ -307,6 +309,47 @@ describe('Zeno Air Control System', () => {
       // Full ramp (60 frames): decel = 0.80
       const result60 = applyHardBrake(state, 60, 1/60);
       expect(result60.velocityMultiplier).toBeCloseTo(0.80, 2);
+    });
+  });
+
+  describe('Hold brake vertical only (Bomb Jack parachute)', () => {
+    it('should brake vy but NOT vx when holding', () => {
+      const state = createInitialState({ reduceFx: false });
+      state.vx = 5;
+      state.vy = 4;
+      state.stamina = 100;
+
+      applyHardBrake(state, 30, 1/60);  // 30 frames past threshold
+
+      expect(state.vx).toBe(5);          // Unchanged
+      expect(state.vy).toBeLessThan(4);  // Reduced
+    });
+
+    it('should maintain horizontal momentum through multiple brake frames', () => {
+      const state = createInitialState({ reduceFx: false });
+      state.vx = 6;
+      state.vy = 3;
+      state.stamina = 100;
+
+      // Apply brake for several frames (starts gentle at 0.98, ramps to 0.80)
+      for (let i = 0; i < 10; i++) {
+        applyHardBrake(state, i + 1, 1/60);
+      }
+
+      expect(state.vx).toBe(6);          // Still unchanged after 10 frames
+      expect(state.vy).toBeLessThan(2.5);  // Reduced (from 3 to ~2.07)
+    });
+
+    it('should allow full horizontal speed while braking vertically', () => {
+      const state = createInitialState({ reduceFx: false });
+      state.vx = 7;  // Max velocity
+      state.vy = 5;
+      state.stamina = 100;
+
+      applyHardBrake(state, 60, 1/60);  // Full brake strength
+
+      expect(state.vx).toBe(7);  // Untouched
+      expect(state.vy).toBeLessThan(5);
     });
   });
 });
