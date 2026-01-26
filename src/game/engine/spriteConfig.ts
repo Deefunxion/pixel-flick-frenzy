@@ -16,8 +16,8 @@ export const FRAME_WIDTH = 128;
 export const FRAME_HEIGHT = 128;
 
 // In-game display size (scales down from frame size)
-export const ZENO_DISPLAY_WIDTH = 40;
-export const ZENO_DISPLAY_HEIGHT = 40;
+export const ZENO_DISPLAY_WIDTH = 35;
+export const ZENO_DISPLAY_HEIGHT = 35;
 
 // Sprite sheet paths (v2 = 50-frame animation system, 2026-01-17)
 // Cache-busting version to force reload of new sprite sheet
