@@ -30,8 +30,12 @@ DOODLE_SPRITES.forEach(sprite => {
 export function renderDoodles(
   ctx: CanvasRenderingContext2D,
   doodles: Doodle[],
-  timeMs: number
+  timeMs: number,
+  levelId: number = 1
 ): void {
+  // Render connecting lines first (behind doodles) for tutorial levels
+  renderConnectingLines(ctx, doodles, levelId);
+
   doodles.forEach(doodle => {
     if (doodle.collected) {
       renderCollectedDoodle(ctx, doodle, timeMs);
@@ -39,6 +43,44 @@ export function renderDoodles(
       renderActiveDoodle(ctx, doodle, timeMs);
     }
   });
+}
+
+/**
+ * Render connecting lines between doodles for tutorial levels (1-10)
+ * Helps new players understand the collection sequence
+ */
+function renderConnectingLines(
+  ctx: CanvasRenderingContext2D,
+  doodles: Doodle[],
+  levelId: number
+): void {
+  // Only show for levels 1-10
+  if (levelId > 10) return;
+  if (doodles.length < 2) return;
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 180, 100, 0.25)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+
+  ctx.beginPath();
+
+  // Sort by sequence to draw in order
+  const sorted = [...doodles]
+    .filter(d => !d.collected)
+    .sort((a, b) => a.sequence - b.sequence);
+
+  for (let i = 0; i < sorted.length; i++) {
+    const doodle = sorted[i];
+    if (i === 0) {
+      ctx.moveTo(doodle.x, doodle.y);
+    } else {
+      ctx.lineTo(doodle.x, doodle.y);
+    }
+  }
+
+  ctx.stroke();
+  ctx.restore();
 }
 
 function renderActiveDoodle(
