@@ -132,6 +132,15 @@ html, body {
   height: 100%;
 }
 
+/* Fullscreen mode - sky blue background to match game sky */
+:fullscreen {
+  background-color: #3f6ca4;
+}
+
+::backdrop {
+  background-color: #3f6ca4;
+}
+
 /* Canvas container - TRUE FULL SCREEN for browser and mobile */
 .canvas-container {
   display: flex;
