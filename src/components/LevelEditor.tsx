@@ -392,10 +392,12 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
         return;
       }
 
-      const windIdx = (level.windZones || []).findIndex(w =>
-        x >= w.x - w.width / 2 && x <= w.x + w.width / 2 &&
-        y >= w.y - w.height / 2 && y <= w.y + w.height / 2
-      );
+      // Wind zones - circular check
+      const windIdx = (level.windZones || []).findIndex(w => {
+        const dx = x - w.x;
+        const dy = y - w.y;
+        return Math.sqrt(dx * dx + dy * dy) <= w.radius;
+      });
       if (windIdx >= 0) {
         setSelected({ type: 'windZone', index: windIdx });
         return;
