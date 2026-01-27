@@ -1,19 +1,17 @@
 // src/game/engine/arcade/generator/transform.ts
-import type { CharacterData, StrokePoint } from './types';
+import type { CharacterData, StrokePoint, Archetype, ArchetypeTransform } from './types';
+import { ARCHETYPE_TRANSFORMS } from './archetypes';
 
-// Game canvas bounds (game units)
-// Full play area: x from 50 (safe start) to 400 (before cliff edge)
+// Game canvas bounds
 const GAME_BOUNDS = {
-  minX: 50,          // Start of play area (safe distance from launch pad)
-  maxX: 400,         // End of play area (safe distance from cliff edge at 420)
-  minY: 30,          // Top of play area (just below ceiling at 28)
-  maxY: 190,         // Bottom (above ground at ~220)
+  minX: 50,
+  maxX: 400,
+  minY: 30,
+  maxY: 190,
 };
 
-// Minimum spacing between doodles for playability
-const MIN_DOODLE_SPACING = 40;
+const MIN_DOODLE_SPACING = 25; // Reduced for smaller doodles
 
-// SVG source bounds (Make Me a Hanzi uses 0-1000)
 const SVG_BOUNDS = {
   width: 1000,
   height: 1000,
@@ -22,16 +20,20 @@ const SVG_BOUNDS = {
 export interface TransformOptions {
   rotation?: 0 | 90 | 180 | 270;
   flipHorizontal?: boolean;
+  archetype?: Archetype;
 }
 
 export class StrokeTransformer {
   private options: Required<TransformOptions>;
+  private transform: ArchetypeTransform;
 
   constructor(options: TransformOptions = {}) {
     this.options = {
       rotation: options.rotation ?? 0,
       flipHorizontal: options.flipHorizontal ?? false,
+      archetype: options.archetype ?? 'general',
     };
+    this.transform = ARCHETYPE_TRANSFORMS[this.options.archetype];
   }
 
   /**
@@ -50,14 +52,10 @@ export class StrokeTransformer {
   }
 
   /**
-   * Extract doodle positions following REALISTIC PHYSICS trajectory:
-   * - Launch phase: Y can decrease (going UP on screen)
-   * - After peak: Y must increase (going DOWN on screen due to gravity)
-   *
-   * Character pattern provides small variations, not the base trajectory.
+   * Extract doodle positions using archetype-specific transform
    */
   extractDoodlePositions(character: CharacterData, targetCount: number = 0): StrokePoint[] {
-    // Step 1: Collect points from character for variation inspiration
+    // Collect and normalize character points
     const rawPoints: StrokePoint[] = [];
     for (const stroke of character.strokes) {
       for (const point of stroke.points) {
@@ -67,127 +65,128 @@ export class StrokeTransformer {
 
     if (rawPoints.length === 0) return [];
 
-    // Step 2: Normalize Y values for variation (0 = top, 1 = bottom)
-    const minY = Math.min(...rawPoints.map(p => p.y));
-    const maxY = Math.max(...rawPoints.map(p => p.y));
-    const yRange = maxY - minY || 1;
-    const normalizedPoints = rawPoints.map(p => ({
-      x: p.x,
-      yNorm: (p.y - minY) / yRange,
-    }));
-    normalizedPoints.sort((a, b) => a.x - b.x);
+    // Normalize to 0-1 range
+    const xs = rawPoints.map(p => p.x);
+    const ys = rawPoints.map(p => p.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const rangeX = maxX - minX || 1;
+    const rangeY = maxY - minY || 1;
 
-    // Step 3: Determine count
+    const normalized = rawPoints.map(p => ({
+      x: (p.x - minX) / rangeX,
+      y: (p.y - minY) / rangeY,
+    }));
+
+    // Sort by X for consistent ordering
+    normalized.sort((a, b) => a.x - b.x);
+
+    // Determine count
     const count = targetCount > 0 ? targetCount : Math.min(rawPoints.length, 15);
     if (count === 0) return [];
 
-    // Step 4: Sample character pattern for small variations
-    const variations: number[] = [];
+    // Sample points evenly
+    const sampled: Array<{ x: number; y: number }> = [];
     for (let i = 0; i < count; i++) {
-      if (normalizedPoints.length >= count) {
-        const idx = count > 1 ? Math.floor((i / (count - 1)) * (normalizedPoints.length - 1)) : 0;
-        variations.push((normalizedPoints[idx].yNorm - 0.5) * 20); // ±10 pixel variation
-      } else {
-        const progress = count > 1 ? i / (count - 1) : 0.5;
-        const floatIdx = progress * (normalizedPoints.length - 1);
-        const lowIdx = Math.floor(floatIdx);
-        const highIdx = Math.min(lowIdx + 1, normalizedPoints.length - 1);
-        const blend = floatIdx - lowIdx;
-        const yNorm = normalizedPoints[lowIdx].yNorm * (1 - blend) +
-                      normalizedPoints[highIdx].yNorm * blend;
-        variations.push((yNorm - 0.5) * 20);
-      }
+      const idx = count > 1
+        ? Math.floor((i / (count - 1)) * (normalized.length - 1))
+        : 0;
+      sampled.push(normalized[Math.min(idx, normalized.length - 1)]);
     }
 
-    // Step 5: Create PHYSICS-BASED parabolic trajectory
-    // Screen coords: Y=35 (top/high physically), Y=190 (bottom/low physically)
-    // Trajectory: start near ground → peak high → descend to landing
+    // Apply archetype-specific transform
+    const positions = this.applyArchetypeTransform(sampled);
 
-    const playWidth = GAME_BOUNDS.maxX - GAME_BOUNDS.minX; // 350 pixels
+    // Ensure minimum spacing
+    this.enforceSpacing(positions);
 
-    // Peak position: around 25-35% through the trajectory (realistic throw)
-    const peakRatio = 0.25 + (rawPoints.length % 10) * 0.01; // Slight variation 0.25-0.35
-    const peakIndex = Math.max(2, Math.floor(count * peakRatio));
+    return positions;
+  }
 
-    // Y boundaries for trajectory
-    const launchY = GAME_BOUNDS.maxY - 15;  // ~175 (start near ground)
-    const peakY = GAME_BOUNDS.minY + 10;    // ~45 (highest point)
-    const landingY = GAME_BOUNDS.maxY - 5;  // ~185 (end near ground)
-
+  /**
+   * Apply archetype-specific coordinate transformation
+   */
+  private applyArchetypeTransform(normalized: Array<{ x: number; y: number }>): StrokePoint[] {
+    const t = this.transform;
     const positions: StrokePoint[] = [];
 
-    for (let i = 0; i < count; i++) {
-      // X: evenly distributed from left to right
-      const xProgress = count > 1 ? i / (count - 1) : 0.5;
-      const x = GAME_BOUNDS.minX + xProgress * playWidth;
+    for (let i = 0; i < normalized.length; i++) {
+      const n = normalized[i];
+      let x: number, y: number;
 
-      let baseY: number;
-
-      if (i <= peakIndex) {
-        // ASCENT PHASE: Y decreases (physically going UP)
-        // Use smooth easing for natural arc
-        const ascentProgress = peakIndex > 0 ? i / peakIndex : 1;
-        const eased = 1 - Math.pow(1 - ascentProgress, 2); // ease-out
-        baseY = launchY - (launchY - peakY) * eased;
+      // Handle X transformation
+      if (t.bifurcateX && t.leftCluster && t.rightCluster) {
+        // Split: alternate between left and right clusters
+        if (i % 2 === 0) {
+          x = t.leftCluster.min + n.x * (t.leftCluster.max - t.leftCluster.min);
+        } else {
+          x = t.rightCluster.min + n.x * (t.rightCluster.max - t.rightCluster.min);
+        }
+      } else if (t.pushToEdges) {
+        // Perimeter: push toward edges
+        const centerDist = Math.abs(n.x - 0.5) + Math.abs(n.y - 0.5);
+        const pushFactor = 1.5 - centerDist;
+        const pushed = n.x + (n.x - 0.5) * pushFactor * 0.5;
+        x = t.xMin + Math.max(0, Math.min(1, pushed)) * (t.xMax - t.xMin);
       } else {
-        // DESCENT PHASE: Y increases (physically going DOWN due to gravity)
-        // Use accelerating easing (gravity)
-        const descentProgress = (i - peakIndex) / (count - 1 - peakIndex);
-        const eased = Math.pow(descentProgress, 1.5); // accelerating fall
-        baseY = peakY + (landingY - peakY) * eased;
+        // Normal X spread
+        x = t.xMin + n.x * (t.xMax - t.xMin);
       }
 
-      // Add small variation from character pattern
-      const variation = variations[i] || 0;
-      let y = baseY + variation;
+      // Handle Y transformation
+      if (t.alternateBands && t.bandA && t.bandB) {
+        // Zigzag: alternate between bands
+        const band = i % 2 === 0 ? t.bandA : t.bandB;
+        y = band.min + n.y * (band.max - band.min);
+      } else if (t.invertY) {
+        // Climber: invert Y (start low, end high)
+        y = t.yMax - n.y * (t.yMax - t.yMin);
+      } else {
+        // Normal Y mapping
+        y = t.yMin + n.y * (t.yMax - t.yMin);
+      }
 
-      // Clamp to bounds
+      // Clamp to game bounds
+      x = Math.max(GAME_BOUNDS.minX, Math.min(GAME_BOUNDS.maxX, x));
       y = Math.max(GAME_BOUNDS.minY, Math.min(GAME_BOUNDS.maxY, y));
 
-      positions.push({
-        x: Math.round(x),
-        y: Math.round(y),
-      });
-    }
-
-    // Step 6: ENFORCE PHYSICS CONSTRAINTS
-    // After peak, each Y must be >= previous Y (must descend)
-    for (let i = peakIndex + 1; i < positions.length; i++) {
-      if (positions[i].y < positions[i - 1].y) {
-        // Force descent: current must be at or below previous
-        positions[i].y = positions[i - 1].y + Math.max(5, MIN_DOODLE_SPACING / 3);
-      }
-      // Clamp to bounds
-      positions[i].y = Math.min(GAME_BOUNDS.maxY, positions[i].y);
-    }
-
-    // Step 7: Ensure minimum spacing
-    for (let i = 1; i < positions.length; i++) {
-      const prev = positions[i - 1];
-      const curr = positions[i];
-      const dx = curr.x - prev.x;
-      const dy = Math.abs(curr.y - prev.y);
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance < MIN_DOODLE_SPACING) {
-        const neededDy = Math.sqrt(MIN_DOODLE_SPACING * MIN_DOODLE_SPACING - dx * dx);
-        // During descent, always push down; during ascent, push up
-        if (i > peakIndex) {
-          curr.y = Math.min(GAME_BOUNDS.maxY, prev.y + neededDy);
-        } else {
-          curr.y = Math.max(GAME_BOUNDS.minY, prev.y - neededDy);
-        }
-      }
+      positions.push({ x: Math.round(x), y: Math.round(y) });
     }
 
     return positions;
   }
 
   /**
-   * Get the full path for trajectory analysis
+   * Enforce minimum spacing between doodles
    */
-  getFullPath(character: CharacterData): StrokePoint[] {
-    return this.transformToGameCanvas(character);
+  private enforceSpacing(positions: StrokePoint[]): void {
+    for (let i = 1; i < positions.length; i++) {
+      const prev = positions[i - 1];
+      const curr = positions[i];
+      let dx = curr.x - prev.x;
+      let dy = curr.y - prev.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < MIN_DOODLE_SPACING) {
+        // If points are at same position, push in X direction
+        if (distance === 0) {
+          dx = MIN_DOODLE_SPACING;
+          dy = 0;
+        } else {
+          // Scale the offset to achieve minimum spacing
+          const scale = MIN_DOODLE_SPACING / distance;
+          dx = dx * scale;
+          dy = dy * scale;
+        }
+
+        curr.x = Math.round(prev.x + dx);
+        curr.y = Math.round(prev.y + dy);
+
+        // Clamp to bounds
+        curr.x = Math.max(GAME_BOUNDS.minX, Math.min(GAME_BOUNDS.maxX, curr.x));
+        curr.y = Math.max(GAME_BOUNDS.minY, Math.min(GAME_BOUNDS.maxY, curr.y));
+      }
+    }
   }
 
   /**
@@ -196,7 +195,6 @@ export class StrokeTransformer {
   private applyRotationAndFlip(point: StrokePoint): StrokePoint {
     let { x, y } = point;
 
-    // Apply rotation around center
     if (this.options.rotation !== 0) {
       const cx = SVG_BOUNDS.width / 2;
       const cy = SVG_BOUNDS.height / 2;
@@ -209,7 +207,6 @@ export class StrokeTransformer {
       y = ny;
     }
 
-    // Apply flip
     if (this.options.flipHorizontal) {
       x = SVG_BOUNDS.width - x;
     }
@@ -231,5 +228,19 @@ export class StrokeTransformer {
       x: Math.round(x),
       y: Math.round(y),
     };
+  }
+
+  /**
+   * Get the full path for trajectory analysis
+   */
+  getFullPath(character: CharacterData): StrokePoint[] {
+    return this.transformToGameCanvas(character);
+  }
+
+  /**
+   * Get the archetype being used
+   */
+  getArchetype(): Archetype {
+    return this.options.archetype;
   }
 }
