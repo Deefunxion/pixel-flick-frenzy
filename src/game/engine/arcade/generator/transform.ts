@@ -53,45 +53,72 @@ export class StrokeTransformer {
 
   /**
    * Extract doodle positions using archetype-specific transform
+   * Limits to MAX_STROKES (3) clear paths and distributes doodles along them
    */
   extractDoodlePositions(character: CharacterData, targetCount: number = 0): StrokePoint[] {
-    // Collect and normalize character points
-    const rawPoints: StrokePoint[] = [];
-    for (const stroke of character.strokes) {
-      for (const point of stroke.points) {
-        rawPoints.push(this.applyRotationAndFlip(point));
-      }
-    }
+    const MAX_STROKES = 3; // Maximum number of distinct paths
 
-    if (rawPoints.length === 0) return [];
+    // Get strokes with their transformed points
+    const strokesWithPoints = character.strokes.map(stroke => ({
+      points: stroke.points.map(p => this.applyRotationAndFlip(p)),
+      length: stroke.points.length,
+    }));
 
-    // Normalize to 0-1 range
-    const xs = rawPoints.map(p => p.x);
-    const ys = rawPoints.map(p => p.y);
+    if (strokesWithPoints.length === 0) return [];
+
+    // Sort strokes by length (longest first) and take top MAX_STROKES
+    const sortedStrokes = [...strokesWithPoints]
+      .sort((a, b) => b.length - a.length)
+      .slice(0, MAX_STROKES);
+
+    // Calculate total points across selected strokes
+    const totalPoints = sortedStrokes.reduce((sum, s) => sum + s.points.length, 0);
+    if (totalPoints === 0) return [];
+
+    // Determine count
+    const count = targetCount > 0 ? targetCount : Math.min(totalPoints, 15);
+    if (count === 0) return [];
+
+    // Calculate global bounds for normalization
+    const allPoints = sortedStrokes.flatMap(s => s.points);
+    const xs = allPoints.map(p => p.x);
+    const ys = allPoints.map(p => p.y);
     const minX = Math.min(...xs), maxX = Math.max(...xs);
     const minY = Math.min(...ys), maxY = Math.max(...ys);
     const rangeX = maxX - minX || 1;
     const rangeY = maxY - minY || 1;
 
-    const normalized = rawPoints.map(p => ({
-      x: (p.x - minX) / rangeX,
-      y: (p.y - minY) / rangeY,
-    }));
-
-    // Sort by X for consistent ordering
-    normalized.sort((a, b) => a.x - b.x);
-
-    // Determine count
-    const count = targetCount > 0 ? targetCount : Math.min(rawPoints.length, 15);
-    if (count === 0) return [];
-
-    // Sample points evenly
+    // Distribute doodles proportionally across strokes based on stroke length
     const sampled: Array<{ x: number; y: number }> = [];
-    for (let i = 0; i < count; i++) {
-      const idx = count > 1
-        ? Math.floor((i / (count - 1)) * (normalized.length - 1))
-        : 0;
-      sampled.push(normalized[Math.min(idx, normalized.length - 1)]);
+    let doodlesRemaining = count;
+
+    for (let strokeIdx = 0; strokeIdx < sortedStrokes.length; strokeIdx++) {
+      const stroke = sortedStrokes[strokeIdx];
+      const isLastStroke = strokeIdx === sortedStrokes.length - 1;
+
+      // Calculate how many doodles for this stroke (proportional to length)
+      const strokeRatio = stroke.points.length / totalPoints;
+      const doodlesForStroke = isLastStroke
+        ? doodlesRemaining // Last stroke gets all remaining
+        : Math.max(1, Math.round(count * strokeRatio));
+
+      const actualCount = Math.min(doodlesForStroke, doodlesRemaining);
+      doodlesRemaining -= actualCount;
+
+      // Sample points evenly along this stroke (maintaining stroke order)
+      for (let i = 0; i < actualCount; i++) {
+        const idx = actualCount > 1
+          ? Math.floor((i / (actualCount - 1)) * (stroke.points.length - 1))
+          : Math.floor(stroke.points.length / 2);
+
+        const point = stroke.points[Math.min(idx, stroke.points.length - 1)];
+
+        // Normalize point
+        sampled.push({
+          x: (point.x - minX) / rangeX,
+          y: (point.y - minY) / rangeY,
+        });
+      }
     }
 
     // Apply archetype-specific transform
