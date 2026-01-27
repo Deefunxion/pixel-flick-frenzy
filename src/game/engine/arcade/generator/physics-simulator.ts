@@ -30,7 +30,7 @@ export interface SimulationResult {
 
 const FRAME_MS = 1000 / 60; // 60fps
 const MAX_FRAMES = 60 * 30; // 30 seconds max simulation
-const DOODLE_RADIUS = 20;
+const DOODLE_RADIUS = 10;
 const GROUND_Y = H - 20;
 
 // Collision Y offset: moves collision point from feet to sprite center

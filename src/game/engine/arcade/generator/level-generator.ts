@@ -153,18 +153,18 @@ export function getDoodleCount(level: number): number {
 }
 
 /**
- * Get base doodle size multiplier (30% shrink = 0.7)
+ * Get base doodle size multiplier (50% of previous = 0.35)
  */
 export function getDoodleBaseSize(): number {
-  return 0.7;
+  return 0.35;
 }
 
 /**
- * Get doodle hitbox radius (proportionally shrunk)
- * Original: 20px, Shrunk: 14px
+ * Get doodle hitbox radius (50% of previous)
+ * Original: 14px, Now: 7px
  */
 export function getDoodleHitboxRadius(): number {
-  return 14;
+  return 7;
 }
 
 /**
@@ -801,6 +801,9 @@ export class LevelGenerator {
       }
 
       onProgress?.(id - startLevel + 1, total, result);
+
+      // Yield to event loop to allow UI updates
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
 
     return { levels, ghostReplays, failed };

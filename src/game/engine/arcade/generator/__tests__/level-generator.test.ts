@@ -161,14 +161,14 @@ describe('getDoodleCount', () => {
 });
 
 describe('getDoodleBaseSize', () => {
-  it('returns 0.7 (30% shrink from 1.0)', () => {
-    expect(getDoodleBaseSize()).toBe(0.7);
+  it('returns 0.35 (50% of previous size)', () => {
+    expect(getDoodleBaseSize()).toBe(0.35);
   });
 });
 
 describe('getDoodleHitboxRadius', () => {
-  it('returns 14 (proportionally shrunk)', () => {
-    expect(getDoodleHitboxRadius()).toBe(14);
+  it('returns 7 (50% of previous radius)', () => {
+    expect(getDoodleHitboxRadius()).toBe(7);
   });
 });
 
