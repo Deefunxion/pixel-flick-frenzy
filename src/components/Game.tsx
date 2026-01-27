@@ -1031,8 +1031,8 @@ const Game = () => {
 
   return (
     <div
-      className="w-full h-[100svh] flex items-center justify-center"
-      style={{ background: `linear-gradient(180deg, ${theme.background} 0%, ${theme.horizon} 100%)` }}
+      className={`w-full flex items-center justify-center ${isFullscreen ? 'h-screen' : 'h-[100svh]'}`}
+      style={{ background: isFullscreen ? '#3f6ca4' : `linear-gradient(180deg, ${theme.background} 0%, ${theme.horizon} 100%)` }}
     >
       {/* Full-screen input overlay - tap/hold anywhere on screen */}
       <div

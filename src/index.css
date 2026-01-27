@@ -133,12 +133,24 @@ html, body {
 }
 
 /* Fullscreen mode - sky blue background to match game sky */
-:fullscreen {
-  background-color: #3f6ca4;
+:fullscreen,
+:fullscreen *,
+html:fullscreen,
+html:fullscreen body {
+  background-color: #3f6ca4 !important;
 }
 
 ::backdrop {
-  background-color: #3f6ca4;
+  background-color: #3f6ca4 !important;
+}
+
+/* Webkit prefix for older browsers */
+:-webkit-full-screen {
+  background-color: #3f6ca4 !important;
+}
+
+::-webkit-backdrop {
+  background-color: #3f6ca4 !important;
 }
 
 /* Canvas container - TRUE FULL SCREEN for browser and mobile */
