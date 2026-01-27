@@ -97,7 +97,7 @@ export function renderDetailZoomWindow(
 
   // Render the scene content (simplified - just key elements)
   const groundY = H - 20;
-  const ZENO_Y_OFFSET = theme.renderStyle.kind === 'noir' ? -24 : -8;
+  const ZENO_Y_OFFSET = theme.renderStyle.kind === 'noir' ? -24 : -16;
   const zenoY = state.py + ZENO_Y_OFFSET;
   const zenoX = state.px + (theme.renderStyle.kind === 'noir' ? 0 : 2);
 

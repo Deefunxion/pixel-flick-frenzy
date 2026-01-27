@@ -35,7 +35,7 @@ const GROUND_Y = H - 20;
 
 // Collision Y offset: moves collision point from feet to sprite center
 // This matches the game's COLLISION_Y_OFFSET for accurate simulation
-const COLLISION_Y_OFFSET = -8;
+const COLLISION_Y_OFFSET = -16;
 
 // Match actual game physics (from precision.ts)
 const TAP_VELOCITY_BOOST = 0.8;       // Forward boost on tap

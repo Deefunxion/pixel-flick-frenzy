@@ -46,7 +46,7 @@ import { updateWindZoneParticles } from '../arcade/windZonesRender';
 
 // Collision Y offset: moves collision point from feet to sprite center
 // This matches ZENO_Y_OFFSET in render, so collisions happen at visual center
-const COLLISION_Y_OFFSET = -15;
+const COLLISION_Y_OFFSET = -16;
 
 // Audio interface for flight
 export type FlightAudio = {
