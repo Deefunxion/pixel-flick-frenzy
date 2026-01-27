@@ -1,5 +1,5 @@
 // src/game/engine/arcade/generator/stroke-data.ts
-import type { CharacterData } from './types';
+import type { CharacterData, ClassifiedCharacterData, Archetype } from './types';
 
 // Stroke count ranges for level difficulty
 export const STROKE_RANGES: Record<string, { min: number; max: number }> = {
@@ -24,24 +24,66 @@ export function getStrokeRangeForLevel(level: number): { min: number; max: numbe
   return STROKE_RANGES['201-250'];
 }
 
-// Will be populated from hanzi-strokes.json
-let characterDatabase: CharacterData[] = [];
+// Will be populated from hanzi-classified.json (or hanzi-strokes.json as fallback)
+let characterDatabase: ClassifiedCharacterData[] = [];
 
 export async function loadStrokeDatabase(): Promise<void> {
   if (characterDatabase.length > 0) return;
-  const response = await fetch('/data/hanzi-strokes.json');
-  characterDatabase = await response.json();
+
+  // Try classified data first, fall back to original
+  try {
+    const response = await fetch('/data/hanzi-classified.json');
+    characterDatabase = await response.json();
+  } catch {
+    // Fallback: load original and classify on the fly (slower)
+    const response = await fetch('/data/hanzi-strokes.json');
+    const original: CharacterData[] = await response.json();
+    const { classifyCharacter } = await import('./character-classifier');
+    characterDatabase = original.map(c => ({
+      ...c,
+      archetype: classifyCharacter(c).archetype,
+      aspectRatio: classifyCharacter(c).aspectRatio,
+      verticalCoM: classifyCharacter(c).verticalCoM,
+    }));
+  }
 }
 
-export function getCharactersByStrokeCount(min: number, max: number): CharacterData[] {
+/**
+ * Get characters matching a specific archetype and stroke count range
+ */
+export function getCharactersByArchetype(
+  archetype: Archetype,
+  minStrokes: number,
+  maxStrokes: number
+): ClassifiedCharacterData[] {
+  return characterDatabase.filter(c =>
+    c.archetype === archetype &&
+    c.strokeCount >= minStrokes &&
+    c.strokeCount <= maxStrokes
+  );
+}
+
+export function getCharactersByStrokeCount(min: number, max: number): ClassifiedCharacterData[] {
   return characterDatabase.filter(c => c.strokeCount >= min && c.strokeCount <= max);
 }
 
-export function getCharacterDatabase(): CharacterData[] {
+export function getCharacterDatabase(): ClassifiedCharacterData[] {
   return characterDatabase;
 }
 
 // For testing: allow direct setting of database
 export function setCharacterDatabase(data: CharacterData[]): void {
-  characterDatabase = data;
+  // Convert to ClassifiedCharacterData if needed
+  characterDatabase = data.map(c => {
+    if ('archetype' in c) {
+      return c as ClassifiedCharacterData;
+    }
+    // For test data without archetype, default to 'general'
+    return {
+      ...c,
+      archetype: 'general' as Archetype,
+      aspectRatio: 1,
+      verticalCoM: 0.5,
+    };
+  });
 }

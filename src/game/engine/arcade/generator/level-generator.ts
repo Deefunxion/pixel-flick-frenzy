@@ -1,11 +1,12 @@
 // src/game/engine/arcade/generator/level-generator.ts
 import type { ArcadeLevel, DoodlePlacement, SpringPlacement, PortalPair, HazardPlacement, HazardMotion, WindZonePlacement, GravityWellPlacement, GravityWellType, FrictionZonePlacement, FrictionType, DoodleMotion } from '../types';
-import type { GenerationResult, CharacterData, GhostInput } from './types';
+import type { GenerationResult, CharacterData, ClassifiedCharacterData, GhostInput, Archetype } from './types';
 import { SeededRandom } from './random';
 import { StrokeTransformer } from './transform';
 import { PhysicsSimulator } from './physics-simulator';
-import { loadStrokeDatabase, getCharactersByStrokeCount, getStrokeRangeForLevel, getCharacterDatabase } from './stroke-data';
+import { loadStrokeDatabase, getCharactersByStrokeCount, getCharactersByArchetype, getStrokeRangeForLevel, getCharacterDatabase } from './stroke-data';
 import { applyCalligraphicFlow } from '../calligraphicScale';
+import { selectArchetypeForLevel } from './archetypes';
 
 // World definitions - which mechanics are available per level range
 interface WorldConfig {
@@ -243,9 +244,19 @@ export class LevelGenerator {
 
     const rng = new SeededRandom(`${seed}-${levelId}`);
     const strokeRange = getStrokeRangeForLevel(levelId);
-    let candidates = getCharactersByStrokeCount(strokeRange.min, strokeRange.max);
 
-    // Fallback: if no candidates in range, use all available characters
+    // Select archetype for this level
+    const archetype = selectArchetypeForLevel(levelId, rng.next());
+
+    // Try to find characters matching archetype first
+    let candidates = getCharactersByArchetype(archetype, strokeRange.min, strokeRange.max);
+
+    // Fallback: if no archetype matches, try any character with matching stroke count
+    if (candidates.length === 0) {
+      candidates = getCharactersByStrokeCount(strokeRange.min, strokeRange.max);
+    }
+
+    // Final fallback: use all available characters
     if (candidates.length === 0) {
       candidates = getCharacterDatabase();
     }
@@ -267,8 +278,8 @@ export class LevelGenerator {
       // Pick random character
       const character = rng.pick(candidates);
 
-      // Try to generate level from this character
-      const result = this.generateFromCharacter(levelId, character, rng.derive(attempts));
+      // Try to generate level from this character with the selected archetype
+      const result = this.generateFromCharacter(levelId, character, rng.derive(attempts), archetype);
 
       if (result.success) {
         return { ...result, attempts };
@@ -285,7 +296,7 @@ export class LevelGenerator {
 
     // Return last attempt even if not fully successful
     const character = rng.pick(candidates);
-    const finalResult = this.generateFromCharacter(levelId, character, rng.derive('final'));
+    const finalResult = this.generateFromCharacter(levelId, character, rng.derive('final'), archetype);
 
     return {
       ...finalResult,
@@ -296,12 +307,17 @@ export class LevelGenerator {
 
   private generateFromCharacter(
     levelId: number,
-    character: CharacterData,
-    rng: SeededRandom
+    character: CharacterData | ClassifiedCharacterData,
+    rng: SeededRandom,
+    archetype: Archetype = 'general'
   ): GenerationResult {
+    // Use character's archetype if available, otherwise use the selected archetype
+    const effectiveArchetype = 'archetype' in character ? character.archetype : archetype;
+
     const transformer = new StrokeTransformer({
       rotation: rng.pick([0, 90, 180, 270] as const),
       flipHorizontal: rng.next() > 0.5,
+      archetype: effectiveArchetype,
     });
 
     const targetDoodleCount = getDoodleCount(levelId);
