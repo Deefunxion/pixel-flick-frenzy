@@ -48,6 +48,34 @@ All notable changes to One-More-Flick are documented in this file.
 - Collecting any doodle updates glow to next uncollected in sequence
 - Example: collect #3 → #4 glows, collect #5 → #1 glows (wraps)
 
+### Changed - Point-Based Wind Zones
+- **Wind zones converted from rectangles to circles**:
+  - Before: Rectangle (width × height) with 4 directions (left/right/up/down)
+  - After: Circle (radius) with 360° angle-based direction
+- **Angle-based force direction**: 0°=right, 90°=down, 180°=left, 270°=up
+- **Circular collision detection**: Uses distance check instead of bounds check
+- **Trigonometric force calculation**: `fx = cos(angle) * strength`, `fy = sin(angle) * strength`
+
+### Added - Gravity Well Rotation
+- **Visual rotation support** for gravity wells (0-360°)
+- Rotation slider in Level Editor creation panel
+- Rotation editable on selected gravity wells
+
+### Changed - Level Editor Wind Zone UI
+- **Circular rendering**: Wind zones display as dashed circles with direction arrow
+- **Angle slider**: Replaces direction dropdown (0-360° in 15° steps)
+- **Radius slider**: Replaces width/height sliders (20-80px)
+- **Scale slider**: Controls visual sprite size (0.5x-2x)
+- **Selected properties panel**: Edit angle, radius, strength, scale, position
+
+### Technical - Point-Based Zones
+- Removed `WindDirection` type (`'left' | 'right' | 'up' | 'down'`)
+- `WindZonePlacement`: `width`/`height`/`direction` → `radius`/`angle`/`scale`
+- `WindZone` interface: Added `radiusSquared` for fast collision, removed bounds
+- `GravityWellPlacement` and `GravityWell`: Added `rotation` field
+- Level generator updated to use angle-based wind zones
+- 15 unit tests updated for new circular interface
+
 ### Improved - Portal Experience
 - **Reduced exit speed**: BASE_EXIT_SPEED lowered from 8 to 4 for better control
 - **Tighter slow-mo trigger**: Portal proximity reduced from 15px to 8px
