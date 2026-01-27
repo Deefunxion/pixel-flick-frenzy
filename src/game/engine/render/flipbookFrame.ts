@@ -32,7 +32,7 @@ import { drawZenoSprite } from './sprites/zenoSprite';
 
 // Visual offset to position Zeno better on screen (doesn't affect physics)
 const ZENO_X_OFFSET = 2;
-const ZENO_Y_OFFSET = -20;
+const ZENO_Y_OFFSET = -16;
 
 export function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameState, COLORS: Theme, nowMs: number) {
   // Ground level reference (for positioning)
@@ -166,6 +166,18 @@ export function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameSt
       renderChargeVignette(ctx, state.chargeGlowIntensity - 0.5, W, H);
     }
   }
+
+  // Hero glow - subtle radial glow behind Zeno
+  const glowPulse = 0.4 + Math.sin(nowMs / 400) * 0.1; // Gentle pulse 0.3-0.5
+  const glowRadius = 28;
+  const heroGlow = ctx.createRadialGradient(zenoX, zenoY, 0, zenoX, zenoY, glowRadius);
+  heroGlow.addColorStop(0, `rgba(255, 255, 220, ${glowPulse})`); // Warm white center
+  heroGlow.addColorStop(0.4, `rgba(255, 230, 150, ${glowPulse * 0.6})`); // Golden mid
+  heroGlow.addColorStop(1, 'rgba(255, 200, 100, 0)'); // Fade to transparent
+  ctx.fillStyle = heroGlow;
+  ctx.beginPath();
+  ctx.arc(zenoX, zenoY, glowRadius, 0, Math.PI * 2);
+  ctx.fill();
 
   // Player rendering - prefer sprites, fallback to procedural
   const spriteDrawn = drawZenoSprite(ctx, state, zenoX, zenoY);
