@@ -1,39 +1,30 @@
 // src/game/engine/arcade/windZones.ts
-import type { WindZonePlacement, WindDirection } from './types';
+import type { WindZonePlacement } from './types';
 
 export interface WindZone {
   x: number;
   y: number;
-  width: number;
-  height: number;
-  direction: WindDirection;
+  radius: number;      // Circular effect area
+  angle: number;       // Force direction in degrees (0=right, 90=down, 180=left, 270=up)
   strength: number;
-  // Computed bounds for fast collision
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
+  scale: number;
+  // Computed for fast collision
+  radiusSquared: number;
 }
 
 /**
  * Create runtime wind zone from placement data
  */
 export function createWindZoneFromPlacement(placement: WindZonePlacement): WindZone {
-  const halfWidth = placement.width / 2;
-  const halfHeight = placement.height / 2;
-
+  const radius = placement.radius;
   return {
     x: placement.x,
     y: placement.y,
-    width: placement.width,
-    height: placement.height,
-    direction: placement.direction,
+    radius,
+    angle: placement.angle,
     strength: placement.strength,
-    // Pre-compute bounds
-    left: placement.x - halfWidth,
-    right: placement.x + halfWidth,
-    top: placement.y - halfHeight,
-    bottom: placement.y + halfHeight,
+    scale: placement.scale ?? 1.0,
+    radiusSquared: radius * radius,
   };
 }
 
@@ -46,38 +37,28 @@ export function createWindZonesFromLevel(placements: WindZonePlacement[] | undef
 }
 
 /**
- * Check if player is inside a wind zone
+ * Check if player is inside a wind zone (circular)
  */
 export function isInWindZone(
   playerX: number,
   playerY: number,
   zone: WindZone
 ): boolean {
-  return (
-    playerX >= zone.left &&
-    playerX <= zone.right &&
-    playerY >= zone.top &&
-    playerY <= zone.bottom
-  );
+  const dx = playerX - zone.x;
+  const dy = playerY - zone.y;
+  return (dx * dx + dy * dy) <= zone.radiusSquared;
 }
 
 /**
- * Get wind force vector for a zone
- * Returns { fx, fy } force components
+ * Get wind force vector for a zone using trigonometry
+ * Returns { fx, fy } force components based on angle
  */
 export function getWindForce(zone: WindZone): { fx: number; fy: number } {
-  switch (zone.direction) {
-    case 'left':
-      return { fx: -zone.strength, fy: 0 };
-    case 'right':
-      return { fx: zone.strength, fy: 0 };
-    case 'up':
-      return { fx: 0, fy: -zone.strength };
-    case 'down':
-      return { fx: 0, fy: zone.strength };
-    default:
-      return { fx: 0, fy: 0 };
-  }
+  const radians = zone.angle * Math.PI / 180;
+  return {
+    fx: Math.cos(radians) * zone.strength,
+    fy: Math.sin(radians) * zone.strength,
+  };
 }
 
 /**
