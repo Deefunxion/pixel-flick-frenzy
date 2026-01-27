@@ -128,11 +128,83 @@ function getLandingTarget(level: number): number {
   return 419.5;
 }
 
-// Doodle count for level
-function getDoodleCount(level: number): number {
-  if (level <= 10) return level;
-  if (level <= 20) return 10 + Math.floor((level - 10) / 2);
-  return Math.min(25, 15 + Math.floor((level - 20) / 10));
+/**
+ * Get doodle count for a level
+ * - Levels 1-10: count = level number
+ * - Levels 11+: +1 every 2 levels from base 10
+ * - World 3+: +5 bonus per world
+ */
+export function getDoodleCount(level: number): number {
+  const world = Math.ceil(level / 10);
+
+  if (level <= 10) {
+    return level;
+  }
+
+  // Base progression: 10 + floor((level-11)/2) continues for all levels 11+
+  // Level 11-12: 10, Level 13-14: 11, ... Level 21-22: 15, etc.
+  const base = 10 + Math.floor((level - 11) / 2);
+
+  // World bonus: +5 per world starting at world 3
+  const worldBonus = world >= 3 ? (world - 2) * 5 : 0;
+
+  return base + worldBonus;
+}
+
+/**
+ * Get base doodle size multiplier (30% shrink = 0.7)
+ */
+export function getDoodleBaseSize(): number {
+  return 0.7;
+}
+
+/**
+ * Get doodle hitbox radius (proportionally shrunk)
+ * Original: 20px, Shrunk: 14px
+ */
+export function getDoodleHitboxRadius(): number {
+  return 14;
+}
+
+/**
+ * Get prop density multiplier for a level
+ */
+export function getPropDensity(level: number): number {
+  if (level <= 10) return 0.5;
+  if (level <= 50) return 1.0;
+  if (level <= 100) return 1.5;
+  if (level <= 140) return 2.0;
+  if (level <= 200) return 2.5;
+  return 3.0;
+}
+
+/**
+ * Get spring count for a level
+ */
+export function getSpringCount(level: number, roll: number): number {
+  const density = getPropDensity(level);
+  const base = 1 + Math.floor(roll * 3); // 1-3 base
+  return Math.max(1, Math.round(base * density));
+}
+
+/**
+ * Get portal count for a level
+ */
+export function getPortalCount(level: number, roll: number): number {
+  const density = getPropDensity(level);
+  if (level < 11) return 0; // No portals in world 1
+  const base = roll < 0.7 ? 1 : 0; // 70% chance of portal
+  return Math.round(base * density);
+}
+
+/**
+ * Get hazard count for a level
+ */
+export function getHazardCount(level: number, roll: number): number {
+  const density = getPropDensity(level);
+  if (level < 21) return 0; // No hazards before world 3
+  const base = 1 + Math.floor(roll * 2); // 1-2 base
+  return Math.round(base * density);
 }
 
 // Should use springs/portals?

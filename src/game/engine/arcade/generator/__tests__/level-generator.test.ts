@@ -1,5 +1,6 @@
 // src/game/engine/arcade/generator/__tests__/level-generator.test.ts
-import { LevelGenerator } from '../level-generator';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { LevelGenerator, getDoodleCount, getDoodleBaseSize, getDoodleHitboxRadius, getPropDensity, getSpringCount } from '../level-generator';
 import { setCharacterDatabase } from '../stroke-data';
 import type { CharacterData } from '../types';
 
@@ -123,5 +124,87 @@ describe('LevelGenerator', () => {
 
     expect(result1.level?.landingTarget).toBe(410);
     expect(result50.level?.landingTarget).toBe(410);
+  });
+});
+
+describe('getDoodleCount', () => {
+  it('level 1-10: count equals level number', () => {
+    expect(getDoodleCount(1)).toBe(1);
+    expect(getDoodleCount(5)).toBe(5);
+    expect(getDoodleCount(10)).toBe(10);
+  });
+
+  it('level 11-20: +1 every 2 levels from 10', () => {
+    expect(getDoodleCount(11)).toBe(10);
+    expect(getDoodleCount(12)).toBe(10);
+    expect(getDoodleCount(13)).toBe(11);
+    expect(getDoodleCount(14)).toBe(11);
+    expect(getDoodleCount(19)).toBe(14);
+    expect(getDoodleCount(20)).toBe(14);
+  });
+
+  it('world 3+ adds +5 per world', () => {
+    // World 3 (21-30): base 15 + world bonus 5 = 20-25
+    expect(getDoodleCount(21)).toBeGreaterThanOrEqual(20);
+    expect(getDoodleCount(30)).toBeLessThanOrEqual(25);
+
+    // World 4 (31-40): base + world bonus 10 = 30-35
+    expect(getDoodleCount(31)).toBeGreaterThanOrEqual(30);
+
+    // World 10 (91-100): base + world bonus 45 = ~60
+    expect(getDoodleCount(100)).toBeGreaterThanOrEqual(55);
+  });
+
+  it('world 25 has 130+ doodles', () => {
+    expect(getDoodleCount(250)).toBeGreaterThanOrEqual(130);
+  });
+});
+
+describe('getDoodleBaseSize', () => {
+  it('returns 0.7 (30% shrink from 1.0)', () => {
+    expect(getDoodleBaseSize()).toBe(0.7);
+  });
+});
+
+describe('getDoodleHitboxRadius', () => {
+  it('returns 14 (proportionally shrunk)', () => {
+    expect(getDoodleHitboxRadius()).toBe(14);
+  });
+});
+
+describe('getPropDensity', () => {
+  it('world 1-10 returns 0.5x', () => {
+    expect(getPropDensity(5)).toBe(0.5);
+    expect(getPropDensity(10)).toBe(0.5);
+  });
+
+  it('world 11-50 returns 1.0x', () => {
+    expect(getPropDensity(15)).toBe(1.0);
+    expect(getPropDensity(50)).toBe(1.0);
+  });
+
+  it('world 51-100 returns 1.5x', () => {
+    expect(getPropDensity(75)).toBe(1.5);
+  });
+
+  it('world 101-140 returns 2.0x', () => {
+    expect(getPropDensity(120)).toBe(2.0);
+  });
+
+  it('world 141-200 returns 2.5x', () => {
+    expect(getPropDensity(175)).toBe(2.5);
+  });
+
+  it('world 201-250 returns 3.0x', () => {
+    expect(getPropDensity(225)).toBe(3.0);
+  });
+});
+
+describe('getSpringCount', () => {
+  it('scales with density multiplier', () => {
+    // Base is 1-3, with 0.5x = 0-1
+    expect(getSpringCount(5, 0.5)).toBeLessThanOrEqual(2);
+    // With 3.0x = 3-9
+    expect(getSpringCount(225, 0.9)).toBeGreaterThanOrEqual(3);
   });
 });
