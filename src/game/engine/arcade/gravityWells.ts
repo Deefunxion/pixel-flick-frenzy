@@ -9,6 +9,7 @@ export interface GravityWell {
   radius: number;
   strength: number;
   scale: number;
+  rotation: number;  // Visual rotation in degrees
 }
 
 /**
@@ -24,6 +25,7 @@ export function createGravityWellFromPlacement(placement: GravityWellPlacement):
     radius: placement.radius * scale,
     strength: placement.strength,
     scale,
+    rotation: placement.rotation ?? 0,
   };
 }
 

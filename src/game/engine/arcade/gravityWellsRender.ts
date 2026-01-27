@@ -46,10 +46,15 @@ function renderGravityWell(
   well: GravityWell,
   timeMs: number
 ): void {
-  const { x, y, radius, type, strength } = well;
+  const { x, y, radius, type, rotation } = well;
 
   ctx.save();
   ctx.translate(x, y);
+
+  // Apply visual rotation
+  if (rotation !== 0) {
+    ctx.rotate(rotation * Math.PI / 180);
+  }
 
   // Pulsing animation
   const pulse = 1 + Math.sin(timeMs * 0.003) * 0.1;
