@@ -1,222 +1,116 @@
 // src/game/engine/arcade/windZonesRender.ts
 import type { WindZone } from './windZones';
-import { ZONE_SPRITES, getSprite, getAnimationFrame } from './arcadeAssets';
-
-// Wind particle for visual effect
-interface WindParticle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  maxLife: number;
-}
-
-// Store particles per zone
-const particlesByZone = new WeakMap<WindZone, WindParticle[]>();
 
 /**
- * Get or create particle array for a zone
+ * No-op particle update - particles are now computed in render from timeMs
+ * @deprecated Particles are now procedural based on timeMs
  */
-function getParticles(zone: WindZone): WindParticle[] {
-  let particles = particlesByZone.get(zone);
-  if (!particles) {
-    particles = [];
-    particlesByZone.set(zone, particles);
-  }
-  return particles;
+export function updateWindZoneParticles(_zones: WindZone[], _deltaMs: number): void {
+  // Particles are now computed procedurally in renderWindZones from timeMs
 }
 
 /**
- * Spawn a new wind particle within zone bounds
+ * Render wind particles flowing in angle direction
  */
-function spawnParticle(zone: WindZone): WindParticle {
-  // Spawn from edge opposite to wind direction
-  let x: number, y: number;
+function renderWindParticles(
+  ctx: CanvasRenderingContext2D,
+  zone: WindZone,
+  frameCount: number
+): void {
+  const radians = zone.angle * Math.PI / 180;
+  const particleCount = 8;
 
-  switch (zone.direction) {
-    case 'right':
-      x = zone.left;
-      y = zone.top + Math.random() * zone.height;
-      break;
-    case 'left':
-      x = zone.right;
-      y = zone.top + Math.random() * zone.height;
-      break;
-    case 'down':
-      x = zone.left + Math.random() * zone.width;
-      y = zone.top;
-      break;
-    case 'up':
-      x = zone.left + Math.random() * zone.width;
-      y = zone.bottom;
-      break;
-    default:
-      x = zone.x;
-      y = zone.y;
+  ctx.save();
+  ctx.globalAlpha = 0.4;
+  ctx.fillStyle = '#87CEEB';
+
+  for (let i = 0; i < particleCount; i++) {
+    // Particles spawn opposite to wind direction and flow toward angle
+    const phase = (frameCount * 0.03 + i / particleCount) % 1;
+    const startOffset = zone.radius * 0.8;
+
+    // Start position (opposite side of wind direction)
+    const startX = zone.x - Math.cos(radians) * startOffset;
+    const startY = zone.y - Math.sin(radians) * startOffset;
+
+    // End position (wind direction side)
+    const endX = zone.x + Math.cos(radians) * startOffset;
+    const endY = zone.y + Math.sin(radians) * startOffset;
+
+    // Interpolate position based on phase
+    const px = startX + (endX - startX) * phase;
+    const py = startY + (endY - startY) * phase;
+
+    // Random perpendicular offset for variety
+    const perpAngle = radians + Math.PI / 2;
+    const perpOffset = Math.sin(i * 2.5 + frameCount * 0.05) * zone.radius * 0.3;
+    const finalX = px + Math.cos(perpAngle) * perpOffset;
+    const finalY = py + Math.sin(perpAngle) * perpOffset;
+
+    // Fade in/out
+    const alpha = Math.sin(phase * Math.PI) * 0.5;
+    ctx.globalAlpha = alpha;
+
+    ctx.beginPath();
+    ctx.arc(finalX, finalY, 2, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  // Velocity in wind direction
-  const speed = zone.strength * 30 + Math.random() * 20;
-  let vx = 0, vy = 0;
-
-  switch (zone.direction) {
-    case 'right': vx = speed; break;
-    case 'left': vx = -speed; break;
-    case 'down': vy = speed; break;
-    case 'up': vy = -speed; break;
-  }
-
-  return {
-    x,
-    y,
-    vx,
-    vy,
-    life: 1,
-    maxLife: 1,
-  };
+  ctx.restore();
 }
 
 /**
- * Update wind zone particles
- */
-export function updateWindZoneParticles(zones: WindZone[], deltaMs: number): void {
-  const dt = deltaMs / 1000;
-
-  for (const zone of zones) {
-    const particles = getParticles(zone);
-
-    // Update existing particles
-    for (let i = particles.length - 1; i >= 0; i--) {
-      const p = particles[i];
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      p.life -= dt * 2; // Fade over ~0.5 seconds
-
-      // Remove dead or out-of-bounds particles
-      if (p.life <= 0 || !isInZoneBounds(p.x, p.y, zone)) {
-        particles.splice(i, 1);
-      }
-    }
-
-    // Spawn new particles (based on zone size)
-    const targetCount = Math.floor((zone.width * zone.height) / 2000);
-    while (particles.length < targetCount) {
-      particles.push(spawnParticle(zone));
-    }
-  }
-}
-
-function isInZoneBounds(x: number, y: number, zone: WindZone): boolean {
-  return x >= zone.left && x <= zone.right && y >= zone.top && y <= zone.bottom;
-}
-
-/**
- * Render wind zones with visual feedback
+ * Render wind zones as circular fields with directional particles
  */
 export function renderWindZones(
   ctx: CanvasRenderingContext2D,
   zones: WindZone[],
-  playerInZone: boolean = false,
+  _playerInZone: boolean = false,
   timeMs: number = 0
 ): void {
+  const frameCount = Math.floor(timeMs / 16); // ~60fps
+
   for (const zone of zones) {
-    // Draw zone background (semi-transparent)
+    const { x, y, radius, angle, scale } = zone;
+
     ctx.save();
 
-    // Try to render wind sprite as overlay
-    const config = ZONE_SPRITES.wind;
-    if (config) {
-      const frameIndex = getAnimationFrame(config, timeMs);
-      const framePath = config.frames[frameIndex];
-      const sprite = getSprite(framePath);
+    // Draw semi-transparent circular area
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = '#87CEEB'; // Sky blue
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
 
-      if (sprite) {
-        ctx.globalAlpha = 0.25;
-        // Tile sprite across zone
-        const tileSize = 32;
-        for (let tx = 0; tx < zone.width; tx += tileSize) {
-          for (let ty = 0; ty < zone.height; ty += tileSize) {
-            const tileWidth = Math.min(tileSize, zone.width - tx);
-            const tileHeight = Math.min(tileSize, zone.height - ty);
-            ctx.drawImage(
-              sprite,
-              0, 0, sprite.naturalWidth * (tileWidth / tileSize), sprite.naturalHeight * (tileHeight / tileSize),
-              zone.left + tx, zone.top + ty, tileWidth, tileHeight
-            );
-          }
-        }
-        ctx.globalAlpha = 1;
-      }
-    }
-
-    // Zone fill (on top of sprite for semi-transparent tint)
-    ctx.fillStyle = 'rgba(135, 206, 235, 0.15)'; // Sky blue, very transparent
-    ctx.fillRect(zone.left, zone.top, zone.width, zone.height);
-
-    // Zone border (dashed)
-    ctx.strokeStyle = 'rgba(135, 206, 235, 0.4)';
+    // Zone border (dashed circle)
+    ctx.globalAlpha = 0.4;
+    ctx.strokeStyle = '#87CEEB';
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
-    ctx.strokeRect(zone.left, zone.top, zone.width, zone.height);
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.setLineDash([]);
 
-    // Draw wind direction indicator
-    drawWindArrow(ctx, zone);
+    // Draw center sprite (rotated by angle)
+    ctx.globalAlpha = 1;
+    ctx.translate(x, y);
+    ctx.rotate(angle * Math.PI / 180);
 
-    // Draw particles
-    const particles = getParticles(zone);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-
-    for (const p of particles) {
-      const alpha = p.life;
-      ctx.globalAlpha = alpha * 0.6;
-
-      // Draw as small line/streak in direction of motion
-      const streakLen = 4;
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y);
-      ctx.lineTo(p.x - (p.vx / 30) * streakLen, p.y - (p.vy / 30) * streakLen);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.8})`;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
+    // Draw wind icon (arrow pointing right, rotated by angle)
+    const iconSize = 16 * scale;
+    ctx.fillStyle = '#4A90D9';
+    ctx.beginPath();
+    // Arrow pointing right (will be rotated by angle)
+    ctx.moveTo(iconSize, 0);
+    ctx.lineTo(-iconSize / 2, -iconSize / 2);
+    ctx.lineTo(-iconSize / 2, iconSize / 2);
+    ctx.closePath();
+    ctx.fill();
 
     ctx.restore();
+
+    // Draw particles flowing in angle direction
+    renderWindParticles(ctx, zone, frameCount);
   }
-}
-
-/**
- * Draw wind direction arrow in center of zone
- */
-function drawWindArrow(ctx: CanvasRenderingContext2D, zone: WindZone): void {
-  const cx = zone.x;
-  const cy = zone.y;
-  const arrowLen = Math.min(zone.width, zone.height) * 0.3;
-
-  ctx.save();
-  ctx.translate(cx, cy);
-
-  // Rotate based on direction
-  let angle = 0;
-  switch (zone.direction) {
-    case 'right': angle = 0; break;
-    case 'down': angle = Math.PI / 2; break;
-    case 'left': angle = Math.PI; break;
-    case 'up': angle = -Math.PI / 2; break;
-  }
-  ctx.rotate(angle);
-
-  // Draw arrow
-  ctx.strokeStyle = 'rgba(135, 206, 235, 0.6)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(-arrowLen / 2, 0);
-  ctx.lineTo(arrowLen / 2, 0);
-  ctx.lineTo(arrowLen / 2 - 6, -4);
-  ctx.moveTo(arrowLen / 2, 0);
-  ctx.lineTo(arrowLen / 2 - 6, 4);
-  ctx.stroke();
-
-  ctx.restore();
 }
