@@ -26,7 +26,7 @@ export interface Spring {
 }
 
 const DEFAULT_RADIUS = 18;
-const DEFAULT_FORCE = 10;
+const DEFAULT_FORCE = 5;  // Reduced from 10 for slower, controllable trajectories
 
 // Sprite is rendered at radius * 2.5 (diameter), so visual radius = radius * 1.25
 // To have collision cover ~80% of visual sprite, multiply by ~1.0
