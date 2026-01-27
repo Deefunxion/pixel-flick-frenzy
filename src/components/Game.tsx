@@ -105,6 +105,7 @@ import { PracticeModeOverlay } from './PracticeModeOverlay';
 import { SlideOutMenu } from './SlideOutMenu';
 import { RotateScreen } from './RotateScreen';
 import { LevelEditor } from './LevelEditor';
+import { useFullscreen } from './FullscreenButton';
 import { ArcadeHUD } from './ArcadeHUD';
 import { loadArcadeLevel } from '@/game/engine/state';
 import {
@@ -192,6 +193,7 @@ const Game = () => {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
+  const { isFullscreen } = useFullscreen();
   // Arcade HUD state (synced from stateRef)
   const [arcadeHudState, setArcadeHudState] = useState<{
     arcadeState: import('@/game/engine/arcade/types').ArcadeState | null;
@@ -1045,7 +1047,11 @@ const Game = () => {
       />
 
       <div
-        className={`w-full max-w-md flex flex-col items-center ${isMobileRef.current ? 'gap-1 p-1' : 'gap-2 p-2'}`}
+        className={`w-full flex flex-col items-center ${
+          isFullscreen
+            ? ''
+            : `max-w-md ${isMobileRef.current ? 'gap-1 p-1' : 'gap-2 p-2'}`
+        }`}
       >
         {/* Slide-out Menu - Only for landscape mode */}
         <SlideOutMenu
@@ -1089,21 +1095,21 @@ const Game = () => {
 
         {/* Canvas - no flex-1, just natural size */}
         <div className="relative w-full flex justify-center">
-          {/* Visual canvas - minimal padding */}
-          <div className="relative flex items-center justify-center" style={{ padding: isMobileRef.current ? '2px' : '6px' }}>
+          {/* Visual canvas - minimal padding (none in fullscreen) */}
+          <div className="relative flex items-center justify-center" style={{ padding: isFullscreen ? 0 : (isMobileRef.current ? '2px' : '6px') }}>
             <canvas
               ref={canvasRef}
               width={W * (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1)}
               height={H * (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1)}
               className="game-canvas cursor-pointer touch-none select-none"
               style={{
-                boxShadow: themeId === 'noir'
+                boxShadow: isFullscreen ? 'none' : (themeId === 'noir'
                   ? '0 2px 8px rgba(0,0,0,0.4)'
-                  : '2px 3px 8px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.05)',
-                border: themeId === 'noir'
+                  : '2px 3px 8px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.05)'),
+                border: isFullscreen ? 'none' : (themeId === 'noir'
                   ? `1.5px solid ${theme.accent3}`
-                  : `2.5px solid ${theme.accent3}`,
-                borderRadius: themeId === 'noir' ? '1px' : '3px',
+                  : `2.5px solid ${theme.accent3}`),
+                borderRadius: isFullscreen ? 0 : (themeId === 'noir' ? '1px' : '3px'),
                 imageRendering: 'auto',
                 pointerEvents: 'none',
               }}
