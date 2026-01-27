@@ -1383,31 +1383,33 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
           {tool === 'wind' && (
             <div className="space-y-3">
               <div>
-                <label className="text-gray-400 text-xs">Direction</label>
-                <select value={newWindDirection} onChange={e => setNewWindDirection(e.target.value as WindDirection)}
-                  className="w-full bg-gray-700 text-white px-2 py-1 rounded mt-1">
-                  <option value="left">← Left</option>
-                  <option value="right">→ Right</option>
-                  <option value="up">↑ Up</option>
-                  <option value="down">↓ Down</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-gray-400 text-xs">Width: {newWindWidth}px</label>
-                <input type="range" min="40" max="200" step="10" value={newWindWidth}
-                  onChange={e => setNewWindWidth(Number(e.target.value))}
+                <label className="text-gray-400 text-xs">Angle: {newWindAngle}°</label>
+                <input type="range" min="0" max="360" step="15" value={newWindAngle}
+                  onChange={e => setNewWindAngle(Number(e.target.value))}
                   className="w-full mt-1" />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>→ 0°</span>
+                  <span>↓ 90°</span>
+                  <span>← 180°</span>
+                  <span>↑ 270°</span>
+                </div>
               </div>
               <div>
-                <label className="text-gray-400 text-xs">Height: {newWindHeight}px</label>
-                <input type="range" min="30" max="150" step="10" value={newWindHeight}
-                  onChange={e => setNewWindHeight(Number(e.target.value))}
+                <label className="text-gray-400 text-xs">Radius: {newWindRadius}px</label>
+                <input type="range" min="20" max="80" step="5" value={newWindRadius}
+                  onChange={e => setNewWindRadius(Number(e.target.value))}
                   className="w-full mt-1" />
               </div>
               <div>
                 <label className="text-gray-400 text-xs">Strength: {newWindStrength.toFixed(2)}</label>
                 <input type="range" min="0.05" max="0.5" step="0.05" value={newWindStrength}
                   onChange={e => setNewWindStrength(Number(e.target.value))}
+                  className="w-full mt-1" />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs">Scale: {newWindScale.toFixed(1)}x</label>
+                <input type="range" min="0.5" max="2" step="0.1" value={newWindScale}
+                  onChange={e => setNewWindScale(Number(e.target.value))}
                   className="w-full mt-1" />
               </div>
             </div>
