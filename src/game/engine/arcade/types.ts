@@ -51,17 +51,15 @@ export interface PortalPair {
   };
 }
 
-// Wind zone direction
-export type WindDirection = 'left' | 'right' | 'up' | 'down';
-
 // Wind zones apply continuous force to player (World 5+)
+// Uses angle-based direction (0-360°) and circular radius
 export interface WindZonePlacement {
   x: number;           // Center X
   y: number;           // Center Y
-  width: number;       // Zone width
-  height: number;      // Zone height
-  direction: WindDirection;
-  strength: number;    // Force applied per frame (0.1 = gentle, 0.5 = strong)
+  radius: number;      // Circular effect area
+  angle: number;       // Force direction in degrees (0=right, 90=down, 180=left, 270=up)
+  strength: number;    // Force per frame (0.1 = gentle, 0.5 = strong)
+  scale?: number;      // Visual sprite scale (default 1.0)
 }
 
 // Hazard motion patterns (World 8-9)
@@ -91,6 +89,7 @@ export interface GravityWellPlacement {
   radius: number;      // Effect radius
   strength: number;    // Force strength (0.1 = weak, 0.5 = strong)
   scale?: number;      // Visual scale (default 1.0)
+  rotation?: number;   // Visual rotation in degrees (default 0)
 }
 
 // Friction zone types (World 15-16)
