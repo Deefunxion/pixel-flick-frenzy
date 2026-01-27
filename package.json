@@ -15,7 +15,8 @@
     "deploy:itch": "npm run package:itch && butler push dist deefunxion/zeno:html5",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "classify-characters": "npx tsx scripts/classify-characters.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
