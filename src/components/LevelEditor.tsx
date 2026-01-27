@@ -141,10 +141,10 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
   const [newHazardRotation, setNewHazardRotation] = useState(0);
 
   // Wind zone tool state
-  const [newWindDirection, setNewWindDirection] = useState<WindDirection>('right');
+  const [newWindAngle, setNewWindAngle] = useState(0); // 0 = right
   const [newWindStrength, setNewWindStrength] = useState(0.25);
-  const [newWindWidth, setNewWindWidth] = useState(80);
-  const [newWindHeight, setNewWindHeight] = useState(60);
+  const [newWindRadius, setNewWindRadius] = useState(40);
+  const [newWindScale, setNewWindScale] = useState(1.0);
 
   // Gravity well tool state
   const [newGravityType, setNewGravityType] = useState<GravityWellType>('attract');
@@ -477,10 +477,10 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
     } else if (tool === 'wind') {
       const newZone: WindZonePlacement = {
         x, y,
-        width: newWindWidth,
-        height: newWindHeight,
-        direction: newWindDirection,
+        radius: newWindRadius,
+        angle: newWindAngle,
         strength: newWindStrength,
+        scale: newWindScale !== 1.0 ? newWindScale : undefined,
       };
       updateLevel(prev => ({
         ...prev,
