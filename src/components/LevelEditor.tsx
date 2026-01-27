@@ -1129,23 +1129,30 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
             {/* Wind Zones */}
             {(level.windZones || []).map((w, i) => {
               const isSelected = selected?.type === 'windZone' && selected.index === i;
+              const scale = w.scale ?? 1.0;
+              const displayRadius = w.radius * 2; // Canvas is 2x scaled
+
               return (
                 <div
                   key={`wind-${i}`}
                   onMouseDown={e => handleMouseDown(e, 'windZone', i)}
-                  className={`absolute border-2 border-dashed border-sky-400 bg-sky-300/30 flex items-center justify-center ${tool === 'select' ? 'cursor-move' : ''}`}
+                  className={`absolute rounded-full border-2 border-dashed border-sky-400 bg-sky-300/20 flex items-center justify-center ${tool === 'select' ? 'cursor-move' : ''}`}
                   style={{
-                    left: (w.x - w.width / 2) * 2,
-                    top: (w.y - w.height / 2) * 2,
-                    width: w.width * 2,
-                    height: w.height * 2,
+                    left: w.x * 2 - displayRadius,
+                    top: w.y * 2 - displayRadius,
+                    width: displayRadius * 2,
+                    height: displayRadius * 2,
                     outline: isSelected ? '3px solid #3b82f6' : undefined,
                     outlineOffset: '2px',
                   }}
                 >
-                  <span className="text-sky-600 text-2xl">
-                    {w.direction === 'left' ? '←' : w.direction === 'right' ? '→' : w.direction === 'up' ? '↑' : '↓'}
-                  </span>
+                  {/* Direction arrow rotated by angle */}
+                  <div
+                    className="text-sky-600 text-2xl"
+                    style={{ transform: `rotate(${w.angle}deg) scale(${scale})` }}
+                  >
+                    →
+                  </div>
                 </div>
               );
             })}
