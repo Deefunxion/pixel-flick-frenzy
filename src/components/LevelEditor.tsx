@@ -1627,6 +1627,213 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
                 );
               })()}
 
+              {selected.type === 'windZone' && level.windZones?.[selected.index] && (() => {
+                const w = level.windZones[selected.index];
+                return (
+                  <>
+                    <div className="text-white font-bold">Wind Zone</div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Angle: {w.angle}°</label>
+                      <input type="range" min="0" max="360" step="15" value={w.angle}
+                        onChange={e => {
+                          const angle = Number(e.target.value);
+                          updateLevel(prev => ({
+                            ...prev,
+                            windZones: prev.windZones?.map((wz, i) =>
+                              i === selected.index ? { ...wz, angle } : wz
+                            ),
+                          }));
+                        }}
+                        className="w-full mt-1" />
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>→ 0°</span>
+                        <span>↓ 90°</span>
+                        <span>← 180°</span>
+                        <span>↑ 270°</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Radius: {w.radius}px</label>
+                      <input type="range" min="20" max="80" step="5" value={w.radius}
+                        onChange={e => {
+                          const radius = Number(e.target.value);
+                          updateLevel(prev => ({
+                            ...prev,
+                            windZones: prev.windZones?.map((wz, i) =>
+                              i === selected.index ? { ...wz, radius } : wz
+                            ),
+                          }));
+                        }}
+                        className="w-full mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Strength: {w.strength.toFixed(2)}</label>
+                      <input type="range" min="0.05" max="0.5" step="0.05" value={w.strength}
+                        onChange={e => {
+                          const strength = Number(e.target.value);
+                          updateLevel(prev => ({
+                            ...prev,
+                            windZones: prev.windZones?.map((wz, i) =>
+                              i === selected.index ? { ...wz, strength } : wz
+                            ),
+                          }));
+                        }}
+                        className="w-full mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Scale: {(w.scale ?? 1).toFixed(1)}x</label>
+                      <input type="range" min="0.5" max="2" step="0.1" value={w.scale ?? 1}
+                        onChange={e => {
+                          const scale = Number(e.target.value);
+                          updateLevel(prev => ({
+                            ...prev,
+                            windZones: prev.windZones?.map((wz, i) =>
+                              i === selected.index ? { ...wz, scale: scale !== 1 ? scale : undefined } : wz
+                            ),
+                          }));
+                        }}
+                        className="w-full mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Position</label>
+                      <div className="flex gap-2 mt-1">
+                        <input type="number" value={w.x}
+                          onChange={e => {
+                            const x = Number(e.target.value);
+                            updateLevel(prev => ({
+                              ...prev,
+                              windZones: prev.windZones?.map((wz, i) =>
+                                i === selected.index ? { ...wz, x } : wz
+                              ),
+                            }));
+                          }}
+                          className="w-1/2 bg-gray-700 text-white px-2 py-1 rounded" placeholder="X" />
+                        <input type="number" value={w.y}
+                          onChange={e => {
+                            const y = Number(e.target.value);
+                            updateLevel(prev => ({
+                              ...prev,
+                              windZones: prev.windZones?.map((wz, i) =>
+                                i === selected.index ? { ...wz, y } : wz
+                              ),
+                            }));
+                          }}
+                          className="w-1/2 bg-gray-700 text-white px-2 py-1 rounded" placeholder="Y" />
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+
+              {selected.type === 'gravityWell' && level.gravityWells?.[selected.index] && (() => {
+                const g = level.gravityWells[selected.index];
+                return (
+                  <>
+                    <div className="text-white font-bold">Gravity Well</div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Type</label>
+                      <select value={g.type}
+                        onChange={e => {
+                          const type = e.target.value as 'attract' | 'repel';
+                          updateLevel(prev => ({
+                            ...prev,
+                            gravityWells: prev.gravityWells?.map((gw, i) =>
+                              i === selected.index ? { ...gw, type } : gw
+                            ),
+                          }));
+                        }}
+                        className="w-full bg-gray-700 text-white px-2 py-1 rounded mt-1">
+                        <option value="attract">◉ Attract (Blue)</option>
+                        <option value="repel">◎ Repel (Red)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Radius: {g.radius}px</label>
+                      <input type="range" min="30" max="100" step="5" value={g.radius}
+                        onChange={e => {
+                          const radius = Number(e.target.value);
+                          updateLevel(prev => ({
+                            ...prev,
+                            gravityWells: prev.gravityWells?.map((gw, i) =>
+                              i === selected.index ? { ...gw, radius } : gw
+                            ),
+                          }));
+                        }}
+                        className="w-full mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Strength: {g.strength.toFixed(2)}</label>
+                      <input type="range" min="0.05" max="0.5" step="0.05" value={g.strength}
+                        onChange={e => {
+                          const strength = Number(e.target.value);
+                          updateLevel(prev => ({
+                            ...prev,
+                            gravityWells: prev.gravityWells?.map((gw, i) =>
+                              i === selected.index ? { ...gw, strength } : gw
+                            ),
+                          }));
+                        }}
+                        className="w-full mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Scale: {(g.scale ?? 1).toFixed(1)}x</label>
+                      <input type="range" min="0.5" max="2" step="0.1" value={g.scale ?? 1}
+                        onChange={e => {
+                          const scale = Number(e.target.value);
+                          updateLevel(prev => ({
+                            ...prev,
+                            gravityWells: prev.gravityWells?.map((gw, i) =>
+                              i === selected.index ? { ...gw, scale: scale !== 1 ? scale : undefined } : gw
+                            ),
+                          }));
+                        }}
+                        className="w-full mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Rotation: {g.rotation ?? 0}°</label>
+                      <input type="range" min="0" max="360" step="15" value={g.rotation ?? 0}
+                        onChange={e => {
+                          const rotation = Number(e.target.value);
+                          updateLevel(prev => ({
+                            ...prev,
+                            gravityWells: prev.gravityWells?.map((gw, i) =>
+                              i === selected.index ? { ...gw, rotation: rotation !== 0 ? rotation : undefined } : gw
+                            ),
+                          }));
+                        }}
+                        className="w-full mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Position</label>
+                      <div className="flex gap-2 mt-1">
+                        <input type="number" value={g.x}
+                          onChange={e => {
+                            const x = Number(e.target.value);
+                            updateLevel(prev => ({
+                              ...prev,
+                              gravityWells: prev.gravityWells?.map((gw, i) =>
+                                i === selected.index ? { ...gw, x } : gw
+                              ),
+                            }));
+                          }}
+                          className="w-1/2 bg-gray-700 text-white px-2 py-1 rounded" placeholder="X" />
+                        <input type="number" value={g.y}
+                          onChange={e => {
+                            const y = Number(e.target.value);
+                            updateLevel(prev => ({
+                              ...prev,
+                              gravityWells: prev.gravityWells?.map((gw, i) =>
+                                i === selected.index ? { ...gw, y } : gw
+                              ),
+                            }));
+                          }}
+                          className="w-1/2 bg-gray-700 text-white px-2 py-1 rounded" placeholder="Y" />
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+
               <button onClick={deleteSelected} className="w-full bg-red-600 text-white py-2 rounded mt-4">
                 🗑️ Delete
               </button>
