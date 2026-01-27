@@ -1836,6 +1836,143 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
                 );
               })()}
 
+              {selected.type === 'hazard' && level.hazards?.[selected.index] && (() => {
+                const h = level.hazards[selected.index];
+                return (
+                  <>
+                    <div className="text-white font-bold">Hazard</div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Sprite</label>
+                      <select value={h.sprite}
+                        onChange={e => {
+                          const sprite = e.target.value as 'spike' | 'saw' | 'fire';
+                          updateLevel(prev => ({
+                            ...prev,
+                            hazards: prev.hazards?.map((hz, i) =>
+                              i === selected.index ? { ...hz, sprite } : hz
+                            ),
+                          }));
+                        }}
+                        className="w-full bg-gray-700 text-white px-2 py-1 rounded mt-1">
+                        <option value="spike">Spike</option>
+                        <option value="saw">Saw</option>
+                        <option value="fire">Fire</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Radius: {h.radius}px</label>
+                      <input type="range" min="8" max="25" step="1" value={h.radius}
+                        onChange={e => {
+                          const radius = Number(e.target.value);
+                          updateLevel(prev => ({
+                            ...prev,
+                            hazards: prev.hazards?.map((hz, i) =>
+                              i === selected.index ? { ...hz, radius } : hz
+                            ),
+                          }));
+                        }}
+                        className="w-full mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Scale: {(h.scale ?? 1).toFixed(1)}x</label>
+                      <input type="range" min="0.5" max="2" step="0.1" value={h.scale ?? 1}
+                        onChange={e => {
+                          const scale = Number(e.target.value);
+                          updateLevel(prev => ({
+                            ...prev,
+                            hazards: prev.hazards?.map((hz, i) =>
+                              i === selected.index ? { ...hz, scale } : hz
+                            ),
+                          }));
+                        }}
+                        className="w-full mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Position</label>
+                      <div className="flex gap-2 mt-1">
+                        <input type="number" value={h.x}
+                          onChange={e => {
+                            const x = Number(e.target.value);
+                            updateLevel(prev => ({
+                              ...prev,
+                              hazards: prev.hazards?.map((hz, i) =>
+                                i === selected.index ? { ...hz, x } : hz
+                              ),
+                            }));
+                          }}
+                          className="w-1/2 bg-gray-700 text-white px-2 py-1 rounded" placeholder="X" />
+                        <input type="number" value={h.y}
+                          onChange={e => {
+                            const y = Number(e.target.value);
+                            updateLevel(prev => ({
+                              ...prev,
+                              hazards: prev.hazards?.map((hz, i) =>
+                                i === selected.index ? { ...hz, y } : hz
+                              ),
+                            }));
+                          }}
+                          className="w-1/2 bg-gray-700 text-white px-2 py-1 rounded" placeholder="Y" />
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+
+              {selected.type === 'frictionZone' && level.frictionZones?.[selected.index] && (() => {
+                const f = level.frictionZones[selected.index];
+                return (
+                  <>
+                    <div className="text-white font-bold">Friction Zone</div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Type</label>
+                      <select value={f.type}
+                        onChange={e => {
+                          const type = e.target.value as 'ice' | 'sticky';
+                          updateLevel(prev => ({
+                            ...prev,
+                            frictionZones: prev.frictionZones?.map((fz, i) =>
+                              i === selected.index ? { ...fz, type } : fz
+                            ),
+                          }));
+                        }}
+                        className="w-full bg-gray-700 text-white px-2 py-1 rounded mt-1">
+                        <option value="ice">Ice (Slippery)</option>
+                        <option value="sticky">Sticky</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Width: {f.width}px</label>
+                      <input type="range" min="30" max="120" step="5" value={f.width}
+                        onChange={e => {
+                          const width = Number(e.target.value);
+                          updateLevel(prev => ({
+                            ...prev,
+                            frictionZones: prev.frictionZones?.map((fz, i) =>
+                              i === selected.index ? { ...fz, width } : fz
+                            ),
+                          }));
+                        }}
+                        className="w-full mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-xs">Position X</label>
+                      <input type="number" value={f.x}
+                        onChange={e => {
+                          const x = Number(e.target.value);
+                          updateLevel(prev => ({
+                            ...prev,
+                            frictionZones: prev.frictionZones?.map((fz, i) =>
+                              i === selected.index ? { ...fz, x } : fz
+                            ),
+                          }));
+                        }}
+                        className="w-full bg-gray-700 text-white px-2 py-1 rounded mt-1" placeholder="X" />
+                      <div className="text-xs text-gray-500 mt-1">Y is fixed at ground level (220)</div>
+                    </div>
+                  </>
+                );
+              })()}
+
               <button onClick={deleteSelected} className="w-full bg-red-600 text-white py-2 rounded mt-4">
                 🗑️ Delete
               </button>
