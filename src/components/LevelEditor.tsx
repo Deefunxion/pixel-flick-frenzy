@@ -1,6 +1,6 @@
 // src/components/LevelEditor.tsx
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { ArcadeLevel, DoodlePlacement, SpringPlacement, SpringDirection, DoodleSize, PortalExitDirection, HazardPlacement, WindZonePlacement, WindDirection, GravityWellPlacement, GravityWellType, FrictionZonePlacement, FrictionType } from '@/game/engine/arcade/types';
+import type { ArcadeLevel, DoodlePlacement, SpringPlacement, SpringDirection, DoodleSize, PortalExitDirection, HazardPlacement, WindZonePlacement, GravityWellPlacement, GravityWellType, FrictionZonePlacement, FrictionType } from '@/game/engine/arcade/types';
 import type { GhostInput } from '@/game/engine/arcade/generator/types';
 import { ARCADE_LEVELS } from '@/game/engine/arcade/levels';
 import { W, H } from '@/game/constants';
@@ -547,8 +547,8 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
       newSpringDirection, newSpringStrength, newSpringScale, newSpringRotation,
       newPortalExitDir, newPortalExitSpeed, newPortalScale,
       newHazardSprite, newHazardScale, newHazardRadius, newHazardRotation,
-      newWindDirection, newWindStrength, newWindWidth, newWindHeight,
-      newGravityType, newGravityRadius, newGravityStrength, newGravityScale,
+      newWindAngle, newWindStrength, newWindRadius, newWindScale,
+      newGravityType, newGravityRadius, newGravityStrength, newGravityScale, newGravityRotation,
       newFrictionType, newFrictionWidth,
       portalStep, pendingPortalEntry, level, dragging, updateLevel]);
 

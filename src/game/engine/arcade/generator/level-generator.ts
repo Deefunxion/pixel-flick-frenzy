@@ -1,5 +1,5 @@
 // src/game/engine/arcade/generator/level-generator.ts
-import type { ArcadeLevel, DoodlePlacement, SpringPlacement, PortalPair, HazardPlacement, HazardMotion, WindZonePlacement, WindDirection, GravityWellPlacement, GravityWellType, FrictionZonePlacement, FrictionType, DoodleMotion } from '../types';
+import type { ArcadeLevel, DoodlePlacement, SpringPlacement, PortalPair, HazardPlacement, HazardMotion, WindZonePlacement, GravityWellPlacement, GravityWellType, FrictionZonePlacement, FrictionType, DoodleMotion } from '../types';
 import type { GenerationResult, CharacterData, GhostInput } from './types';
 import { SeededRandom } from './random';
 import { StrokeTransformer } from './transform';
@@ -578,19 +578,18 @@ export class LevelGenerator {
   ): WindZonePlacement[] {
     const zones: WindZonePlacement[] = [];
     const zoneCount = rng.nextInt(1, 2);
-    const directions: WindDirection[] = ['left', 'right', 'up', 'down'];
+    // Angle in degrees: 0=right, 90=down, 180=left, 270=up
+    const angles = [0, 90, 180, 270];
 
     for (let i = 0; i < zoneCount; i++) {
-      // Place wind zones in play area
-      const width = rng.nextInt(60, 120);
-      const height = rng.nextInt(40, 80);
+      // Place wind zones in play area with circular radius
+      const radius = rng.nextInt(30, 50);
 
       zones.push({
         x: rng.nextInt(100, 350),
         y: rng.nextInt(40, 160),
-        width,
-        height,
-        direction: rng.pick(directions),
+        radius,
+        angle: rng.pick(angles),
         strength: rng.nextFloat(0.15, 0.35),
       });
     }
