@@ -151,6 +151,7 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
   const [newGravityRadius, setNewGravityRadius] = useState(50);
   const [newGravityStrength, setNewGravityStrength] = useState(0.2);
   const [newGravityScale, setNewGravityScale] = useState(1.0);
+  const [newGravityRotation, setNewGravityRotation] = useState(0);
 
   // Friction zone tool state
   const [newFrictionType, setNewFrictionType] = useState<FrictionType>('ice');
@@ -493,6 +494,7 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
         radius: newGravityRadius,
         strength: newGravityStrength,
         scale: newGravityScale !== 1.0 ? newGravityScale : undefined,
+        rotation: newGravityRotation !== 0 ? newGravityRotation : undefined,
       };
       updateLevel(prev => ({
         ...prev,
@@ -1162,6 +1164,7 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
               const isSelected = selected?.type === 'gravityWell' && selected.index === i;
               const scale = g.scale ?? 1.0;
               const size = g.radius * 2 * scale * 2;
+              const rotation = g.rotation ?? 0;
               return (
                 <div
                   key={`gravity-${i}`}
@@ -1178,7 +1181,10 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
                     outlineOffset: '2px',
                   }}
                 >
-                  <span className={`text-2xl ${g.type === 'attract' ? 'text-blue-400' : 'text-red-400'}`}>
+                  <span
+                    className={`text-2xl ${g.type === 'attract' ? 'text-blue-400' : 'text-red-400'}`}
+                    style={{ transform: `rotate(${rotation}deg)` }}
+                  >
                     {g.type === 'attract' ? '◉' : '◎'}
                   </span>
                 </div>
@@ -1441,6 +1447,12 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
                 <label className="text-gray-400 text-xs">Scale: {newGravityScale.toFixed(1)}x</label>
                 <input type="range" min="0.5" max="2" step="0.1" value={newGravityScale}
                   onChange={e => setNewGravityScale(Number(e.target.value))}
+                  className="w-full mt-1" />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs">Rotation: {newGravityRotation}°</label>
+                <input type="range" min="0" max="360" step="15" value={newGravityRotation}
+                  onChange={e => setNewGravityRotation(Number(e.target.value))}
                   className="w-full mt-1" />
               </div>
             </div>
