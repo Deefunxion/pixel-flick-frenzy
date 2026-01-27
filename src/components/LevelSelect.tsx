@@ -70,7 +70,6 @@ export function LevelSelect({ arcadeState, onSelectLevel, onClose }: LevelSelect
         >
           {ARCADE_LEVELS.map(level => {
             const stars = arcadeState.starsPerLevel[level.id];
-            const passed = stars?.allDoodles || false;
             const starCount = countDisplayStars(stars);
             const isCurrent = level.id === arcadeState.currentLevelId;
 
@@ -98,7 +97,7 @@ export function LevelSelect({ arcadeState, onSelectLevel, onClose }: LevelSelect
                   {level.id}
                 </span>
                 <div className="flex">
-                  {[0, 1].map(i => (
+                  {[0, 1, 2].map(i => (
                     <span
                       key={i}
                       style={{
@@ -110,9 +109,6 @@ export function LevelSelect({ arcadeState, onSelectLevel, onClose }: LevelSelect
                     </span>
                   ))}
                 </div>
-                {passed && (
-                  <span style={{ color: STABILO_ORANGE, fontSize: '8px' }}>✓</span>
-                )}
               </button>
             );
           })}
@@ -132,7 +128,7 @@ export function LevelSelect({ arcadeState, onSelectLevel, onClose }: LevelSelect
           <span style={{ color: STABILO_ORANGE, fontWeight: 'bold' }}>
             {getTotalDisplayStars(arcadeState)}
           </span>
-          {' '}/ {ARCADE_LEVELS.length * 2}
+          {' '}/ {ARCADE_LEVELS.length * 3}
         </div>
       </div>
     </div>
@@ -143,6 +139,7 @@ function countDisplayStars(stars: StarObjectives | undefined): number {
   if (!stars) return 0;
   let count = 0;
   if (stars.landedInZone) count++;
+  if (stars.allDoodles) count++;
   if (stars.inOrder) count++;
   return count;
 }

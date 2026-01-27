@@ -31,7 +31,7 @@ export interface Portal {
 }
 
 const DEFAULT_RADIUS = 18;
-const BASE_EXIT_SPEED = 8; // Base horizontal speed on exit
+const BASE_EXIT_SPEED = 4; // Reduced for smoother control (was 8)
 
 // Sprite is rendered at radius * 2.5 (diameter), so visual radius = radius * 1.25
 // Multiplier of 1.1 gives ~88% of visual sprite as hitbox

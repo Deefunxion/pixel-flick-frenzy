@@ -148,6 +148,13 @@ Visual feedback for landing accuracy:
 
 250-level puzzle mode with collectibles and various mechanics:
 
+**3-Star System:**
+- ★ **landedInZone** - Land beyond target distance (also passes level)
+- ★★ **allDoodles** - Collect all doodles (any order)
+- ★★★ **inOrder** - Collect all doodles in circular sequence (Bomb Jack style)
+
+**Pass Requirement:** Land on target (1 star minimum)
+
 - **`levels-data.json`** - Level definitions (editable via Level Editor)
 - **`levels.ts`** - Imports JSON, exports `ARCADE_LEVELS` array
 - **`types.ts`** - Type definitions for all arcade elements

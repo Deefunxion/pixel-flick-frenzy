@@ -53,9 +53,10 @@ export function ArcadeHUD({
         </div>
       )}
 
-      {/* Stars display - transparent, bold */}
+      {/* Stars display - transparent, bold - 3 stars now */}
       <div className="flex gap-1">
         <Star filled={earnedStars?.landedInZone || false} />
+        <Star filled={earnedStars?.allDoodles || false} />
         <Star filled={earnedStars?.inOrder || false} />
       </div>
     </div>

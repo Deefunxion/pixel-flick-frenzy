@@ -118,12 +118,14 @@ export interface ArcadeLevel {
 }
 
 // Star objectives
-// NOTE: allDoodles is a PASS REQUIREMENT, not a star!
-// Stars are: ★ landedInZone, ★★ inOrder (circular Bomb Jack style)
+// NEW: 3 stars total
+// ★ landedInZone - landed beyond target
+// ★★ allDoodles - collected all doodles (any order)
+// ★★★ inOrder - collected all doodles in circular sequence (Bomb Jack style)
 export interface StarObjectives {
-  allDoodles: boolean;      // PASS REQUIREMENT - collected all doodles
-  inOrder: boolean;         // ★★ - collected in circular sequence (Bomb Jack style)
   landedInZone: boolean;    // ★ - landed beyond target
+  allDoodles: boolean;      // ★★ - collected all doodles (any order)
+  inOrder: boolean;         // ★★★ - collected in circular sequence (Bomb Jack style)
 }
 
 // Runtime state for current arcade session

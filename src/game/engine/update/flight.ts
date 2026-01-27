@@ -458,7 +458,7 @@ export function processArcadeCollisions(
     state.screenShake = 8; // Add screen shake
     if (!state.reduceFx) {
       // Post-warp punch: keep slow-mo and push zoom a bit more to highlight exit
-      state.portalJuiceTimer = 24; // Shorter but more intense (~0.4s at 60fps)
+      state.portalJuiceTimer = 32;  // Longer for smoother transition (~0.5s)
       state.portalZoomTargetX = state.px;
       state.portalZoomTargetY = state.py;
     }

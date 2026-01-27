@@ -127,11 +127,11 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
   const [newDoodleScale, setNewDoodleScale] = useState(1.0);
   const [newDoodleRotation, setNewDoodleRotation] = useState(0);
   const [newSpringDirection, setNewSpringDirection] = useState<SpringDirection>('up');
-  const [newSpringStrength, setNewSpringStrength] = useState(1.0);
+  const [newSpringStrength, setNewSpringStrength] = useState(0.5);
   const [newSpringScale, setNewSpringScale] = useState(1.0);
   const [newSpringRotation, setNewSpringRotation] = useState(0);
   const [newPortalExitDir, setNewPortalExitDir] = useState<PortalExitDirection>('straight');
-  const [newPortalExitSpeed, setNewPortalExitSpeed] = useState(1.0);
+  const [newPortalExitSpeed, setNewPortalExitSpeed] = useState(0.5);
   const [newPortalScale, setNewPortalScale] = useState(1.0);
 
   // Hazard tool state
@@ -434,7 +434,7 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
       const newSpring: SpringPlacement = {
         x, y,
         direction: newSpringDirection,
-        strength: newSpringStrength !== 1.0 ? newSpringStrength : undefined,
+        strength: newSpringStrength !== 0.5 ? newSpringStrength : undefined,
         scale: newSpringScale !== 1.0 ? newSpringScale : undefined,
         rotation: newSpringRotation !== 0 ? newSpringRotation : undefined,
       };
@@ -454,7 +454,7 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
               entry: pendingPortalEntry,
               exit: { x, y },
               exitDirection: newPortalExitDir !== 'straight' ? newPortalExitDir : undefined,
-              exitSpeed: newPortalExitSpeed !== 1.0 ? newPortalExitSpeed : undefined,
+              exitSpeed: newPortalExitSpeed !== 0.5 ? newPortalExitSpeed : undefined,
               scale: newPortalScale !== 1.0 ? newPortalScale : undefined,
             },
           }));

@@ -27,8 +27,8 @@ export function saveArcadeState(state: ArcadeState): void {
 
 /**
  * Collect a doodle with circular sequence tracking (Bomb Jack style)
- * Player can start from any doodle, and the chain follows the cycle.
- * E.g., for 5 doodles: 3→4→5→1→2 is a perfect in-order collection.
+ * Always updates expectedNextSequence to show which doodle to collect next.
+ * E.g., if player picks #3, next glow is #4 (or wraps to #1 if #4 doesn't exist).
  */
 export function collectDoodle(state: ArcadeState, sequence: number): void {
   // Already collected
@@ -37,20 +37,50 @@ export function collectDoodle(state: ArcadeState, sequence: number): void {
   state.doodlesCollected.push(sequence);
 
   // First pickup - any doodle is valid, sets the expected next
-  if (state.expectedNextSequence === null) {
+  if (state.streakCount === 0) {
     state.streakCount = 1;
-    // Next expected is sequence + 1, wrapping around
-    state.expectedNextSequence = (sequence % state.totalDoodlesInLevel) + 1;
   } else {
     // Check if this is the expected next in circular order
     if (sequence === state.expectedNextSequence) {
       state.streakCount++;
-      // Update expected next (circular wrap)
-      state.expectedNextSequence = (sequence % state.totalDoodlesInLevel) + 1;
     }
-    // If not expected, streak breaks but we don't update expectedNextSequence
-    // (player can still collect remaining doodles, just won't get inOrder star)
+    // If not expected, streak breaks but we still update the glow
   }
+
+  // Always update expected next to be the next in circular order from what was just collected
+  // This ensures the glow always shows the "correct" next doodle
+  state.expectedNextSequence = findNextUncollectedInSequence(
+    sequence,
+    state.totalDoodlesInLevel,
+    state.doodlesCollected
+  );
+}
+
+/**
+ * Find the next uncollected doodle in circular sequence order.
+ * Starting from `fromSequence`, wraps around to find the first uncollected.
+ */
+function findNextUncollectedInSequence(
+  fromSequence: number,
+  totalDoodles: number,
+  collected: number[]
+): number {
+  if (totalDoodles === 0) return 1;
+
+  let next = (fromSequence % totalDoodles) + 1;
+  let checked = 0;
+
+  // Search circularly for the next uncollected doodle
+  while (checked < totalDoodles) {
+    if (!collected.includes(next)) {
+      return next;
+    }
+    next = (next % totalDoodles) + 1;
+    checked++;
+  }
+
+  // All collected, return 1 as fallback
+  return 1;
 }
 
 export function checkStarObjectives(
@@ -61,48 +91,49 @@ export function checkStarObjectives(
   const totalDoodles = level.doodles.length;
   const collectedCount = state.doodlesCollected.length;
 
-  // allDoodles is PASS REQUIREMENT (not a star)
-  const allDoodles = totalDoodles === 0 || collectedCount === totalDoodles;
-
-  // inOrder (★★) - collected all in circular sequence (Bomb Jack style)
-  // streakCount must equal totalDoodles for perfect circular collection
-  const inOrder = allDoodles && state.streakCount === totalDoodles;
-
-  // landedInZone (★) - landed beyond target
+  // ★ landedInZone - landed beyond target
   const landedInZone = landingDistance >= level.landingTarget;
 
+  // ★★ allDoodles - collected all doodles (any order)
+  const allDoodles = totalDoodles === 0 || collectedCount === totalDoodles;
+
+  // ★★★ inOrder - collected all in circular sequence (Bomb Jack style)
+  const inOrder = allDoodles && state.streakCount === totalDoodles;
+
   return {
+    landedInZone,
     allDoodles,
     inOrder,
-    landedInZone,
   };
 }
 
 /**
  * Check if level is passed.
- * PASS REQUIREMENT: All doodles must be collected.
+ * PASS REQUIREMENT: At least 1 star (land on target).
  */
 export function isLevelPassed(objectives: StarObjectives): boolean {
-  return objectives.allDoodles;
+  return objectives.landedInZone;  // Just need to land on target
 }
 
 /**
- * Check if any stars were earned (not counting pass requirement).
- * Stars: ★ landedInZone, ★★ inOrder
+ * Check if any stars were earned.
+ * Stars: ★ landedInZone, ★★ allDoodles, ★★★ inOrder
  */
 export function hasAnyStars(objectives: StarObjectives): boolean {
-  return objectives.inOrder || objectives.landedInZone;
+  return objectives.landedInZone || objectives.allDoodles || objectives.inOrder;
 }
 
 /**
- * Count stars earned (max 2).
+ * Count stars earned (max 3).
  * ★ landedInZone
- * ★★ inOrder (circular Bomb Jack style)
+ * ★★ allDoodles (any order)
+ * ★★★ inOrder (circular Bomb Jack style)
  */
 export function countStars(objectives: StarObjectives): number {
   let count = 0;
-  if (objectives.landedInZone) count++;
-  if (objectives.inOrder) count++;  // ★★ for perfect circular order
+  if (objectives.landedInZone) count++;  // ★
+  if (objectives.allDoodles) count++;    // ★★
+  if (objectives.inOrder) count++;       // ★★★
   return count;
 }
 
@@ -137,7 +168,7 @@ export function setLevel(state: ArcadeState, levelId: number): void {
 
 export function resetThrowState(state: ArcadeState): void {
   state.doodlesCollected = [];
-  state.expectedNextSequence = null;
+  state.expectedNextSequence = 1;  // Start with #1 glowing
   state.streakCount = 0;
 }
 
@@ -154,14 +185,15 @@ export function recordStars(
 }
 
 /**
- * Get total stars across all levels (max 2 per level = 20 total).
- * ★ landedInZone, ★★ inOrder
+ * Get total stars across all levels (max 3 per level).
+ * ★ landedInZone, ★★ allDoodles, ★★★ inOrder
  */
 export function getTotalStars(state: ArcadeState): number {
   let total = 0;
   for (const levelId in state.starsPerLevel) {
     const stars = state.starsPerLevel[levelId];
     if (stars.landedInZone) total++;
+    if (stars.allDoodles) total++;
     if (stars.inOrder) total++;
   }
   return total;

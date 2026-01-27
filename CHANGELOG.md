@@ -28,6 +28,40 @@ All notable changes to One-More-Flick are documented in this file.
 - `renderDoodles()` accepts `levelId` and `nextSequence` parameters
 - 12 unit tests for stroke detection, scale calculation, and sprite assignment
 
+### Changed - Game UX Improvements
+- **3-Star System**: Arcade mode now uses 3 stars per level (was 2)
+  - ★ Land on target (also passes level)
+  - ★★ Collect all doodles (any order)
+  - ★★★ Collect all doodles in circular sequence (Bomb Jack style)
+  - Pass requirement changed from "collect all doodles" to "land on target"
+- **Score readability**: HIGH and LAST values now use dark indigo (#0e0f69) instead of theme highlight/orange
+- **Level Editor defaults**: Spring strength and portal exit speed default to 0.5 (was 1.0) for gentler gameplay
+
+### Added - Fullscreen Support
+- **Fullscreen toggle button** (⛶) in HUD below score display
+- Click to enter/exit fullscreen mode
+- Only visible when not flying/sliding
+
+### Fixed - Circular Sequence Glow
+- Glow now always follows circular order from last collected doodle
+- `expectedNextSequence` initialized to 1 at throw start (was null)
+- Collecting any doodle updates glow to next uncollected in sequence
+- Example: collect #3 → #4 glows, collect #5 → #1 glows (wraps)
+
+### Improved - Portal Experience
+- **Reduced exit speed**: BASE_EXIT_SPEED lowered from 8 to 4 for better control
+- **Tighter slow-mo trigger**: Portal proximity reduced from 15px to 8px
+- **No re-trigger**: Slow-mo only triggers once per throw (removed post-warp re-trigger)
+- **Smoother fade-out**: Extended juice timer from 24 to 32 frames (~0.5s)
+- **Quadratic ease**: Slow-mo fades from 0.9 → 0.5 with eased interpolation
+
+### Technical - UX Improvements
+- New `FullscreenButton.tsx` component with `useFullscreen()` hook
+- Updated `StarObjectives` interface field order: landedInZone, allDoodles, inOrder
+- `collectDoodle()` now uses `findNextUncollectedInSequence()` helper
+- `isLevelPassed()` now checks `landedInZone` instead of `allDoodles`
+- `countStars()` and `getTotalStars()` updated for 3-star counting
+
 ---
 
 ## [Previous] - 2026-01-26

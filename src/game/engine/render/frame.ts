@@ -71,6 +71,18 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
     }
 
     ctx.restore();
+
+    // Fullscreen toggle icon (top-right corner, below scores)
+    const fsX = W - 18;
+    const fsY = 58;
+
+    ctx.save();
+    ctx.fillStyle = theme.accent3;
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⛶', fsX, fsY);
+    ctx.restore();
   }
 
   // High Score & Last Score display (top-right)
@@ -83,7 +95,7 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
   ctx.fillText('HIGH', W - 8, 12);
   // HIGH value - uses Zeno precision (up to 6 decimals near edge)
   ctx.font = 'bold 10px monospace';
-  ctx.fillStyle = theme.highlight;
+  ctx.fillStyle = '#0e0f69';  // Dark indigo for readability
   ctx.fillText(formatZenoScore(state.best), W - 8, 23);
 
   // LAST label
@@ -92,7 +104,7 @@ export function renderFrame(ctx: CanvasRenderingContext2D, state: GameState, the
   ctx.fillText('LAST', W - 8, 36);
   // LAST value - uses Zeno precision (up to 6 decimals near edge)
   ctx.font = 'bold 10px monospace';
-  ctx.fillStyle = '#ed8818';  // Orange for visibility
+  ctx.fillStyle = '#0e0f69';  // Dark indigo for readability
   ctx.fillText(state.lastDist !== null ? formatZenoScore(state.lastDist) : '-', W - 8, 47);
 
   ctx.restore();

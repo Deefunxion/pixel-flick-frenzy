@@ -784,6 +784,30 @@ const Game = () => {
           setMenuOpen(true);
           return; // Don't start charging
         }
+
+        // Fullscreen hit area: at (W - 18, 58) with radius 16
+        // Only active when not flying/sliding (matches icon visibility)
+        const s = stateRef.current;
+        if (s && !s.flying && !s.sliding) {
+          const fsX = W - 18;
+          const fsY = 58;
+          const fsRadius = 16;
+          const fsDx = canvasX - fsX;
+          const fsDy = canvasY - fsY;
+          if (fsDx * fsDx + fsDy * fsDy < fsRadius * fsRadius) {
+            // Toggle fullscreen
+            try {
+              if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+              } else {
+                document.exitFullscreen();
+              }
+            } catch (err) {
+              console.warn('Fullscreen not supported:', err);
+            }
+            return; // Don't start charging
+          }
+        }
       }
 
       // Buffer input if we're in slow-mo/freeze

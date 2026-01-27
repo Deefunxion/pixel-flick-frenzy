@@ -286,12 +286,12 @@ export function updateFrame(state: GameState, svc: GameServices): void {
   const portalJuiceActive = state.portalJuiceTimer > 0;
 
   if (!state.reduceFx && state.arcadeMode && state.arcadePortal) {
-    const bufferPx = 15; // Tighter trigger for portal slow-mo (was 30)
-    const { aX, aY, bX, bY, usedThisThrow, lastUsedSide } = state.arcadePortal;
+    const bufferPx = 8; // Tighter trigger (was 15)
+    const { aX, aY, bX, bY, usedThisThrow } = state.arcadePortal;
     const distA = Math.hypot(state.px - aX, state.py - aY);
     const distB = Math.hypot(state.px - bX, state.py - bY);
 
-    // Pre-warp: approaching portal
+    // Pre-warp: approaching portal (only if not used yet)
     if (!usedThisThrow && (distA <= bufferPx || distB <= bufferPx)) {
       portalProximityActive = true;
       if (distA <= distB) {
@@ -302,17 +302,8 @@ export function updateFrame(state: GameState, svc: GameServices): void {
         portalProximityY = bY;
       }
     }
-    // Post-warp: only apply proximity slow-mo very close to exit (not the extended juice period)
-    else if (usedThisThrow && lastUsedSide && !portalJuiceActive) {
-      const exitX = lastUsedSide === 'a' ? bX : aX;
-      const exitY = lastUsedSide === 'a' ? bY : aY;
-      const distExit = Math.hypot(state.px - exitX, state.py - exitY);
-      if (distExit <= bufferPx) {
-        portalProximityActive = true;
-        portalProximityX = exitX;
-        portalProximityY = exitY;
-      }
-    }
+    // Post-warp: NO re-trigger of slow-mo if already used this throw
+    // (removed the post-warp proximity check entirely)
   }
 
   // Calculate edge-based cinematic effects (slow-mo, zoom)
@@ -331,12 +322,16 @@ export function updateFrame(state: GameState, svc: GameServices): void {
     state.zoomTargetY = portalProximityY;
   }
 
-  // Portal juice effect (after teleportation) - short dramatic effect
+  // Portal juice effect (after teleportation) - smooth decay
   if (portalJuiceActive && !state.reduceFx) {
-    // Stronger cue immediately after warp, then decay
-    const juiceIntensity = Math.min(1, state.portalJuiceTimer / 20); // Peak at first 20 frames
-    adjSlowMo = 0.7 + juiceIntensity * 0.2; // 0.7 to 0.9 slow-mo
-    adjZoom = 1.5 + juiceIntensity * 0.4; // 1.5 to 1.9 zoom
+    // Gradual decay with easing
+    const juiceProgress = state.portalJuiceTimer / 32;  // Extended to 32 frames
+    const easedProgress = juiceProgress * juiceProgress;  // Quadratic ease-out
+
+    // Start at 0.9 slow-mo, decay to 0.5 (normal-ish)
+    adjSlowMo = 0.5 + easedProgress * 0.4;  // 0.9 → 0.5
+    adjZoom = 1.2 + easedProgress * 0.6;    // 1.8 → 1.2
+
     state.zoomTargetX = state.portalZoomTargetX;
     state.zoomTargetY = state.portalZoomTargetY;
     state.portalJuiceTimer--;
