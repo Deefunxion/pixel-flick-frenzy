@@ -37,6 +37,14 @@ const BASE_EXIT_SPEED = 8; // Base horizontal speed on exit
 // Multiplier of 1.1 gives ~88% of visual sprite as hitbox
 const COLLISION_RADIUS_MULTIPLIER = 1.1;
 
+
+
+
+
+
+
+
+
 export function createPortalFromPair(pair: PortalPair, defaultColorId: number = 0): Portal {
   const scale = pair.scale ?? 1.0;
 

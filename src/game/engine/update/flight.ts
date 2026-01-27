@@ -610,10 +610,10 @@ export function checkLandingTransition(
   theme: Theme,
   audio: FlightAudio
 ): boolean {
-  if (state.py >= H - 20) {
+  if (state.py >= H - 10) {
     state.flying = false;
     state.sliding = true;
-    state.py = H - 20;
+    state.py = H - 10;  // Lowered 10px after Zeno size reduction (35x35)
 
     const impactVelocity = Math.abs(state.vy);
     state.screenShake = state.reduceFx ? 0 : Math.min(8, 2 + impactVelocity * 1.5);

@@ -341,7 +341,7 @@ export function createInitialState(params: { reduceFx: boolean }): GameState {
 
 export function resetPhysics(state: GameState) {
   state.px = LAUNCH_PAD_X;
-  state.py = H - 20;
+  state.py = H - 10;  // Lowered 10px after Zeno size reduction (35x35)
   state.vx = 0;
   state.vy = 0;
   state.flying = false;
