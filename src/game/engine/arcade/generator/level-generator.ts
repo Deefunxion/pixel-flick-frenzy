@@ -1,5 +1,5 @@
 // src/game/engine/arcade/generator/level-generator.ts
-import type { ArcadeLevel, DoodlePlacement, SpringPlacement, PortalPair, HazardPlacement, HazardMotion, WindZonePlacement, GravityWellPlacement, GravityWellType, FrictionZonePlacement, FrictionType, DoodleMotion } from '../types';
+import type { ArcadeLevel, DoodlePlacement, SpringPlacement, PortalPair, HazardPlacement, HazardMotion, WindZonePlacement, GravityWellPlacement, GravityWellType, FrictionZonePlacement, FrictionType, DoodleMotion, LevelMiseEnPlace, StrokeOverlay } from '../types';
 import type { GenerationResult, CharacterData, ClassifiedCharacterData, GhostInput, Archetype } from './types';
 import { SeededRandom } from './random';
 import { StrokeTransformer } from './transform';
@@ -7,6 +7,9 @@ import { PhysicsSimulator } from './physics-simulator';
 import { loadStrokeDatabase, getCharactersByStrokeCount, getCharactersByArchetype, getStrokeRangeForLevel, getCharacterDatabase } from './stroke-data';
 import { applyCalligraphicFlow } from '../calligraphicScale';
 import { selectArchetypeForLevel } from './archetypes';
+import { getLevelType, getDefaultDensity } from './level-type';
+import { populateStrokes } from './stroke-populator';
+import { connectStrokes } from './stroke-connector';
 
 // World definitions - which mechanics are available per level range
 interface WorldConfig {
@@ -320,54 +323,104 @@ export class LevelGenerator {
       archetype: effectiveArchetype,
     });
 
-    const targetDoodleCount = getDoodleCount(levelId);
-
-    // Get evenly-spread doodle positions from the character pattern
-    // The transformer handles: spreading across X, using Y pattern, ensuring spacing
-    const positions = transformer.extractDoodlePositions(character, targetDoodleCount);
-
-    // Positions are already sorted by X (left to right) from the transformer
-
     // Get world config for this level
     const worldConfig = getWorldConfig(levelId);
 
-    // Create doodles with potential motion for levels 21+
-    let doodles: DoodlePlacement[] = positions.map((pos, i) => {
-      const doodle: DoodlePlacement = {
-        x: pos.x,
-        y: pos.y,
-        size: 'large',  // Base size, scale will override visual
-        sprite: 'coin', // Will be overridden by calligraphic flow
-        sequence: i + 1,
-      };
+    // === Mise en Place: Create stroke overlays for editor visualization ===
+    const levelType = getLevelType(levelId);
+    const density = getDefaultDensity(levelType);
+    const strokeOverlays = transformer.createStrokeOverlays(character);
 
-      // Add motion for moving doodles (levels 21+)
-      if (worldConfig.mechanics.movingDoodles && rng.next() > 0.6) {
-        if (rng.next() > 0.5) {
-          doodle.motion = {
-            type: 'linear',
-            axis: rng.pick(['x', 'y'] as const),
-            range: rng.nextInt(20, 40),
-            speed: rng.nextFloat(0.3, 0.6),
-          };
-        } else {
-          doodle.motion = {
-            type: 'circular',
-            radius: rng.nextInt(15, 30),
-            speed: rng.nextFloat(0.2, 0.4),
-          };
-        }
-      }
+    // Determine which strokes to populate based on level type
+    // Puzzly: populate 2-3 strokes for sparser levels
+    // Juicy: populate all strokes for dense levels
+    const strokesToPopulate = levelType === 'juicy'
+      ? strokeOverlays
+      : strokeOverlays.slice(0, Math.min(3, strokeOverlays.length));
 
-      return doodle;
+    // Populate strokes with coins using calligraphic sizing
+    const { coins: strokeCoins, updatedStrokes } = populateStrokes(strokesToPopulate, {
+      density,
+      startId: 1,
+      minSpacing: levelType === 'juicy' ? 10 : 20,
     });
 
-    // Generate portals first (needed for calligraphic stroke detection)
+    // Merge updated strokes back into full stroke array
+    const allStrokes: StrokeOverlay[] = strokeOverlays.map(s =>
+      updatedStrokes.find(u => u.id === s.id) || s
+    );
+
+    // Auto-connect populated strokes with appropriate props
+    const connections = connectStrokes(allStrokes, levelId);
+
+    // Create mise en place metadata for editor
+    const miseEnPlace: LevelMiseEnPlace = {
+      character: character.character,
+      strokes: allStrokes,
+      levelType,
+    };
+
+    // === Fallback to existing approach if stroke population didn't work ===
+    const targetDoodleCount = getDoodleCount(levelId);
+    let doodles: DoodlePlacement[];
+    let positions: { x: number; y: number }[];
+
+    if (strokeCoins.length >= 3) {
+      // Use stroke-populated coins
+      doodles = strokeCoins;
+      positions = doodles.map(d => ({ x: d.x, y: d.y }));
+    } else {
+      // Fallback to original extraction method
+      positions = transformer.extractDoodlePositions(character, targetDoodleCount);
+      doodles = positions.map((pos, i) => ({
+        x: pos.x,
+        y: pos.y,
+        size: 'large' as const,
+        sprite: 'coin',
+        sequence: i + 1,
+      }));
+    }
+
+    // Add motion for moving doodles (levels 21+)
+    if (worldConfig.mechanics.movingDoodles) {
+      doodles = doodles.map(doodle => {
+        if (rng.next() > 0.6) {
+          if (rng.next() > 0.5) {
+            return {
+              ...doodle,
+              motion: {
+                type: 'linear' as const,
+                axis: rng.pick(['x', 'y'] as const),
+                range: rng.nextInt(20, 40),
+                speed: rng.nextFloat(0.3, 0.6),
+              },
+            };
+          } else {
+            return {
+              ...doodle,
+              motion: {
+                type: 'circular' as const,
+                radius: rng.nextInt(15, 30),
+                speed: rng.nextFloat(0.2, 0.4),
+              },
+            };
+          }
+        }
+        return doodle;
+      });
+    }
+
+    // Generate portals - use auto-connected ones if available, otherwise generate
     const props = shouldUseProps(levelId);
     let portal: PortalPair | null = null;
     let portalsArray: PortalPair[] = [];
 
-    if (props.portals) {
+    if (connections.portals.length > 0) {
+      // Use stroke-connected portals
+      portalsArray = connections.portals;
+      portal = portalsArray[0];
+    } else if (props.portals) {
+      // Fallback to generated portals
       const portalResult = this.generatePortals(
         rng.derive('portals'),
         worldConfig.mechanics.timedPortals,
@@ -384,7 +437,7 @@ export class LevelGenerator {
     // Apply calligraphic flow sizing (scale + sprite based on stroke position)
     doodles = applyCalligraphicFlow(doodles, portalsArray);
 
-    // Create level
+    // Create level with mise en place metadata
     const level: ArcadeLevel = {
       id: levelId,
       landingTarget: getLandingTarget(levelId),
@@ -396,16 +449,33 @@ export class LevelGenerator {
       windZones: [],
       gravityWells: [],
       frictionZones: [],
+      miseEnPlace,
     };
 
-    // Add springs if needed
-    if (props.springs) {
+    // Add springs - use auto-connected ones if available, otherwise generate
+    if (connections.springs.length > 0) {
+      level.springs = connections.springs;
+    } else if (props.springs) {
       level.springs = this.generateSprings(
         positions,
         rng,
         worldConfig.mechanics.timedSprings,
         worldConfig.mechanics.breakableSprings
       );
+    }
+
+    // Add wind zones - use auto-connected ones if available
+    if (connections.windZones.length > 0) {
+      level.windZones = connections.windZones;
+    } else if (worldConfig.mechanics.windZones) {
+      level.windZones = this.generateWindZones(rng.derive('wind'));
+    }
+
+    // Add gravity wells - use auto-connected ones if available
+    if (connections.gravityWells.length > 0) {
+      level.gravityWells = connections.gravityWells;
+    } else if (worldConfig.mechanics.gravityWells) {
+      level.gravityWells = this.generateGravityWells(positions, rng.derive('gravity'));
     }
 
     // Add hazards for levels 71+
@@ -415,16 +485,6 @@ export class LevelGenerator {
         rng.derive('hazards'),
         worldConfig.mechanics.movingHazards
       );
-    }
-
-    // Add wind zones for levels 41+
-    if (worldConfig.mechanics.windZones) {
-      level.windZones = this.generateWindZones(rng.derive('wind'));
-    }
-
-    // Add gravity wells for levels 91+
-    if (worldConfig.mechanics.gravityWells) {
-      level.gravityWells = this.generateGravityWells(positions, rng.derive('gravity'));
     }
 
     // Add friction zones for levels 141+
