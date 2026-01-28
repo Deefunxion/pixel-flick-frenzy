@@ -16,7 +16,8 @@ export function renderPortal(
 
   // Determine if exit ripple should be shown (just warped)
   const showExitRipple = portal.usedThisThrow && portalJuiceTimer > 0;
-  const rippleIntensity = portalJuiceTimer / 24; // 0-1 based on remaining juice
+  // Clamp to 0-1 range (timer can be up to 32 frames)
+  const rippleIntensity = Math.min(1, portalJuiceTimer / 32);
 
   // Render both portals identically (bidirectional)
   const isExitA = portal.lastUsedSide === 'b'; // If entered B, exit is A
@@ -72,7 +73,7 @@ function renderPortalOrb(
     // Multiple ripple rings
     for (let i = 0; i < 3; i++) {
       const ringProgress = (rippleProgress + i * 0.15) % 1;
-      const ringRadius = r + ringProgress * 50;
+      const ringRadius = Math.max(1, r + ringProgress * 50); // Safety: ensure positive radius
       const ringAlpha = (1 - ringProgress) * rippleAlpha * 0.4;
 
       ctx.beginPath();
