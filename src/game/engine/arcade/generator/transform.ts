@@ -1,6 +1,8 @@
 // src/game/engine/arcade/generator/transform.ts
 import type { CharacterData, StrokePoint, Archetype, ArchetypeTransform } from './types';
+import type { StrokeOverlay } from '../types';
 import { ARCHETYPE_TRANSFORMS } from './archetypes';
+import { extractStrokeWidthsWithDensity } from './stroke-width-extractor';
 
 // Game canvas bounds
 const GAME_BOUNDS = {
@@ -269,5 +271,56 @@ export class StrokeTransformer {
    */
   getArchetype(): Archetype {
     return this.options.archetype;
+  }
+
+  /**
+   * Create stroke overlays for editor visualization
+   * Transforms all strokes to game coordinates with width data
+   */
+  createStrokeOverlays(character: CharacterData): StrokeOverlay[] {
+    const overlays: StrokeOverlay[] = [];
+
+    for (let i = 0; i < character.strokes.length; i++) {
+      const stroke = character.strokes[i];
+      const transformedPoints: Array<{ x: number; y: number }> = [];
+
+      // Transform each point from SVG to game coordinates
+      for (const point of stroke.points) {
+        const rotated = this.applyRotationAndFlip(point);
+        const gameCoords = this.svgToGameCoords(rotated);
+        transformedPoints.push(gameCoords);
+      }
+
+      // Extract widths for calligraphic sizing
+      const widths = extractStrokeWidthsWithDensity(stroke.points);
+
+      overlays.push({
+        id: `stroke-${i}`,
+        points: transformedPoints,
+        widths,
+        populated: false,
+        doodleIds: [],
+      });
+    }
+
+    return overlays;
+  }
+
+  /**
+   * Convert SVG coordinates (0-1000) to game canvas coordinates
+   */
+  private svgToGameCoords(point: StrokePoint): { x: number; y: number } {
+    // SVG bounds: 0-1000 x 0-1000
+    // Game bounds: 50-400 (X), 30-190 (Y)
+    const nx = point.x / SVG_BOUNDS.width;  // Normalize to 0-1
+    const ny = point.y / SVG_BOUNDS.height;
+
+    const gameX = GAME_BOUNDS.minX + nx * (GAME_BOUNDS.maxX - GAME_BOUNDS.minX);
+    const gameY = GAME_BOUNDS.minY + ny * (GAME_BOUNDS.maxY - GAME_BOUNDS.minY);
+
+    return {
+      x: Math.round(gameX),
+      y: Math.round(gameY),
+    };
   }
 }

@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { StrokeTransformer } from '../transform';
 import type { CharacterData } from '../types';
+import type { StrokeOverlay } from '../../types';
 
 describe('StrokeTransformer', () => {
   const mockCharacter: CharacterData = {
@@ -220,5 +221,81 @@ describe('StrokeTransformer with archetypes', () => {
       const transformer = new StrokeTransformer();
       expect(transformer.getArchetype()).toBe('general');
     });
+  });
+});
+
+describe('StrokeTransformer.createStrokeOverlays', () => {
+  it('creates overlay for each stroke in character', () => {
+    const character: CharacterData = {
+      character: '一',
+      strokeCount: 1,
+      strokes: [
+        { path: '', points: [{ x: 100, y: 500 }, { x: 900, y: 500 }] }
+      ],
+    };
+    const transformer = new StrokeTransformer();
+    const overlays = transformer.createStrokeOverlays(character);
+
+    expect(overlays.length).toBe(1);
+    expect(overlays[0].id).toBe('stroke-0');
+    expect(overlays[0].populated).toBe(false);
+    expect(overlays[0].doodleIds).toEqual([]);
+  });
+
+  it('transforms SVG coordinates to game canvas coordinates', () => {
+    const character: CharacterData = {
+      character: '一',
+      strokeCount: 1,
+      strokes: [
+        { path: '', points: [{ x: 0, y: 500 }, { x: 1000, y: 500 }] }
+      ],
+    };
+    const transformer = new StrokeTransformer();
+    const overlays = transformer.createStrokeOverlays(character);
+
+    // SVG 0-1000 maps to game 50-400 (X) and 30-190 (Y)
+    expect(overlays[0].points[0].x).toBeGreaterThanOrEqual(50);
+    expect(overlays[0].points[0].x).toBeLessThanOrEqual(400);
+    expect(overlays[0].points[overlays[0].points.length - 1].x).toBeGreaterThanOrEqual(50);
+    expect(overlays[0].points[overlays[0].points.length - 1].x).toBeLessThanOrEqual(400);
+  });
+
+  it('includes width data for each point', () => {
+    const character: CharacterData = {
+      character: '一',
+      strokeCount: 1,
+      strokes: [
+        { path: '', points: [
+          { x: 100, y: 500 },
+          { x: 300, y: 500 },
+          { x: 500, y: 500 },
+          { x: 700, y: 500 },
+          { x: 900, y: 500 },
+        ]}
+      ],
+    };
+    const transformer = new StrokeTransformer();
+    const overlays = transformer.createStrokeOverlays(character);
+
+    expect(overlays[0].widths.length).toBe(overlays[0].points.length);
+    // First width > last width (calligraphic taper)
+    expect(overlays[0].widths[0]).toBeGreaterThan(overlays[0].widths[overlays[0].widths.length - 1]);
+  });
+
+  it('creates multiple overlays for multi-stroke characters', () => {
+    const character: CharacterData = {
+      character: '二',
+      strokeCount: 2,
+      strokes: [
+        { path: '', points: [{ x: 100, y: 300 }, { x: 900, y: 300 }] },
+        { path: '', points: [{ x: 100, y: 700 }, { x: 900, y: 700 }] },
+      ],
+    };
+    const transformer = new StrokeTransformer();
+    const overlays = transformer.createStrokeOverlays(character);
+
+    expect(overlays.length).toBe(2);
+    expect(overlays[0].id).toBe('stroke-0');
+    expect(overlays[1].id).toBe('stroke-1');
   });
 });
