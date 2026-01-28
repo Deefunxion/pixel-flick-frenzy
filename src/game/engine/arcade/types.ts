@@ -114,6 +114,7 @@ export interface ArcadeLevel {
   hazards?: HazardPlacement[];            // Hazards (World 8+)
   gravityWells?: GravityWellPlacement[];  // Gravity wells (World 10+)
   frictionZones?: FrictionZonePlacement[]; // Friction zones (World 15+)
+  miseEnPlace?: LevelMiseEnPlace;         // Stroke overlay data for editor (optional)
 }
 
 // Star objectives
@@ -125,6 +126,23 @@ export interface StarObjectives {
   landedInZone: boolean;    // ★ - landed beyond target
   allDoodles: boolean;      // ★★ - collected all doodles (any order)
   inOrder: boolean;         // ★★★ - collected in circular sequence (Bomb Jack style)
+}
+
+// Stroke overlay for editor visualization (mise en place system)
+export interface StrokeOverlay {
+  id: string;                    // Unique stroke identifier
+  points: Array<{ x: number; y: number }>;  // Path points in game coordinates
+  widths: number[];              // Brush width at each point (for calligraphic sizing)
+  populated: boolean;            // Whether this stroke has coins
+  doodleIds: number[];           // IDs of doodles on this stroke (if populated)
+}
+
+export type LevelType = 'puzzly' | 'juicy';
+
+export interface LevelMiseEnPlace {
+  character: string;             // The Chinese character used
+  strokes: StrokeOverlay[];      // All strokes from the character
+  levelType: LevelType;          // Determines star requirements and density
 }
 
 // Runtime state for current arcade session
