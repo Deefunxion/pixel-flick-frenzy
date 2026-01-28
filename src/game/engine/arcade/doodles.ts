@@ -43,13 +43,16 @@ export function createDoodleFromPlacement(
     ? createMovingDoodleState(placement.x, placement.y, motion)
     : null;
 
+  // Ensure scale is positive (safety check)
+  const safeScale = Math.max(0.1, scale);
+
   return {
     x: placement.x,
     y: placement.y,
     baseX: placement.x,
     baseY: placement.y,
-    hitRadius: config.hitRadius * scale,
-    displaySize: config.displaySize * scale,
+    hitRadius: config.hitRadius * safeScale,
+    displaySize: config.displaySize * safeScale,
     sprite: placement.sprite,
     sequence: placement.sequence,
     collected: false,

@@ -179,12 +179,15 @@ function renderNextDoodleGlow(
   displaySize: number,
   timeMs: number
 ): void {
+  // Safety: skip if displaySize is invalid
+  if (displaySize <= 0) return;
+
   ctx.save();
 
   // Fast, energetic pulse
   const fastPulse = 0.6 + Math.sin(timeMs * 0.012) * 0.4;
   const slowPulse = 0.8 + Math.sin(timeMs * 0.004) * 0.2;
-  const radius = displaySize * 1.2;
+  const radius = Math.max(1, displaySize * 1.2);
 
   // Outer sparkle ring (rotating)
   const sparkleAngle = (timeMs * 0.003) % (Math.PI * 2);
@@ -214,13 +217,14 @@ function renderNextDoodleGlow(
   ctx.fill();
 
   // Inner bright core
-  const coreGlow = ctx.createRadialGradient(x, y, 0, x, y, displaySize * 0.5);
+  const coreRadius = Math.max(1, displaySize * 0.5);
+  const coreGlow = ctx.createRadialGradient(x, y, 0, x, y, coreRadius);
   coreGlow.addColorStop(0, `rgba(255, 255, 255, ${0.95 * fastPulse})`);
   coreGlow.addColorStop(0.5, `rgba(255, 255, 200, ${0.6 * fastPulse})`);
   coreGlow.addColorStop(1, 'rgba(255, 220, 100, 0)');
 
   ctx.beginPath();
-  ctx.arc(x, y, displaySize * 0.5, 0, Math.PI * 2);
+  ctx.arc(x, y, coreRadius, 0, Math.PI * 2);
   ctx.fillStyle = coreGlow;
   ctx.fill();
 
@@ -234,11 +238,14 @@ function renderFallbackDoodle(
   size: number,
   _sequence: number
 ): void {
+  // Safety: skip if size is invalid
+  if (size <= 0) return;
+
   ctx.save();
 
   // Wobbly circle (hand-drawn style)
   ctx.beginPath();
-  const radius = size / 2;
+  const radius = Math.max(1, size / 2);
   const segments = 16;
   for (let i = 0; i <= segments; i++) {
     const angle = (i / segments) * Math.PI * 2;
