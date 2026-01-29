@@ -121,7 +121,18 @@ import {
   isLevelPassed,
   recordStars,
   advanceLevel,
+  countStars,
 } from '@/game/engine/arcade';
+import {
+  isWorldUnlocked,
+  getWorldForLevel,
+  getWorldProgress,
+} from '@/game/engine/arcade/progression';
+import {
+  triggerCelebration,
+  updateCelebrations,
+  renderCelebrations,
+} from '@/game/engine/celebrations';
 import { preloadArcadeSprites } from '@/game/engine/arcade/arcadeAssets';
 import { useIsPortrait } from '@/hooks/useIsPortrait';
 import type { ThrowState, DailyTasks, MilestonesClaimed } from '@/game/engine/types';
@@ -526,11 +537,32 @@ const Game = () => {
       const level = getLevel(state.arcadeState.currentLevelId);
       if (level) {
         const stars = checkStarObjectives(state.arcadeState, level, landingX);
+        const starCount = countStars(stars);
+
         if (isLevelPassed(stars)) {
+          const prevWorldProgress = getWorldProgress(getWorldForLevel(level.id).id, state.arcadeState);
           recordStars(state.arcadeState, level.id, stars);
+          const newWorldProgress = getWorldProgress(getWorldForLevel(level.id).id, state.arcadeState);
+
+          // Trigger 3-star celebration
+          if (starCount === 3) {
+            triggerCelebration('level-3star', {
+              audioRefs: audioRefs.current,
+              audioSettings: audioSettingsRef.current,
+            });
+          }
+
+          // Check for world completion (all 10 levels passed)
+          if (prevWorldProgress.levelsCompleted < 10 && newWorldProgress.levelsCompleted === 10) {
+            triggerCelebration('world-complete', {
+              audioRefs: audioRefs.current,
+              audioSettings: audioSettingsRef.current,
+            });
+          }
+
           // Advance to next level after page flip completes
           setTimeout(() => {
-            if (state.arcadeState && state.arcadeState.currentLevelId < 10) {
+            if (state.arcadeState && state.arcadeState.currentLevelId < 250) {
               advanceLevel(state.arcadeState);
               loadArcadeLevel(state, state.arcadeState.currentLevelId);
             }
@@ -1007,6 +1039,10 @@ const Game = () => {
             if (!pageFlipConsumed) {
               renderFrame(ctx, state, currentTheme, now, dpr);
             }
+
+            // Update and render celebrations (confetti) on top
+            updateCelebrations();
+            renderCelebrations(ctx);
           }
         } catch (err: unknown) {
           const error = err as Error;

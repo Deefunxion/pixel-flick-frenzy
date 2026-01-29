@@ -1,6 +1,7 @@
 import React from 'react';
 import type { TutorialPhase } from '@/game/engine/types';
 import { TUTORIAL_CONTENT } from '@/game/engine/tutorial';
+import { TutorialHand } from './TutorialHand';
 
 interface TutorialOverlayProps {
   phase: TutorialPhase;
@@ -18,6 +19,9 @@ export function TutorialOverlay({ phase, active, timeRemaining }: TutorialOverla
     <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
       {/* Dim background */}
       <div className="absolute inset-0 bg-black/50" />
+
+      {/* Animated hand gesture */}
+      <TutorialHand phase={phase} active={active} />
 
       {/* Speech bubble - hand-drawn style */}
       <div

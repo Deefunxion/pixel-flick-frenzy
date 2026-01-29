@@ -135,3 +135,49 @@ export function hapticLandingImpact(intensity: number): void {
   const duration = Math.floor(20 + intensity * 60);
   vibrate(duration);
 }
+
+// === Arcade-Specific Haptic Patterns ===
+
+/**
+ * Spring bounce - bouncy feedback
+ */
+export function hapticSpringBounce(strength: number): void {
+  // strength 0.5-3.0, maps to 15-60ms
+  const duration = Math.floor(15 + (strength / 3) * 45);
+  vibrate(duration);
+}
+
+/**
+ * Portal warp - whooshy pattern
+ */
+export function hapticPortalWarp(): void {
+  vibrate([20, 30, 40, 30, 20]);
+}
+
+/**
+ * Doodle collect - light tap
+ */
+export function hapticDoodleCollect(): void {
+  vibrate(15);
+}
+
+/**
+ * Hazard hit - sharp negative
+ */
+export function hapticHazardHit(): void {
+  vibrate([40, 20, 60]);
+}
+
+/**
+ * World unlock - celebration
+ */
+export function hapticWorldUnlock(): void {
+  vibrate([30, 50, 30, 50, 100]);
+}
+
+/**
+ * Galaxy unlock - epic celebration
+ */
+export function hapticGalaxyUnlock(): void {
+  vibrate([50, 30, 50, 30, 50, 30, 150]);
+}
