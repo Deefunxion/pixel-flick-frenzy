@@ -2,6 +2,8 @@ import type { Theme } from '@/game/themes';
 import type { GameState } from '../types';
 import { CLIFF_EDGE, H, MAX_ANGLE, MIN_ANGLE, W } from '@/game/constants';
 import { backgroundRenderer } from '../backgroundRenderer';
+import { parallaxRenderer } from '../parallax';
+import { getGalaxyForLevel } from '../arcade/progression';
 import {
   drawStickFigure,
   drawFailingStickFigure,
@@ -41,9 +43,19 @@ export function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameSt
   const zenoX = state.px + ZENO_X_OFFSET;
   const zenoY = state.py + ZENO_Y_OFFSET;
 
-  // Update and render background layers using asset-based renderer
-  backgroundRenderer.update(state.wind, nowMs);
-  backgroundRenderer.render(ctx);
+  // Update and render background layers
+  // Arcade mode uses galaxy parallax backgrounds; classic mode uses asset-based renderer
+  const galaxy = state.arcadeMode ? getGalaxyForLevel(state.arcadeState?.currentLevelId ?? 1) : null;
+
+  if (galaxy) {
+    // Arcade mode: use galaxy parallax
+    parallaxRenderer.update(state.px);
+    parallaxRenderer.render(ctx, galaxy.colorPalette);
+  } else {
+    // Classic mode: use existing background
+    backgroundRenderer.update(state.wind, nowMs);
+    backgroundRenderer.render(ctx);
+  }
 
   // Practice mode badge
   if (state.practiceMode) {
