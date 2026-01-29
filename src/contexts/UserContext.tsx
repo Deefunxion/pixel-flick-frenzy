@@ -1,23 +1,30 @@
 // src/contexts/UserContext.tsx
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { type User } from 'firebase/auth';
 import { type UserProfile } from '@/firebase/auth';
 import { loadNumber, loadString, saveString } from '@/game/storage';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
 import { captureError } from '@/lib/sentry';
 
-// Cache key for onboarding completion (survives page refresh)
 const ONBOARDING_COMPLETE_KEY = 'onboarding_complete';
+
+type AuthPath = 'splash' | 'nickname' | 'nickname-google' | 'ready';
 
 type UserContextType = {
   firebaseUser: User | null;
   profile: UserProfile | null;
   isLoading: boolean;
-  needsOnboarding: boolean;
+  needsOnboarding: boolean; // Kept for backwards compatibility
+  authPath: AuthPath;
+  isGoogleUser: boolean;
   setProfile: (profile: UserProfile) => void;
   completeOnboarding: (profile: UserProfile) => void;
-  skipOnboarding: () => void; // Dev mode - skip without creating profile
+  skipOnboarding: () => void;
   refreshProfile: () => Promise<void>;
+  // New auth flow functions
+  signInWithGoogle: () => Promise<void>;
+  continueAsGuest: () => void;
+  linkGoogleAccount: () => Promise<{ success: boolean; error?: string }>;
 };
 
 const UserContext = createContext<UserContextType | null>(null);
@@ -26,7 +33,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [authPath, setAuthPath] = useState<AuthPath>('splash');
+  const [pendingGoogleUser, setPendingGoogleUser] = useState<User | null>(null);
+
+  // Derived state
+  const needsOnboarding = authPath === 'nickname' || authPath === 'nickname-google';
+  const isGoogleUser = authPath === 'nickname-google' || (profile?.googleLinked ?? false);
 
   useEffect(() => {
     let unsubscribe: null | (() => void) = null;
@@ -34,18 +46,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     async function init() {
       console.log('[UserContext] init, FIREBASE_ENABLED:', FIREBASE_ENABLED);
+
       if (!FIREBASE_ENABLED) {
         console.log('[UserContext] Firebase disabled, skipping auth');
         setFirebaseUser(null);
         setProfile(null);
-        // In offline builds we don't show onboarding / nickname UI.
-        setNeedsOnboarding(false);
+        setAuthPath('ready'); // Skip splash in offline mode
         setIsLoading(false);
         return;
       }
 
-      // Check if user already completed onboarding (survives page refresh)
-      // Legacy key fallback for users who completed onboarding before storage version bump
       const cachedOnboarding = loadString(ONBOARDING_COMPLETE_KEY, '', 'onboarding_complete');
       const hasCompletedBefore = cachedOnboarding === 'true';
 
@@ -59,14 +69,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
         if (user) {
           const hasProfile = await hasUserProfile(user.uid);
+
           if (hasProfile) {
+            // User has profile - load it and go to game
             const userProfile = await getUserProfile(user.uid);
             setProfile(userProfile);
-            setNeedsOnboarding(false);
-            // Mark as completed in cache
+            setAuthPath('ready');
             saveString(ONBOARDING_COMPLETE_KEY, 'true');
 
-            // One-time sync: upload existing local scores to Firebase
+            // Sync local scores to Firebase
             if (userProfile) {
               const localTotalScore = loadNumber('total_score', 0, 'omf_total_score');
               const localBestThrow = loadNumber('best', 0, 'omf_best');
@@ -79,14 +90,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 );
               }
             }
+          } else if (user.isAnonymous) {
+            // Anonymous user without profile - needs nickname
+            if (hasCompletedBefore) {
+              // Edge case: cached as complete but no profile (shouldn't happen)
+              // Show nickname modal anyway
+              setAuthPath('nickname');
+            } else {
+              setAuthPath('nickname');
+            }
           } else {
-            // Only show onboarding if user hasn't completed it before
-            // This prevents the modal from showing during auth loading
-            setNeedsOnboarding(!hasCompletedBefore);
+            // Google user without profile - needs optional nickname
+            setPendingGoogleUser(user);
+            setAuthPath('nickname-google');
           }
         } else {
-          // Only show onboarding if user hasn't completed it before
-          setNeedsOnboarding(!hasCompletedBefore);
+          // No user - show splash screen (unless cached as complete)
+          if (hasCompletedBefore) {
+            // User completed before but session lost - show splash to re-auth
+            setAuthPath('splash');
+          } else {
+            setAuthPath('splash');
+          }
           setProfile(null);
         }
 
@@ -100,7 +125,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       });
       setFirebaseUser(null);
       setProfile(null);
-      setNeedsOnboarding(false);
+      setAuthPath('splash');
       setIsLoading(false);
     });
 
@@ -119,21 +144,60 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setProfile(userProfile);
   };
 
-  // Complete onboarding - sets profile AND closes the modal
-  // This fixes the race condition where auth state fires before profile creation completes
-  const completeOnboarding = (profile: UserProfile) => {
-    setProfile(profile);
-    setNeedsOnboarding(false);
-    // Cache that onboarding is complete (survives page refresh)
+  const completeOnboarding = (newProfile: UserProfile) => {
+    setProfile(newProfile);
+    setAuthPath('ready');
+    setPendingGoogleUser(null);
     saveString(ONBOARDING_COMPLETE_KEY, 'true');
   };
 
-  // Skip onboarding (dev mode only) - play without profile
   const skipOnboarding = () => {
-    setNeedsOnboarding(false);
-    // Cache so it doesn't ask again
+    setAuthPath('ready');
     saveString(ONBOARDING_COMPLETE_KEY, 'true');
   };
+
+  // New: Sign in with Google from splash screen
+  const signInWithGoogle = useCallback(async () => {
+    if (!FIREBASE_ENABLED) return;
+
+    const { signInWithGoogle: googleSignIn } = await import('@/firebase/auth');
+
+    const result = await googleSignIn();
+    if (!result) {
+      throw new Error('Sign in cancelled');
+    }
+
+    const { user, isNewUser } = result;
+
+    if (isNewUser) {
+      // New Google user - show optional nickname modal
+      setPendingGoogleUser(user);
+      setAuthPath('nickname-google');
+    }
+    // Returning Google user - profile already loaded by auth state listener
+  }, []);
+
+  // New: Continue as guest from splash screen
+  const continueAsGuest = useCallback(() => {
+    setAuthPath('nickname');
+  }, []);
+
+  // New: Link Google account (for existing guest users)
+  const linkGoogleAccount = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    if (!FIREBASE_ENABLED) {
+      return { success: false, error: 'Firebase not enabled' };
+    }
+
+    const { linkGoogleAccount: linkGoogle } = await import('@/firebase/auth');
+    const result = await linkGoogle();
+
+    if (result.success) {
+      // Refresh profile to get updated googleLinked status
+      await refreshProfile();
+    }
+
+    return result;
+  }, []);
 
   return (
     <UserContext.Provider
@@ -142,10 +206,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
         profile,
         isLoading,
         needsOnboarding,
+        authPath,
+        isGoogleUser,
         setProfile,
         completeOnboarding,
         skipOnboarding,
         refreshProfile,
+        signInWithGoogle,
+        continueAsGuest,
+        linkGoogleAccount,
       }}
     >
       {children}
