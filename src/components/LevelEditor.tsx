@@ -531,14 +531,14 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
     if (dragging) return;
     const { x, y } = getCanvasCoords(e);
 
-    // Shift+click for group selection (select all doodles on a stroke)
+    // Shift+click for group selection (select a stroke - populated or not)
     if (e.shiftKey && tool === 'select' && level?.miseEnPlace) {
       const clickedStroke = findStrokeAtPosition(x, y, level.miseEnPlace.strokes);
-      if (clickedStroke && clickedStroke.populated) {
+      if (clickedStroke) {
         setSelectedGroup({
           type: 'stroke',
           strokeId: clickedStroke.id,
-          doodleIds: clickedStroke.doodleIds,
+          doodleIds: clickedStroke.doodleIds, // Empty array if unpopulated
         });
         setSelected(null); // Clear individual selection
         return;
@@ -1149,13 +1149,19 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
               {level.landingTarget}
             </span>
 
-            {/* Stroke Overlays - rendered as faint brush-width paths */}
+            {/* Stroke Overlays - show ALL strokes with different colors */}
             {level.miseEnPlace?.strokes && (
               <svg className="absolute inset-0 pointer-events-none" style={{ width: W * 2, height: H * 2 }}>
                 {level.miseEnPlace.strokes.map(stroke => {
-                  // Only show unpopulated strokes (populated ones have visible coins)
-                  if (stroke.populated) return null;
                   if (stroke.points.length < 2) return null;
+
+                  // Color coding: populated = green, unpopulated = gray, selected = blue
+                  const isSelected = selectedGroup?.strokeId === stroke.id;
+                  const strokeColor = isSelected
+                    ? 'rgba(0, 120, 255, 0.5)'
+                    : stroke.populated
+                      ? 'rgba(34, 197, 94, 0.3)'  // green for populated
+                      : 'rgba(100, 100, 100, 0.4)'; // gray for unpopulated
 
                   return (
                     <g key={stroke.id}>
@@ -1169,12 +1175,24 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
                             y1={prevPoint.y * 2}
                             x2={point.x * 2}
                             y2={point.y * 2}
-                            stroke="rgba(100, 100, 100, 0.3)"
+                            stroke={strokeColor}
                             strokeWidth={width * 15}
                             strokeLinecap="round"
                           />
                         );
                       })}
+                      {/* Stroke label */}
+                      {stroke.points.length > 0 && (
+                        <text
+                          x={stroke.points[0].x * 2}
+                          y={stroke.points[0].y * 2 - 10}
+                          fill={stroke.populated ? '#22c55e' : '#888'}
+                          fontSize="10"
+                          fontWeight="bold"
+                        >
+                          {stroke.id} {stroke.populated ? `(${stroke.doodleIds.length})` : '(empty)'}
+                        </text>
+                      )}
                     </g>
                   );
                 })}
@@ -1183,11 +1201,46 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
 
             {/* Group Selection Highlight */}
             {selectedGroup && (() => {
-              // Calculate bounding box of selected group
+              // For populated strokes: highlight doodles
               const groupDoodles = level.doodles.filter(d =>
                 selectedGroup.doodleIds.includes(d.sequence)
               );
-              if (groupDoodles.length === 0) return null;
+
+              // For unpopulated strokes: highlight the stroke path itself
+              if (groupDoodles.length === 0) {
+                const stroke = level.miseEnPlace?.strokes.find(s => s.id === selectedGroup.strokeId);
+                if (!stroke || stroke.points.length < 2) return null;
+
+                // Calculate bounding box from stroke points
+                const minX = Math.min(...stroke.points.map(p => p.x)) * 2 - 20;
+                const maxX = Math.max(...stroke.points.map(p => p.x)) * 2 + 20;
+                const minY = Math.min(...stroke.points.map(p => p.y)) * 2 - 20;
+                const maxY = Math.max(...stroke.points.map(p => p.y)) * 2 + 20;
+
+                return (
+                  <>
+                    <svg className="absolute inset-0 pointer-events-none" style={{ width: W * 2, height: H * 2 }}>
+                      <rect
+                        x={minX}
+                        y={minY}
+                        width={maxX - minX}
+                        height={maxY - minY}
+                        fill="none"
+                        stroke="rgba(0, 120, 255, 0.6)"
+                        strokeWidth="2"
+                        strokeDasharray="5,5"
+                      />
+                    </svg>
+                    {/* Info text */}
+                    <div
+                      className="absolute text-blue-400 text-xs bg-gray-900/80 px-1 rounded"
+                      style={{ left: minX, top: minY - 20 }}
+                    >
+                      Unpopulated stroke - use Repopulate to add coins
+                    </div>
+                  </>
+                );
+              }
 
               const minX = Math.min(...groupDoodles.map(d => d.x)) * 2 - 20;
               const maxX = Math.max(...groupDoodles.map(d => d.x)) * 2 + 20;
@@ -2286,18 +2339,24 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
           )}
 
           {/* Group Selection Properties */}
-          {tool === 'select' && selectedGroup && (
+          {tool === 'select' && selectedGroup && (() => {
+            const stroke = level.miseEnPlace?.strokes.find(s => s.id === selectedGroup.strokeId);
+            const isPopulated = stroke?.populated ?? false;
+
+            return (
             <div className="space-y-3">
               <div className="text-white font-bold">
-                Group: {selectedGroup.strokeId || 'Custom'}
-                <span className="text-gray-400 font-normal ml-2">
-                  ({selectedGroup.doodleIds.length} doodles)
-                </span>
+                Stroke: {selectedGroup.strokeId || 'Custom'}
+              </div>
+              <div className={`text-sm px-2 py-1 rounded ${isPopulated ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-400'}`}>
+                {isPopulated
+                  ? `✓ Populated (${selectedGroup.doodleIds.length} doodles)`
+                  : '○ Empty - needs population'}
               </div>
 
               {selectedGroup.type === 'stroke' && (
                 <div>
-                  <label className="text-gray-400 text-xs">Stroke Density: {Math.round(strokeDensity * 100)}%</label>
+                  <label className="text-gray-400 text-xs">Density: {Math.round(strokeDensity * 100)}%</label>
                   <input
                     type="range"
                     min="0.1"
@@ -2309,9 +2368,11 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
                   />
                   <button
                     onClick={() => repopulateStroke(selectedGroup.strokeId!, strokeDensity)}
-                    className="w-full bg-blue-600 text-white py-1 rounded mt-2 text-sm"
+                    className={`w-full py-1 rounded mt-2 text-sm ${
+                      isPopulated ? 'bg-blue-600 text-white' : 'bg-green-600 text-white'
+                    }`}
                   >
-                    🔄 Repopulate Stroke
+                    {isPopulated ? '🔄 Repopulate' : '➕ Populate Stroke'}
                   </button>
                 </div>
               )}
@@ -2399,7 +2460,8 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
                 🗑️ Delete Group
               </button>
             </div>
-          )}
+            );
+          })()}
 
           {tool === 'select' && !selected && !selectedGroup && (
             <div className="text-gray-500 text-center mt-8">

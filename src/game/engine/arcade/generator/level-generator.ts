@@ -331,18 +331,14 @@ export class LevelGenerator {
     const density = getDefaultDensity(levelType);
     const strokeOverlays = transformer.createStrokeOverlays(character);
 
-    // Determine which strokes to populate based on level type
-    // Puzzly: populate 2-3 strokes for sparser levels
-    // Juicy: populate all strokes for dense levels
-    const strokesToPopulate = levelType === 'juicy'
-      ? strokeOverlays
-      : strokeOverlays.slice(0, Math.min(3, strokeOverlays.length));
-
-    // Populate strokes with coins using calligraphic sizing
-    const { coins: strokeCoins, updatedStrokes } = populateStrokes(strokesToPopulate, {
+    // Populate ALL strokes with coins (density determines how many per stroke)
+    // Puzzly levels: lower density = fewer coins per stroke
+    // Juicy levels: higher density = more coins per stroke
+    const { coins: strokeCoins, updatedStrokes } = populateStrokes(strokeOverlays, {
       density,
       startId: 1,
-      minSpacing: levelType === 'juicy' ? 10 : 20,
+      minSpacing: levelType === 'juicy' ? 8 : 15,
+      scaleMultiplier: levelType === 'juicy' ? 0.8 : 1.0,
     });
 
     // Merge updated strokes back into full stroke array
