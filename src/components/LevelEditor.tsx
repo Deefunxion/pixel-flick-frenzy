@@ -1,6 +1,7 @@
 // src/components/LevelEditor.tsx
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { ArcadeLevel, DoodlePlacement, SpringPlacement, SpringDirection, DoodleSize, PortalExitDirection, HazardPlacement, WindZonePlacement, GravityWellPlacement, GravityWellType, FrictionZonePlacement, FrictionType } from '@/game/engine/arcade/types';
+import type { ArcadeLevel, DoodlePlacement, SpringPlacement, SpringDirection, DoodleSize, PortalExitDirection, HazardPlacement, WindZonePlacement, GravityWellPlacement, GravityWellType, FrictionZonePlacement, FrictionType, StrokeOverlay } from '@/game/engine/arcade/types';
+import { populateStrokeWithCoins } from '@/game/engine/arcade/generator/stroke-populator';
 import type { GhostInput } from '@/game/engine/arcade/generator/types';
 import { ARCADE_LEVELS } from '@/game/engine/arcade/levels';
 import { W, H } from '@/game/constants';
@@ -18,6 +19,13 @@ type SelectedObject =
   | { type: 'gravityWell'; index: number }
   | { type: 'frictionZone'; index: number }
   | null;
+
+// Group selection for stroke-based multi-select
+interface SelectedGroup {
+  type: 'stroke' | 'custom';
+  strokeId?: string;
+  doodleIds: number[];
+}
 
 interface LevelEditorProps {
   onClose: () => void;
@@ -120,6 +128,8 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
 
   const [tool, setTool] = useState<EditorTool>('select');
   const [selected, setSelected] = useState<SelectedObject>(null);
+  const [selectedGroup, setSelectedGroup] = useState<SelectedGroup | null>(null);
+  const [strokeDensity, setStrokeDensity] = useState(0.5);
 
   // New object defaults
   const [newDoodleSize, setNewDoodleSize] = useState<DoodleSize>('large');
@@ -159,7 +169,8 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
 
   const [portalStep, setPortalStep] = useState<'entry' | 'exit'>('entry');
   const [pendingPortalEntry, setPendingPortalEntry] = useState<{ x: number; y: number } | null>(null);
-  const [dragging, setDragging] = useState<{ type: 'doodle' | 'spring' | 'portal-entry' | 'portal-exit' | 'hazard' | 'windZone' | 'gravityWell' | 'frictionZone'; index: number } | null>(null);
+  const [dragging, setDragging] = useState<{ type: 'doodle' | 'spring' | 'portal-entry' | 'portal-exit' | 'hazard' | 'windZone' | 'gravityWell' | 'frictionZone' | 'group'; index: number } | null>(null);
+  const [groupDragStart, setGroupDragStart] = useState<{ x: number; y: number } | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [swapping, setSwapping] = useState(false);
@@ -316,6 +327,90 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
     };
   };
 
+  // Find which stroke is at a given position (for group selection)
+  const findStrokeAtPosition = (x: number, y: number, strokes: StrokeOverlay[]): StrokeOverlay | null => {
+    const threshold = 20; // Click distance threshold
+    for (const stroke of strokes) {
+      for (const point of stroke.points) {
+        const dx = x - point.x;
+        const dy = y - point.y;
+        if (Math.sqrt(dx * dx + dy * dy) < threshold) {
+          return stroke;
+        }
+      }
+    }
+    return null;
+  };
+
+  // Repopulate a stroke with a new density
+  const repopulateStroke = useCallback((strokeId: string, density: number) => {
+    if (!level?.miseEnPlace) return;
+
+    const stroke = level.miseEnPlace.strokes.find(s => s.id === strokeId);
+    if (!stroke) return;
+
+    // Remove old doodles from this stroke
+    const otherDoodles = level.doodles.filter(d =>
+      !stroke.doodleIds.includes(d.sequence)
+    );
+
+    // Find next available sequence ID
+    const maxSeq = Math.max(0, ...otherDoodles.map(d => d.sequence));
+
+    // Repopulate with new density
+    const newCoins = populateStrokeWithCoins(stroke, {
+      density,
+      startId: maxSeq + 1,
+      minSpacing: density > 0.7 ? 10 : 20,
+    });
+
+    // Update level
+    updateLevel(prev => {
+      if (!prev.miseEnPlace) return prev;
+      return {
+        ...prev,
+        doodles: [...otherDoodles, ...newCoins],
+        miseEnPlace: {
+          ...prev.miseEnPlace,
+          strokes: prev.miseEnPlace.strokes.map(s =>
+            s.id === strokeId
+              ? { ...s, populated: newCoins.length > 0, doodleIds: newCoins.map(c => c.sequence) }
+              : s
+          ),
+        },
+      };
+    });
+
+    // Update selected group with new doodle IDs
+    setSelectedGroup(prev =>
+      prev?.strokeId === strokeId
+        ? { ...prev, doodleIds: newCoins.map(c => c.sequence) }
+        : prev
+    );
+  }, [level, updateLevel]);
+
+  // Delete a group of doodles
+  const deleteGroup = useCallback(() => {
+    if (!selectedGroup || !level) return;
+
+    updateLevel(prev => ({
+      ...prev,
+      doodles: prev.doodles.filter(d =>
+        !selectedGroup.doodleIds.includes(d.sequence)
+      ).map((d, i) => ({ ...d, sequence: i + 1 })), // Re-sequence
+      miseEnPlace: prev.miseEnPlace ? {
+        ...prev.miseEnPlace,
+        strokes: prev.miseEnPlace.strokes.map(s =>
+          s.id === selectedGroup.strokeId
+            ? { ...s, populated: false, doodleIds: [] }
+            : s
+        ),
+      } : undefined,
+    }));
+
+    setSelectedGroup(null);
+  }, [selectedGroup, level, updateLevel]);
+
   const deleteSelected = useCallback(() => {
     if (!selected) return;
     if (selected.type === 'doodle') {
@@ -357,6 +452,25 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (dragging) return;
     const { x, y } = getCanvasCoords(e);
+
+    // Shift+click for group selection (select all doodles on a stroke)
+    if (e.shiftKey && tool === 'select' && level?.miseEnPlace) {
+      const clickedStroke = findStrokeAtPosition(x, y, level.miseEnPlace.strokes);
+      if (clickedStroke && clickedStroke.populated) {
+        setSelectedGroup({
+          type: 'stroke',
+          strokeId: clickedStroke.id,
+          doodleIds: clickedStroke.doodleIds,
+        });
+        setSelected(null); // Clear individual selection
+        return;
+      }
+    }
+
+    // Clear group selection on normal click
+    if (!e.shiftKey) {
+      setSelectedGroup(null);
+    }
 
     if (tool === 'select') {
       // Check what was clicked
@@ -590,10 +704,26 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
         newLevel.gravityWells[dragging.index] = { ...newLevel.gravityWells[dragging.index], x, y };
       } else if (dragging.type === 'frictionZone' && newLevel.frictionZones) {
         newLevel.frictionZones[dragging.index] = { ...newLevel.frictionZones[dragging.index], x };
+      } else if (dragging.type === 'group' && selectedGroup && groupDragStart) {
+        // Move all doodles in the group by the delta
+        const dx = x - groupDragStart.x;
+        const dy = y - groupDragStart.y;
+        newLevel.doodles = newLevel.doodles.map(d => {
+          if (selectedGroup.doodleIds.includes(d.sequence)) {
+            return { ...d, x: d.x + dx, y: d.y + dy };
+          }
+          return d;
+        });
+        // Update groupDragStart through state setter below
       }
       return { ...h, present: newLevel };
     });
-  }, [dragging]);
+
+    // Update group drag start position for next delta calculation
+    if (dragging.type === 'group') {
+      setGroupDragStart({ x, y });
+    }
+  }, [dragging, selectedGroup, groupDragStart]);
 
   const handleMouseUp = useCallback(() => {
     if (dragging) {
@@ -603,6 +733,7 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
         future: [],
       }));
       setDragging(null);
+      setGroupDragStart(null);
     }
   }, [dragging]);
 
@@ -939,6 +1070,103 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
             <span className="absolute top-1 text-green-600 text-xs font-mono font-bold" style={{ left: `${(level.landingTarget / W) * 100}%` }}>
               {level.landingTarget}
             </span>
+
+            {/* Stroke Overlays - rendered as faint brush-width paths */}
+            {level.miseEnPlace?.strokes && (
+              <svg className="absolute inset-0 pointer-events-none" style={{ width: W * 2, height: H * 2 }}>
+                {level.miseEnPlace.strokes.map(stroke => {
+                  // Only show unpopulated strokes (populated ones have visible coins)
+                  if (stroke.populated) return null;
+                  if (stroke.points.length < 2) return null;
+
+                  return (
+                    <g key={stroke.id}>
+                      {stroke.points.slice(1).map((point, i) => {
+                        const prevPoint = stroke.points[i];
+                        const width = stroke.widths[i] ?? 1;
+                        return (
+                          <line
+                            key={`${stroke.id}-${i}`}
+                            x1={prevPoint.x * 2}
+                            y1={prevPoint.y * 2}
+                            x2={point.x * 2}
+                            y2={point.y * 2}
+                            stroke="rgba(100, 100, 100, 0.3)"
+                            strokeWidth={width * 15}
+                            strokeLinecap="round"
+                          />
+                        );
+                      })}
+                    </g>
+                  );
+                })}
+              </svg>
+            )}
+
+            {/* Group Selection Highlight */}
+            {selectedGroup && (() => {
+              // Calculate bounding box of selected group
+              const groupDoodles = level.doodles.filter(d =>
+                selectedGroup.doodleIds.includes(d.sequence)
+              );
+              if (groupDoodles.length === 0) return null;
+
+              const minX = Math.min(...groupDoodles.map(d => d.x)) * 2 - 20;
+              const maxX = Math.max(...groupDoodles.map(d => d.x)) * 2 + 20;
+              const minY = Math.min(...groupDoodles.map(d => d.y)) * 2 - 20;
+              const maxY = Math.max(...groupDoodles.map(d => d.y)) * 2 + 20;
+
+              return (
+                <>
+                  {/* Visual highlight (non-interactive) */}
+                  <svg className="absolute inset-0 pointer-events-none" style={{ width: W * 2, height: H * 2 }}>
+                    {/* Bounding box */}
+                    <rect
+                      x={minX}
+                      y={minY}
+                      width={maxX - minX}
+                      height={maxY - minY}
+                      fill="none"
+                      stroke="rgba(0, 120, 255, 0.6)"
+                      strokeWidth="2"
+                      strokeDasharray="5,5"
+                    />
+                    {/* Highlight circles around grouped doodles */}
+                    {groupDoodles.map(d => (
+                      <circle
+                        key={d.sequence}
+                        cx={d.x * 2}
+                        cy={d.y * 2}
+                        r="22"
+                        fill="none"
+                        stroke="rgba(0, 120, 255, 0.8)"
+                        strokeWidth="2"
+                      />
+                    ))}
+                  </svg>
+                  {/* Interactive drag handle (transparent div over bounding box) */}
+                  {tool === 'select' && (
+                    <div
+                      className="absolute cursor-move"
+                      style={{
+                        left: minX,
+                        top: minY,
+                        width: maxX - minX,
+                        height: maxY - minY,
+                        border: '2px solid rgba(0, 120, 255, 0.3)',
+                        backgroundColor: 'rgba(0, 120, 255, 0.05)',
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        const { x, y } = getCanvasCoords(e);
+                        setDragging({ type: 'group', index: 0 });
+                        setGroupDragStart({ x, y });
+                      }}
+                    />
+                  )}
+                </>
+              );
+            })()}
 
             {/* Doodles */}
             {level.doodles.map((d, i) => {
@@ -1979,9 +2207,54 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
             </div>
           )}
 
-          {tool === 'select' && !selected && (
+          {/* Group Selection Properties */}
+          {tool === 'select' && selectedGroup && (
+            <div className="space-y-3">
+              <div className="text-white font-bold">
+                Group: {selectedGroup.strokeId || 'Custom'}
+                <span className="text-gray-400 font-normal ml-2">
+                  ({selectedGroup.doodleIds.length} doodles)
+                </span>
+              </div>
+
+              {selectedGroup.type === 'stroke' && (
+                <div>
+                  <label className="text-gray-400 text-xs">Stroke Density: {Math.round(strokeDensity * 100)}%</label>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1.0"
+                    step="0.1"
+                    value={strokeDensity}
+                    onChange={(e) => setStrokeDensity(parseFloat(e.target.value))}
+                    className="w-full mt-1"
+                  />
+                  <button
+                    onClick={() => repopulateStroke(selectedGroup.strokeId!, strokeDensity)}
+                    className="w-full bg-blue-600 text-white py-1 rounded mt-2 text-sm"
+                  >
+                    🔄 Repopulate Stroke
+                  </button>
+                </div>
+              )}
+
+              <div className="border-t border-gray-700 pt-3 mt-3">
+                <div className="text-gray-400 text-xs mb-2">Group Transform</div>
+                <div className="text-gray-500 text-xs">
+                  Drag group to move all doodles together.
+                </div>
+              </div>
+
+              <button onClick={deleteGroup} className="w-full bg-red-600 text-white py-2 rounded mt-4">
+                🗑️ Delete Group
+              </button>
+            </div>
+          )}
+
+          {tool === 'select' && !selected && !selectedGroup && (
             <div className="text-gray-500 text-center mt-8">
-              Click an object to select it
+              Click an object to select it<br />
+              <span className="text-xs">Shift+click on a stroke to select group</span>
             </div>
           )}
 
