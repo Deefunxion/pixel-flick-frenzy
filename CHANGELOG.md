@@ -2,7 +2,40 @@
 
 All notable changes to One-More-Flick are documented in this file.
 
-## [Unreleased] - 2026-01-27
+## [Unreleased] - 2026-01-29
+
+### Added - Hybrid Auth System
+- **SplashScreen for new users**: Two-path entry point
+  - "Sign in with Google" (primary) - Full cloud sync, cross-device progress
+  - "Play as Guest" (secondary) - Anonymous auth, local-only until linked
+  - Warning about guest data persistence
+- **Progressive Google link prompts**: Encourage guests to save progress
+  - Prompts appear at 5, 20, and 50 throws
+  - Shows "progress at risk" (throws, best score, achievements)
+  - Final reminder at 50 throws ("Last chance!")
+  - Dismissed prompts don't reappear (localStorage tracking)
+- **Google user nickname flow**: Optional custom nickname
+  - Pre-fills with sanitized Google display name
+  - "Use [name] instead" button to skip customization
+  - Handles nickname collisions with random suffix
+
+### Technical - Hybrid Auth
+- **New functions in `src/firebase/auth.ts`**:
+  - `signInWithGoogle()` - Direct Google authentication
+  - `createProfileFromGoogle()` - Profile creation for Google users
+  - Improved `linkGoogleAccount()` with better error handling
+- **New `UserProfile` fields**: `googleEmail`, `googleDisplayName`, `linkedAt`
+- **New storage functions** (`src/game/storage.ts`):
+  - `hasSeenLinkPrompt()`, `markLinkPromptSeen()`, `getNextLinkPromptMilestone()`
+- **New components**:
+  - `SplashScreen.tsx` - Entry point with Google/Guest buttons
+  - `GoogleLinkPrompt.tsx` - Progressive link reminder modal
+- **Updated `UserContext.tsx`**:
+  - `authPath` state machine: `splash` → `nickname`/`nickname-google` → `ready`
+  - `signInWithGoogle()`, `continueAsGuest()`, `linkGoogleAccount()` functions
+- **Updated `NicknameModal.tsx`**: Supports Google user props and profile creation
+
+---
 
 ### Added - Calligraphic Flow Size System
 - **Doodle sizing inspired by Chinese brush calligraphy**:
