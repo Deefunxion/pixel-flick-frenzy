@@ -154,3 +154,32 @@ export function updateTodayHistory(bestDistance: number, throws: number, score: 
 
   saveHistory(history);
 }
+
+// Google Link Prompt Tracking
+export type LinkPromptMilestone = 5 | 20 | 50;
+
+export function hasSeenLinkPrompt(milestone: LinkPromptMilestone): boolean {
+  return loadJson<boolean>(`link_prompt_shown_at_${milestone}`, false);
+}
+
+export function markLinkPromptSeen(milestone: LinkPromptMilestone): void {
+  saveJson(`link_prompt_shown_at_${milestone}`, true);
+}
+
+export function getNextLinkPromptMilestone(totalThrows: number): LinkPromptMilestone | null {
+  const milestones: LinkPromptMilestone[] = [5, 20, 50];
+
+  for (const milestone of milestones) {
+    if (totalThrows >= milestone && !hasSeenLinkPrompt(milestone)) {
+      return milestone;
+    }
+  }
+
+  return null;
+}
+
+export function resetLinkPrompts(): void {
+  saveJson('link_prompt_shown_at_5', false);
+  saveJson('link_prompt_shown_at_20', false);
+  saveJson('link_prompt_shown_at_50', false);
+}
