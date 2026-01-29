@@ -111,46 +111,45 @@ describe('Air Brake', () => {
 });
 
 describe('Slide Control', () => {
-  describe('Tap (extend: +0.15 velocity in travel direction)', () => {
-    it('adds 0.15 to positive velocity at position 300', () => {
+  describe('Tap (extend: +0.40 velocity in travel direction)', () => {
+    it('adds 0.40 to positive velocity at position 300', () => {
       const state = createInitialState({ reduceFx: false });
       state.px = 300;
       state.vx = 1.0;
-      state.stamina = 100;
+      state.stamina = 200; // Stamina is now 200
 
       const result = applySlideControl(state, 'tap');
 
       expect(result.applied).toBe(true);
-      expect(state.vx).toBeCloseTo(1.15);
-      expect(state.stamina).toBe(92); // 100 - 8*1.0
+      expect(state.vx).toBeCloseTo(1.40);
+      expect(state.stamina).toBe(192); // 200 - 8*1.0
     });
 
-    // FIX 5: Handle negative velocity correctly
-    it('subtracts 0.15 from negative velocity (extends in travel direction)', () => {
+    it('subtracts 0.40 from negative velocity (extends in travel direction)', () => {
       const state = createInitialState({ reduceFx: false });
       state.px = 300;
       state.vx = -1.0; // Moving backwards (rare with wind)
-      state.stamina = 100;
+      state.stamina = 200; // Stamina is now 200
 
       const result = applySlideControl(state, 'tap');
 
       expect(result.applied).toBe(true);
-      expect(state.vx).toBeCloseTo(-1.15); // Extended in negative direction
-      expect(state.stamina).toBe(92);
+      expect(state.vx).toBeCloseTo(-1.40); // Extended in negative direction
+      expect(state.stamina).toBe(192);
     });
 
     it('costs more stamina near the edge', () => {
       const state = createInitialState({ reduceFx: false });
       state.px = 410; // ~1.73x multiplier
       state.vx = 1.0;
-      state.stamina = 100;
+      state.stamina = 200;
 
       const result = applySlideControl(state, 'tap');
       const edgeMult = calculateEdgeMultiplier(410);
       const expectedCost = Math.ceil(8 * edgeMult);
 
       expect(result.applied).toBe(true);
-      expect(state.stamina).toBe(100 - expectedCost);
+      expect(state.stamina).toBe(200 - expectedCost);
     });
 
     it('denies if insufficient stamina for edge-scaled cost', () => {
@@ -170,27 +169,27 @@ describe('Slide Control', () => {
     it('returns brake friction multiplier of 2.5', () => {
       const state = createInitialState({ reduceFx: false });
       state.px = 300;
-      state.stamina = 100;
+      state.stamina = 200;
       const deltaTime = 1/60;
 
       const result = applySlideControl(state, 'hold', deltaTime);
 
       expect(result.applied).toBe(true);
       expect(result.frictionMultiplier).toBe(2.5);
-      expect(state.stamina).toBeCloseTo(100 - 10 * 1.0 * deltaTime);
+      expect(state.stamina).toBeCloseTo(200 - 10 * 1.0 * deltaTime);
     });
 
     it('costs more stamina near edge', () => {
       const state = createInitialState({ reduceFx: false });
       state.px = 410;
-      state.stamina = 100;
+      state.stamina = 200;
       const deltaTime = 1/60;
       const edgeMult = calculateEdgeMultiplier(410);
 
       const result = applySlideControl(state, 'hold', deltaTime);
 
       expect(result.applied).toBe(true);
-      expect(state.stamina).toBeCloseTo(100 - 10 * edgeMult * deltaTime);
+      expect(state.stamina).toBeCloseTo(200 - 10 * edgeMult * deltaTime);
     });
   });
 });

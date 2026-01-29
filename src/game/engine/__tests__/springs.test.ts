@@ -29,7 +29,12 @@ describe('Springs System', () => {
       direction: 'up',
       radius: 18,
       force: 10,
+      scale: 1.0,
       usedThisThrow: false,
+      timing: null,
+      isActive: true,
+      breakable: false,
+      isBroken: false,
     };
 
     expect(checkSpringCollision(200, 100, spring)).toBe(true);
@@ -43,7 +48,12 @@ describe('Springs System', () => {
       direction: 'up',
       radius: 18,
       force: 10,
+      scale: 1.0,
       usedThisThrow: true,
+      timing: null,
+      isActive: true,
+      breakable: false,
+      isBroken: false,
     };
 
     expect(checkSpringCollision(200, 100, spring)).toBe(false);
@@ -56,7 +66,12 @@ describe('Springs System', () => {
       direction: 'up',
       radius: 18,
       force: 10,
+      scale: 1.0,
       usedThisThrow: false,
+      timing: null,
+      isActive: true,
+      breakable: false,
+      isBroken: false,
     };
 
     const velocity = { vx: 2, vy: 3 };
@@ -73,7 +88,12 @@ describe('Springs System', () => {
       direction: 'up-right',
       radius: 18,
       force: 10,
+      scale: 1.0,
       usedThisThrow: false,
+      timing: null,
+      isActive: true,
+      breakable: false,
+      isBroken: false,
     };
 
     const velocity = { vx: 0, vy: 0 };
@@ -90,7 +110,12 @@ describe('Springs System', () => {
       direction: 'down',
       radius: 18,
       force: 10,
+      scale: 1.0,
       usedThisThrow: false,
+      timing: null,
+      isActive: true,
+      breakable: false,
+      isBroken: false,
     };
 
     const velocity = { vx: 0, vy: -5 };

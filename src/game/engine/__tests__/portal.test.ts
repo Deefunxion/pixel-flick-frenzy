@@ -32,6 +32,12 @@ describe('Portal System (Bidirectional)', () => {
       radius: 15,
       usedThisThrow: false,
       lastUsedSide: null,
+      exitDirection: 'straight',
+      exitSpeed: 1.0,
+      scale: 1.0,
+      timing: null,
+      isActive: true,
+      colorId: 0,
     };
 
     expect(checkPortalEntry(100, 150, portal)).toBe('a');
@@ -47,6 +53,12 @@ describe('Portal System (Bidirectional)', () => {
       radius: 15,
       usedThisThrow: false,
       lastUsedSide: null,
+      exitDirection: 'straight',
+      exitSpeed: 1.0,
+      scale: 1.0,
+      timing: null,
+      isActive: true,
+      colorId: 0,
     };
 
     expect(checkPortalEntry(350, 80, portal)).toBe('b');
@@ -61,6 +73,12 @@ describe('Portal System (Bidirectional)', () => {
       radius: 15,
       usedThisThrow: true,
       lastUsedSide: 'a',
+      exitDirection: 'straight',
+      exitSpeed: 1.0,
+      scale: 1.0,
+      timing: null,
+      isActive: true,
+      colorId: 0,
     };
 
     expect(checkPortalEntry(100, 150, portal)).toBe(null);
@@ -76,6 +94,12 @@ describe('Portal System (Bidirectional)', () => {
       radius: 15,
       usedThisThrow: false,
       lastUsedSide: null,
+      exitDirection: 'straight',
+      exitSpeed: 1.0,
+      scale: 1.0,
+      timing: null,
+      isActive: true,
+      colorId: 0,
     };
 
     const position = { px: 100, py: 150 };
@@ -85,8 +109,10 @@ describe('Portal System (Bidirectional)', () => {
 
     expect(position.px).toBe(350);
     expect(position.py).toBe(80);
-    expect(velocity.vx).toBe(5); // Preserved
-    expect(velocity.vy).toBe(-3); // Preserved
+    // Exit velocity is now calculated from exitDirection and exitSpeed
+    // Entering from A exits toward B (positive vx)
+    expect(velocity.vx).toBeGreaterThan(0);
+    expect(velocity.vy).toBe(0); // 'straight' = horizontal
     expect(portal.usedThisThrow).toBe(true);
     expect(portal.lastUsedSide).toBe('a');
   });
@@ -100,6 +126,12 @@ describe('Portal System (Bidirectional)', () => {
       radius: 15,
       usedThisThrow: false,
       lastUsedSide: null,
+      exitDirection: 'straight',
+      exitSpeed: 1.0,
+      scale: 1.0,
+      timing: null,
+      isActive: true,
+      colorId: 0,
     };
 
     const position = { px: 350, py: 80 };
@@ -109,8 +141,10 @@ describe('Portal System (Bidirectional)', () => {
 
     expect(position.px).toBe(100);
     expect(position.py).toBe(150);
-    expect(velocity.vx).toBe(-3); // Preserved
-    expect(velocity.vy).toBe(2); // Preserved
+    // Exit velocity is now calculated from exitDirection and exitSpeed
+    // Entering from B exits toward A (negative vx)
+    expect(velocity.vx).toBeLessThan(0);
+    expect(velocity.vy).toBe(0); // 'straight' = horizontal
     expect(portal.usedThisThrow).toBe(true);
     expect(portal.lastUsedSide).toBe('b');
   });
