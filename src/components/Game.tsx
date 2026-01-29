@@ -143,10 +143,23 @@ import { claimAchievement, getUnclaimedCount } from '@/game/engine/achievementCl
 import { getClosestGoal } from '@/game/engine/achievementProgress';
 import { FIREBASE_ENABLED } from '@/firebase/flags';
 import { captureError } from '@/lib/sentry';
+import { SplashScreen } from './SplashScreen';
+import { GoogleLinkPrompt } from './GoogleLinkPrompt';
+import { getNextLinkPromptMilestone, markLinkPromptSeen, type LinkPromptMilestone } from '@/game/storage';
 
 const Game = () => {
-  const { firebaseUser, profile, isLoading, needsOnboarding, completeOnboarding, skipOnboarding } = useUser();
-  console.log('[Game] Render, isLoading:', isLoading, 'needsOnboarding:', needsOnboarding);
+  const {
+    firebaseUser,
+    profile,
+    isLoading,
+    authPath,
+    completeOnboarding,
+    skipOnboarding,
+    signInWithGoogle,
+    continueAsGuest,
+    linkGoogleAccount,
+  } = useUser();
+  console.log('[Game] Render, isLoading:', isLoading, 'authPath:', authPath);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputPadRef = useRef<HTMLDivElement>(null);
@@ -313,6 +326,10 @@ const Game = () => {
     })
   );
 
+  // Google link prompt state
+  const [showLinkPrompt, setShowLinkPrompt] = useState(false);
+  const [linkPromptMilestone, setLinkPromptMilestone] = useState<LinkPromptMilestone | null>(null);
+
   useEffect(() => {
     saveJson('reduce_fx', reduceFx);
     if (stateRef.current) stateRef.current.reduceFx = reduceFx;
@@ -345,6 +362,17 @@ const Game = () => {
       setDailyStats(next);
     }
   }, [dailyStats.date]);
+
+  // Check for Google link prompt milestones (guest users only)
+  useEffect(() => {
+    if (!profile || profile.googleLinked) return;
+
+    const milestone = getNextLinkPromptMilestone(stats.totalThrows);
+    if (milestone) {
+      setLinkPromptMilestone(milestone);
+      setShowLinkPrompt(true);
+    }
+  }, [stats.totalThrows, profile]);
 
   // Format score with Zeno-adaptive decimals (more precision closer to edge)
   const formatScore = (score: number) => {
@@ -454,6 +482,23 @@ const Game = () => {
       }
     }
   }, []);
+
+  // Handle Google link prompt
+  const handleLinkPromptDismiss = useCallback(() => {
+    if (linkPromptMilestone) {
+      markLinkPromptSeen(linkPromptMilestone);
+    }
+    setShowLinkPrompt(false);
+    setLinkPromptMilestone(null);
+  }, [linkPromptMilestone]);
+
+  const handleLinkFromPrompt = useCallback(async () => {
+    const result = await linkGoogleAccount();
+    if (result.success) {
+      handleLinkPromptDismiss();
+    }
+    return result;
+  }, [linkGoogleAccount, handleLinkPromptDismiss]);
 
   // Handle landing - calculate and display grade
   const handleLanding = useCallback((
@@ -1021,13 +1066,27 @@ const Game = () => {
     );
   }
 
+  // Show splash screen for new users
+  if (authPath === 'splash') {
+    return (
+      <SplashScreen
+        theme={theme}
+        onGoogleSignIn={signInWithGoogle}
+        onGuestSignIn={continueAsGuest}
+        isLoading={isLoading}
+      />
+    );
+  }
+
   // Show rotate screen for mobile portrait visitors
   if (isPortrait && isMobileRef.current) {
     return <RotateScreen />;
   }
 
   // Check if any modal is open (to disable game input)
-  const anyModalOpen = menuOpen || showStats || showLeaderboard || needsOnboarding || showEditor;
+  const anyModalOpen = menuOpen || showStats || showLeaderboard ||
+    authPath === 'nickname' || authPath === 'nickname-google' ||
+    authPath === 'splash' || showEditor || showLinkPrompt;
 
   return (
     <div
@@ -1263,8 +1322,28 @@ const Game = () => {
         )}
 
         {/* Onboarding modal for first-time users */}
-        {needsOnboarding && (
-          <NicknameModal theme={theme} onComplete={completeOnboarding} onSkip={skipOnboarding} />
+        {(authPath === 'nickname' || authPath === 'nickname-google') && (
+          <NicknameModal
+            theme={theme}
+            onComplete={completeOnboarding}
+            onSkip={skipOnboarding}
+            isGoogleUser={authPath === 'nickname-google'}
+            googleDisplayName={firebaseUser?.displayName || undefined}
+            googleUid={firebaseUser?.uid}
+          />
+        )}
+
+        {/* Google Link Prompt for guest users */}
+        {showLinkPrompt && linkPromptMilestone && profile && !profile.googleLinked && (
+          <GoogleLinkPrompt
+            theme={theme}
+            milestone={linkPromptMilestone}
+            totalThrows={stats.totalThrows}
+            bestScore={bestScore}
+            achievementCount={achievements.size}
+            onLink={handleLinkFromPrompt}
+            onDismiss={handleLinkPromptDismiss}
+          />
         )}
 
         {/* iOS Audio Warning Toast - positioned as fixed overlay */}
