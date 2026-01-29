@@ -20,10 +20,12 @@ export const GALAXY_THEMES: Record<number, { name: string; palette: GalaxyColorP
       accent: '#4CAF50',
       paper: '#F5F0E1',
     },
+    // Galaxy 1 uses the original ballpoint pen style backgroundRenderer
+    // These parallax values are not used (kept for type consistency)
     parallax: {
-      far: 'grasslands-mountains.png',
-      mid: 'grasslands-hills.png',
-      near: 'grasslands-grass.png',
+      far: '',
+      mid: '',
+      near: '',
     },
   },
   2: {

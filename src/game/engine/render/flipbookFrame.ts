@@ -44,15 +44,16 @@ export function renderFlipbookFrame(ctx: CanvasRenderingContext2D, state: GameSt
   const zenoY = state.py + ZENO_Y_OFFSET;
 
   // Update and render background layers
-  // Arcade mode uses galaxy parallax backgrounds; classic mode uses asset-based renderer
+  // Galaxy 1 (Grasslands) uses the original ballpoint pen style background
+  // Galaxies 2-5 use the new parallax system
   const galaxy = state.arcadeMode ? getGalaxyForLevel(state.arcadeState?.currentLevelId ?? 1) : null;
 
-  if (galaxy) {
-    // Arcade mode: use galaxy parallax
+  if (galaxy && galaxy.id > 1) {
+    // Galaxies 2-5: use parallax backgrounds
     parallaxRenderer.update(state.px);
     parallaxRenderer.render(ctx, galaxy.colorPalette);
   } else {
-    // Classic mode: use existing background
+    // Classic mode OR Galaxy 1 (Grasslands): use original ballpoint pen background
     backgroundRenderer.update(state.wind, nowMs);
     backgroundRenderer.render(ctx);
   }
