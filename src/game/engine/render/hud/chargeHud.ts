@@ -100,6 +100,7 @@ function drawFlipbookChargeHud(
 
   // Trajectory preview arc (dashed curve showing predicted path)
   if (chargePower > 0.2) {
+    const angleRad = (angle * Math.PI) / 180;
     const power = MIN_POWER + chargePower * (MAX_POWER - MIN_POWER);
     const vx = Math.cos(angleRad) * power;
     const vy = -Math.sin(angleRad) * power;
