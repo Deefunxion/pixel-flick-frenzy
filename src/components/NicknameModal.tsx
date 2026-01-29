@@ -8,12 +8,28 @@ type NicknameModalProps = {
   theme: Theme;
   onComplete: (profile: UserProfile) => void;
   onSkip?: () => void; // For dev mode - skip onboarding
+  // New props for Google users
+  isGoogleUser?: boolean;
+  googleDisplayName?: string;
+  googleUid?: string;
 };
 
 const isDev = import.meta.env.DEV;
 
-export function NicknameModal({ theme, onComplete, onSkip }: NicknameModalProps) {
-  const [nickname, setNickname] = useState('');
+export function NicknameModal({
+  theme,
+  onComplete,
+  onSkip,
+  isGoogleUser = false,
+  googleDisplayName,
+  googleUid,
+}: NicknameModalProps) {
+  // For Google users, pre-fill with sanitized display name
+  const defaultNickname = isGoogleUser && googleDisplayName
+    ? googleDisplayName.replace(/[^a-zA-Z]/g, '').slice(0, 12)
+    : '';
+
+  const [nickname, setNickname] = useState(defaultNickname);
   const [error, setError] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,6 +46,37 @@ export function NicknameModal({ theme, onComplete, onSkip }: NicknameModalProps)
     setNickname(value);
     setError(validateNickname(value));
   }, []);
+
+  // Google user: Use display name directly (skip nickname)
+  const handleUseGoogleName = useCallback(async () => {
+    if (!isGoogleUser || !googleUid) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const { createProfileFromGoogle } = await import('@/firebase/auth');
+      const { auth } = await import('@/firebase/config');
+
+      if (!auth.currentUser) {
+        setError('Not signed in');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const profile = await createProfileFromGoogle(auth.currentUser);
+
+      if (profile) {
+        setTimeout(() => onComplete(profile), 0);
+      } else {
+        setError('Failed to create profile');
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setIsSubmitting(false);
+    }
+  }, [isGoogleUser, googleUid, onComplete]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,54 +98,74 @@ export function NicknameModal({ theme, onComplete, onSkip }: NicknameModalProps)
     let didComplete = false;
 
     try {
-      const { isNicknameAvailable, createAnonymousUser } = await import('@/firebase/auth');
+      if (isGoogleUser && googleUid) {
+        // Google user with custom nickname
+        const { createProfileFromGoogle } = await import('@/firebase/auth');
+        const { auth } = await import('@/firebase/config');
 
-      // Quick availability check (non-authoritative, just for UX)
-      const available = await isNicknameAvailable(nickname);
-      if (!available) {
-        setError('Nickname is already taken');
+        if (!auth.currentUser) {
+          setError('Not signed in');
+          setIsChecking(false);
+          return;
+        }
+
         setIsChecking(false);
-        return;
-      }
+        setIsSubmitting(true);
 
-      setIsChecking(false);
-      setIsSubmitting(true);
+        const profile = await createProfileFromGoogle(auth.currentUser, nickname);
 
-      // Create user with timeout (uses transaction for race-safe reservation)
-      // Use AbortController pattern for cleaner timeout handling on iOS
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-      const profile = await Promise.race([
-        createAnonymousUser(nickname),
-        new Promise<null>((_, reject) => {
-          timeoutId = setTimeout(() => {
-            reject(new Error('Request timed out. Please try again.'));
-          }, 15000);
-        }),
-      ]);
-
-      // Clear timeout if we got a response
-      if (timeoutId) clearTimeout(timeoutId);
-
-      if (profile) {
-        didComplete = true;
-        // Use setTimeout(0) to ensure state updates flush before callback on iOS Safari
-        setTimeout(() => onComplete(profile), 0);
+        if (profile) {
+          didComplete = true;
+          setTimeout(() => onComplete(profile), 0);
+        } else {
+          setError('Failed to create profile');
+          setIsSubmitting(false);
+        }
       } else {
-        setError('Failed to create profile. Please try again.');
-        setIsSubmitting(false);
+        // Anonymous user flow (existing logic)
+        const { isNicknameAvailable, createAnonymousUser } = await import('@/firebase/auth');
+
+        const available = await isNicknameAvailable(nickname);
+        if (!available) {
+          setError('Nickname is already taken');
+          setIsChecking(false);
+          return;
+        }
+
+        setIsChecking(false);
+        setIsSubmitting(true);
+
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+        const profile = await Promise.race([
+          createAnonymousUser(nickname),
+          new Promise<null>((_, reject) => {
+            timeoutId = setTimeout(() => {
+              reject(new Error('Request timed out. Please try again.'));
+            }, 15000);
+          }),
+        ]);
+
+        if (timeoutId) clearTimeout(timeoutId);
+
+        if (profile) {
+          didComplete = true;
+          setTimeout(() => onComplete(profile), 0);
+        } else {
+          setError('Failed to create profile. Please try again.');
+          setIsSubmitting(false);
+        }
       }
     } catch (err) {
       console.error('Nickname creation error:', err);
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
-      // Always reset states if we didn't complete successfully
       if (!didComplete) {
         setIsSubmitting(false);
         setIsChecking(false);
       }
     }
-  }, [nickname, onComplete]);
+  }, [nickname, onComplete, isGoogleUser, googleUid]);
 
   const isValid = nickname.length >= 3 && nickname.length <= 12 && /^[a-zA-Z]+$/.test(nickname);
 
@@ -115,14 +182,17 @@ export function NicknameModal({ theme, onComplete, onSkip }: NicknameModalProps)
           className="text-2xl font-bold mb-2"
           style={{ color: theme.accent1 }}
         >
-          Welcome to One More Flick
+          {isGoogleUser ? 'Choose Your Nickname' : 'Welcome to One More Flick'}
         </h1>
 
         <p
           className="text-sm mb-6 opacity-80"
           style={{ color: theme.uiText }}
         >
-          Choose a nickname to join the leaderboards
+          {isGoogleUser
+            ? 'Pick a nickname for the leaderboards, or use your Google name'
+            : 'Choose a nickname to join the leaderboards'
+          }
         </p>
 
         <form onSubmit={handleSubmit}>
@@ -171,6 +241,24 @@ export function NicknameModal({ theme, onComplete, onSkip }: NicknameModalProps)
           >
             {isChecking ? 'Checking...' : isSubmitting ? 'Creating...' : 'Join the Leaderboards'}
           </button>
+
+          {/* Google user: Skip with Google name */}
+          {isGoogleUser && googleDisplayName && (
+            <button
+              type="button"
+              onClick={handleUseGoogleName}
+              disabled={isSubmitting}
+              className="w-full py-2 mt-3 rounded text-sm transition-opacity"
+              style={{
+                background: 'transparent',
+                color: theme.accent2,
+                border: `1px solid ${theme.accent2}`,
+                opacity: isSubmitting ? 0.5 : 1,
+              }}
+            >
+              Use "{googleDisplayName.split(' ')[0]}" instead
+            </button>
+          )}
 
           {/* Dev mode skip button */}
           {isDev && onSkip && (
