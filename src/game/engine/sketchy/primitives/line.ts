@@ -139,3 +139,97 @@ export function drawDashedLine(
 
   ctx.setLineDash([]);
 }
+
+/**
+ * Draw an animated aim arrow with dashed segments that taper toward the end
+ * Similar to classic arcade games like Angry Birds, golf games, etc.
+ */
+export function drawAimArrow(
+  ctx: CanvasRenderingContext2D,
+  startX: number,
+  startY: number,
+  angle: number,        // Degrees
+  power: number,        // 0-1, affects length
+  color: string,
+  nowMs: number,
+) {
+  const angleRad = (angle * Math.PI) / 180;
+
+  // Arrow length based on power (grows as you charge)
+  const minLength = 25;
+  const maxLength = 55;
+  const length = minLength + power * (maxLength - minLength);
+
+  // Direction vector
+  const dx = Math.cos(angleRad);
+  const dy = -Math.sin(angleRad);
+
+  // End point
+  const endX = startX + dx * length;
+  const endY = startY + dy * length;
+
+  // Draw dashed segments that get smaller toward the end
+  const numSegments = 5;
+
+  for (let i = 0; i < numSegments; i++) {
+    const t1 = i / numSegments;
+    const t2 = (i + 0.6) / numSegments; // Gap between dashes
+
+    // Segment start and end
+    const sx = startX + dx * length * t1;
+    const sy = startY + dy * length * t1;
+    const ex = startX + dx * length * Math.min(t2, 1);
+    const ey = startY + dy * length * Math.min(t2, 1);
+
+    // Taper: segments get thinner toward the end
+    const widthMultiplier = 1 - (i / numSegments) * 0.6;
+    const baseWidth = 2.5 + power * 1.5;
+    const segmentWidth = baseWidth * widthMultiplier;
+
+    // Fade: segments get more transparent toward the end
+    const alpha = 1 - (i / numSegments) * 0.5;
+
+    // Pulsing animation for each segment
+    const pulsePhase = ((nowMs / 150) + i * 0.4) % (Math.PI * 2);
+    const pulse = 0.7 + Math.sin(pulsePhase) * 0.3;
+
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = alpha * pulse;
+    ctx.lineWidth = segmentWidth;
+    ctx.lineCap = 'round';
+
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+  }
+
+  // Arrowhead (chevron style)
+  const arrowSize = 6 + power * 4;
+  const arrowAngle = 25 * Math.PI / 180; // 25 degree angle for chevron
+
+  // Left wing of arrowhead
+  const leftX = endX - Math.cos(angleRad - arrowAngle) * arrowSize;
+  const leftY = endY + Math.sin(angleRad - arrowAngle) * arrowSize;
+
+  // Right wing of arrowhead
+  const rightX = endX - Math.cos(angleRad + arrowAngle) * arrowSize;
+  const rightY = endY + Math.sin(angleRad + arrowAngle) * arrowSize;
+
+  // Arrowhead pulses with power
+  const arrowPulse = 0.8 + Math.sin(nowMs / 100) * 0.2;
+  ctx.globalAlpha = arrowPulse;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2 + power * 1.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  ctx.beginPath();
+  ctx.moveTo(leftX, leftY);
+  ctx.lineTo(endX, endY);
+  ctx.lineTo(rightX, rightY);
+  ctx.stroke();
+
+  // Reset alpha
+  ctx.globalAlpha = 1;
+}

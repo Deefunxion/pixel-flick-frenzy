@@ -1,10 +1,10 @@
 import type { Theme } from '@/game/themes';
 import { MAX_ANGLE, MIN_ANGLE, OPTIMAL_ANGLE, MIN_POWER, MAX_POWER, BASE_GRAV, W } from '@/game/constants';
 import {
-  drawHandLine,
   drawHandCircle,
   drawDecorativeCurl,
   drawStyledTrajectory,
+  drawAimArrow,
 } from '../../sketchy';
 
 /**
@@ -64,45 +64,39 @@ function drawFlipbookChargeHud(
   ctx.fillStyle = powerColor;
   ctx.fillRect(barX + 2, barY + 2, fillW, barH - 4);
 
-  // Angle indicator arc
+  // Angle indicator arc (faint guide)
   const arcX = zenoX;
   const arcY = zenoY;
-  const arcRadius = 25;
+  const arcRadius = 20;
 
-  // Draw arc
+  // Draw faint arc guide
   ctx.strokeStyle = COLORS.accent3;
-  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.3;
+  ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.arc(arcX, arcY, arcRadius, -MAX_ANGLE * Math.PI / 180, -MIN_ANGLE * Math.PI / 180);
   ctx.stroke();
+  ctx.globalAlpha = 1;
 
-  // Current angle line
-  const angleRad = (angle * Math.PI) / 180;
-  const lineLen = 20 + chargePower * 25;
-  drawHandLine(
+  // Animated aim arrow with dashed segments and chevron arrowhead
+  drawAimArrow(
     ctx,
     arcX,
     arcY,
-    arcX + Math.cos(angleRad) * lineLen,
-    arcY - Math.sin(angleRad) * lineLen,
+    angle,
+    chargePower,
     COLORS.accent1,
-    2.5,
     nowMs,
   );
 
-  // Arrowhead
-  const endX = arcX + Math.cos(angleRad) * lineLen;
-  const endY = arcY - Math.sin(angleRad) * lineLen;
-  drawHandCircle(ctx, endX, endY, 4, COLORS.accent1, 2, nowMs, true);
-
-  // Optimal angle marker
+  // Optimal angle marker (small dot that blinks)
   const optRad = (OPTIMAL_ANGLE * Math.PI) / 180;
-  const optBlink = Math.floor(nowMs / 300) % 2;
-  if (optBlink) {
-    const optX = arcX + Math.cos(optRad) * (arcRadius + 8);
-    const optY = arcY - Math.sin(optRad) * (arcRadius + 8);
-    drawHandCircle(ctx, optX, optY, 5, COLORS.highlight, 2, nowMs, false);
-  }
+  const optBlink = Math.sin(nowMs / 200) * 0.5 + 0.5; // Smooth pulsing
+  const optX = arcX + Math.cos(optRad) * (arcRadius + 5);
+  const optY = arcY - Math.sin(optRad) * (arcRadius + 5);
+  ctx.globalAlpha = 0.4 + optBlink * 0.4;
+  drawHandCircle(ctx, optX, optY, 3, COLORS.highlight, 1.5, nowMs, true);
+  ctx.globalAlpha = 1;
 
   // Trajectory preview arc (dashed curve showing predicted path)
   if (chargePower > 0.2) {
@@ -157,27 +151,23 @@ function drawNoirChargeHud(
   ctx.fillStyle = powerColor;
   ctx.fillRect(barX + 1, barY + 1, fillW, barH - 2);
 
-  // Angle line
+  // Animated aim arrow (noir style - same as flipbook for consistency)
   const arcX = zenoX;
   const arcY = zenoY;
-  const angleRad = (angle * Math.PI) / 180;
-  const lineLen = 15 + chargePower * 20;
 
-  ctx.strokeStyle = COLORS.accent1;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(arcX, arcY);
-  ctx.lineTo(arcX + Math.cos(angleRad) * lineLen, arcY - Math.sin(angleRad) * lineLen);
-  ctx.stroke();
-
-  // Endpoint dot
-  ctx.fillStyle = COLORS.accent1;
-  ctx.beginPath();
-  ctx.arc(arcX + Math.cos(angleRad) * lineLen, arcY - Math.sin(angleRad) * lineLen, 3, 0, Math.PI * 2);
-  ctx.fill();
+  drawAimArrow(
+    ctx,
+    arcX,
+    arcY,
+    angle,
+    chargePower,
+    COLORS.accent1,
+    nowMs,
+  );
 
   // Trajectory preview arc (noir style)
   if (chargePower > 0.2) {
+    const angleRad = (angle * Math.PI) / 180;
     const power = MIN_POWER + chargePower * (MAX_POWER - MIN_POWER);
     const vx = Math.cos(angleRad) * power;
     const vy = -Math.sin(angleRad) * power;
