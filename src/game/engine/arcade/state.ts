@@ -2,6 +2,7 @@
 import type { ArcadeState, ArcadeLevel, StarObjectives } from './types';
 import { loadJson, saveJson } from '@/game/storage';
 import { getTotalLevels } from './levels';
+import { getLevelType } from './generator/level-type';
 
 const STORAGE_KEY = 'arcade_state';
 
@@ -90,15 +91,28 @@ export function checkStarObjectives(
 ): StarObjectives {
   const totalDoodles = level.doodles.length;
   const collectedCount = state.doodlesCollected.length;
+  const levelType = getLevelType(level.id);
 
-  // ★ landedInZone - landed beyond target
+  // ★ landedInZone - landed beyond target (always the same)
   const landedInZone = landingDistance >= level.landingTarget;
 
-  // ★★ allDoodles - collected all doodles (any order)
-  const allDoodles = totalDoodles === 0 || collectedCount === totalDoodles;
+  let allDoodles: boolean;
+  let inOrder: boolean;
 
-  // ★★★ inOrder - collected all in circular sequence (Bomb Jack style)
-  const inOrder = allDoodles && state.streakCount === totalDoodles;
+  if (levelType === 'juicy') {
+    // JUICY LEVELS: Dense coins, easier star requirements
+    // ★★ allDoodles = collected 50% of coins
+    // ★★★ inOrder = collected ALL coins (no sequence required)
+    const halfDoodles = Math.ceil(totalDoodles / 2);
+    allDoodles = totalDoodles === 0 || collectedCount >= halfDoodles;
+    inOrder = totalDoodles === 0 || collectedCount === totalDoodles;
+  } else {
+    // PUZZLY LEVELS: Sparse coins, sequence-based challenge
+    // ★★ allDoodles = collected all coins (any order)
+    // ★★★ inOrder = collected all in circular sequence (Bomb Jack style)
+    allDoodles = totalDoodles === 0 || collectedCount === totalDoodles;
+    inOrder = allDoodles && state.streakCount === totalDoodles;
+  }
 
   return {
     landedInZone,

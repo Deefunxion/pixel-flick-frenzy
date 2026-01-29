@@ -411,6 +411,84 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
     setSelectedGroup(null);
   }, [selectedGroup, level, updateLevel]);
 
+  // Apply offset to all doodles in a group
+  const applyGroupOffset = useCallback((dx: number, dy: number) => {
+    if (!selectedGroup || !level) return;
+
+    updateLevel(prev => ({
+      ...prev,
+      doodles: prev.doodles.map(d => {
+        if (selectedGroup.doodleIds.includes(d.sequence)) {
+          return { ...d, x: d.x + dx, y: d.y + dy };
+        }
+        return d;
+      }),
+    }));
+  }, [selectedGroup, level, updateLevel]);
+
+  // Apply scale to all doodles in a group (scale from center)
+  const applyGroupScale = useCallback((scaleFactor: number) => {
+    if (!selectedGroup || !level) return;
+
+    // Calculate group center
+    const groupDoodles = level.doodles.filter(d =>
+      selectedGroup.doodleIds.includes(d.sequence)
+    );
+    if (groupDoodles.length === 0) return;
+
+    const centerX = groupDoodles.reduce((sum, d) => sum + d.x, 0) / groupDoodles.length;
+    const centerY = groupDoodles.reduce((sum, d) => sum + d.y, 0) / groupDoodles.length;
+
+    updateLevel(prev => ({
+      ...prev,
+      doodles: prev.doodles.map(d => {
+        if (selectedGroup.doodleIds.includes(d.sequence)) {
+          return {
+            ...d,
+            x: Math.round(centerX + (d.x - centerX) * scaleFactor),
+            y: Math.round(centerY + (d.y - centerY) * scaleFactor),
+            scale: (d.scale || 1) * scaleFactor,
+          };
+        }
+        return d;
+      }),
+    }));
+  }, [selectedGroup, level, updateLevel]);
+
+  // Apply rotation to all doodles in a group (rotate around center)
+  const applyGroupRotation = useCallback((degrees: number) => {
+    if (!selectedGroup || !level) return;
+
+    // Calculate group center
+    const groupDoodles = level.doodles.filter(d =>
+      selectedGroup.doodleIds.includes(d.sequence)
+    );
+    if (groupDoodles.length === 0) return;
+
+    const centerX = groupDoodles.reduce((sum, d) => sum + d.x, 0) / groupDoodles.length;
+    const centerY = groupDoodles.reduce((sum, d) => sum + d.y, 0) / groupDoodles.length;
+
+    const rad = (degrees * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    updateLevel(prev => ({
+      ...prev,
+      doodles: prev.doodles.map(d => {
+        if (selectedGroup.doodleIds.includes(d.sequence)) {
+          const dx = d.x - centerX;
+          const dy = d.y - centerY;
+          return {
+            ...d,
+            x: Math.round(centerX + dx * cos - dy * sin),
+            y: Math.round(centerY + dx * sin + dy * cos),
+          };
+        }
+        return d;
+      }),
+    }));
+  }, [selectedGroup, level, updateLevel]);
+
   const deleteSelected = useCallback(() => {
     if (!selected) return;
     if (selected.type === 'doodle') {
@@ -2240,8 +2318,80 @@ export function LevelEditor({ onClose, onTestLevel, initialLevel }: LevelEditorP
 
               <div className="border-t border-gray-700 pt-3 mt-3">
                 <div className="text-gray-400 text-xs mb-2">Group Transform</div>
-                <div className="text-gray-500 text-xs">
-                  Drag group to move all doodles together.
+
+                {/* Offset controls */}
+                <div className="mb-2">
+                  <label className="text-gray-400 text-xs">Offset</label>
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      onClick={() => applyGroupOffset(-10, 0)}
+                      className="flex-1 bg-gray-700 text-white py-1 rounded text-xs hover:bg-gray-600"
+                    >
+                      ← 10
+                    </button>
+                    <button
+                      onClick={() => applyGroupOffset(10, 0)}
+                      className="flex-1 bg-gray-700 text-white py-1 rounded text-xs hover:bg-gray-600"
+                    >
+                      10 →
+                    </button>
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      onClick={() => applyGroupOffset(0, -10)}
+                      className="flex-1 bg-gray-700 text-white py-1 rounded text-xs hover:bg-gray-600"
+                    >
+                      ↑ 10
+                    </button>
+                    <button
+                      onClick={() => applyGroupOffset(0, 10)}
+                      className="flex-1 bg-gray-700 text-white py-1 rounded text-xs hover:bg-gray-600"
+                    >
+                      10 ↓
+                    </button>
+                  </div>
+                </div>
+
+                {/* Scale controls */}
+                <div className="mb-2">
+                  <label className="text-gray-400 text-xs">Scale</label>
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      onClick={() => applyGroupScale(0.9)}
+                      className="flex-1 bg-gray-700 text-white py-1 rounded text-xs hover:bg-gray-600"
+                    >
+                      -10%
+                    </button>
+                    <button
+                      onClick={() => applyGroupScale(1.1)}
+                      className="flex-1 bg-gray-700 text-white py-1 rounded text-xs hover:bg-gray-600"
+                    >
+                      +10%
+                    </button>
+                  </div>
+                </div>
+
+                {/* Rotation controls */}
+                <div className="mb-2">
+                  <label className="text-gray-400 text-xs">Rotation</label>
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      onClick={() => applyGroupRotation(-15)}
+                      className="flex-1 bg-gray-700 text-white py-1 rounded text-xs hover:bg-gray-600"
+                    >
+                      ↺ 15°
+                    </button>
+                    <button
+                      onClick={() => applyGroupRotation(15)}
+                      className="flex-1 bg-gray-700 text-white py-1 rounded text-xs hover:bg-gray-600"
+                    >
+                      15° ↻
+                    </button>
+                  </div>
+                </div>
+
+                <div className="text-gray-500 text-xs mt-2">
+                  Drag bounding box to move group freely.
                 </div>
               </div>
 
